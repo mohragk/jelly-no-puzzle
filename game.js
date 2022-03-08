@@ -369,6 +369,7 @@ function updateAndRender(world)  {
     
     
     // Handle move
+    
     if (move_pieces.length)
     {
         let can_move = true;
@@ -421,27 +422,29 @@ function updateAndRender(world)  {
             let can_move = true;
 
             // Remove itself from wall-set
-            const tmp_walls = [...walls];
-            for (let {row, col} of piece.blocks) {  
-                const index = getIndexForGrid(row, col);
-                tmp_walls[index] = TileTypes.EMPTY;
-            }
-
-            for (let coord of piece.blocks) {
-                let {row, col} = coord;
-                row += 1;
-                const block_wall = getTile(row, col, tmp_walls);
-                const other      = getTile(row, col, world);
-                
-                if (other === TileTypes.WALL || block_wall === TileTypes.WALL) { 
-                    can_move = false;
-                    break;
+            while (can_move) {
+                const tmp_walls = [...walls];
+                for (let {row, col} of piece.blocks) {  
+                    const index = getIndexForGrid(row, col);
+                    tmp_walls[index] = TileTypes.EMPTY;
                 }
-                
-            }
-            if (can_move) {
+    
                 for (let coord of piece.blocks) {
-                    coord.row += 1;
+                    let {row, col} = coord;
+                    row += 1;
+                    const block_wall = getTile(row, col, tmp_walls);
+                    const other      = getTile(row, col, world);
+                    
+                    if (other === TileTypes.WALL || block_wall === TileTypes.WALL) { 
+                        can_move = false;
+                        break;
+                    }
+                    
+                }
+                if (can_move) {
+                    for (let coord of piece.blocks) {
+                        coord.row += 1;
+                    }
                 }
             }
             // Check win-state
