@@ -33,19 +33,52 @@ class Recorder {
 let recorder = new Recorder();
 
 
+class CommandBuffer {
 
+    constructor() {
+        this.commands.length = this.max;
+    }
 
+    add(command) {
+        this.commands[this.end++] = command;
+        this.end %= this.max;
+        this.count++;
+    }
+
+    get() {
+        let c = this.commands[this.start];
+        return c;
+    }
+
+    pop() {
+        let c = this.commands[this.start++];
+        this.start %= this.max;
+        this.count--;
+        return c;
+    }
+
+    hasCommands() {
+        return this.count > 0;
+    }
+
+   
+
+    commands = [];
+    max = 64;
+    
+    count = 0;
+    end = 0;
+    start = 0;
+}
+
+let command_buffer = new CommandBuffer();
 
 
 let game_state = {
-    mouse: {
-        x: 0, y: 0,
-        last_clicked_left:  [],
-        last_clicked_right: [],
-    },
     running: false,
     level_colors: new Set(),
-    has_won: false
+    has_won: false,
+    mouse: {row: 0, col: 0}
 };
 
 let DEBUG_RENDER_WALLS = false;
@@ -58,10 +91,10 @@ function reset(level) {
     game_state.level_colors = new Set();
     world = new World(1, 1);
     recorder = new Recorder();
+    command_buffer = new CommandBuffer();
    
     const level_index = level - 1;
     loadLevel(level_index, levels, world);
-    //recorder.add([...world]);
     
     game_state.running = true;
     mainLoop();
@@ -81,6 +114,36 @@ function getColorForTileType (type) {
 }
 
 
+
+const MoveDirections = {
+    LEFT:  [0, -1],
+    RIGHT: [0, 1],
+    DOWN:  [1, 0]
+};
+
+const InstructionTypes = {
+    MOVE: 0,
+};
+
+class Instruction {
+    constructor(type, direction) {
+        this.type = type;
+        this.direction = direction;
+    }
+    type      = InstructionTypes.MOVE;
+    direction = MoveDirections.LEFT;
+};
+
+class Command {
+    constructor(id, instruction) {
+        this.piece_id = id;
+        this.instruction = instruction;        
+    }
+    piece_id;
+    instruction;
+}
+
+
 const TileTypes = {
     EMPTY: 0,
     WALL: 1,
@@ -92,6 +155,11 @@ const TileTypes = {
     BLACK_BLOCK: 20,
 };
 
+const PieceTypes = {
+    PASSTHROUGH: 0,
+    STATIC: 1,
+    MOVABLE: 2
+};
 
 class World {
 
@@ -104,16 +172,28 @@ class World {
 
     addWall(row, col) {
         const id = this.wall_id;
-        const p = new Piece(id, TileTypes.WALL);
+        let p = this.pieces[id];
+        if (!p) {
+            p = new Piece(id, TileTypes.WALL);
+        }
+        
         this.pieces[id] = p;
+        p.type = PieceTypes.STATIC;
+        p.blocks.push({row, col});
         const index = this.getIndex(row, col);
         this.grid[index] = id;
     }
 
     addEmpty(row, col) {
         const id = this.empty_id;
-        const p = new Piece(id, TileTypes.EMPTY);
+        let p = this.pieces[id];
+        if (!p) {
+            p = new Piece(id, TileTypes.EMPTY);
+        }
+        
         this.pieces[id] = p;
+        p.type = PieceTypes.PASSTHROUGH;
+        p.blocks.push({row, col});
         const index = this.getIndex(row, col);
         this.grid[index] = id;
     }
@@ -128,14 +208,32 @@ class World {
         else {
             let id = this.block_id++;
             const p = new Piece(id, type);
+            p.type = PieceTypes.MOVABLE;
+            p.blocks.push({row, col})
             this.pieces.push(p);
             const index = this.getIndex(row, col);
             this.grid[index] = id;
         }
-
-
     }
 
+    getPiece(row, col) {
+        const index = this.getIndex(row, col);
+        const id = this.grid[index];
+        return this.pieces[id];
+    }
+
+
+    handleClick(button, row, col) {
+        const p = this.getPiece(row, col);
+        if (p.type === PieceTypes.MOVABLE) {
+            if (button === MouseButtons.LEFT || button === MouseButtons.RIGHT) {
+                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
+                
+                command_buffer.add(command);
+            }
+        }
+    }
   
 
     forEachTile = (cb) => {
@@ -147,7 +245,92 @@ class World {
         }
     };
 
+
+    update() {
+        if (command_buffer.hasCommands()) {
+            let command = command_buffer.get();
+            const {piece_id, instruction} = command;
+            const p = this.pieces[piece_id];
+
+            console.log(command, command_buffer.count)
+
+
+
+            if (instruction.type == InstructionTypes.MOVE) {
+                p.should_move = true;
+                p.move_direction = instruction.direction;
+
+                let move_pieces = [p];
+
+                let can_move = true;
+                outer: for (let piece of move_pieces) {
+                    
+                    // CHECK TO SEE IF WE AND OTHER PIECES CAN MOVE
+                    for (let block of piece.blocks) {
+                        let {row, col} = block;
+                        let [dir_row, dir_col] = piece.move_direction;
+                        col += dir_col;
+                        row += dir_row;
+                        const other = this.getPiece(row, col);
+                        if (other.type === PieceTypes.STATIC) {
+                            can_move = false;
+                            break outer;
+                        }
+                        if (other.type === PieceTypes.MOVABLE) {
+                            other.should_move = true;
+                            other.move_direction = piece.move_direction;
+                            move_pieces.push(other);
+                        }
+                    }
+                }
+                    
+                if (can_move) {
+                    const tmp_grid = [...this.grid];
+                    for (let piece of move_pieces) {
+
+                        // clear movable blocks from grid state
+                        for (let block of piece.blocks) {
+                            let {row, col} = block;
+                            let index = this.getIndex(row, col);
+                            tmp_grid[index] = this.empty_id;
+                        }
+    
+                    }
+                    
+                    for (let piece of move_pieces) {
+                        for (let block of piece.blocks) {
+                            let [dir_row, dir_col] = piece.move_direction;
+                            block.col += dir_col;
+                            block.row += dir_row;
+                                    
+                            let index = this.getIndex(block.row, block.col);
+                            tmp_grid[index] = piece.id;
+                        }
+                        piece.should_move = false;
+                    }
+
+
+                    this.grid = [...tmp_grid];
+
+
+                    const c = new Command(p.id, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
+                   // command_buffer.add(c);
+                }
+
+                command_buffer.pop();
+            }
+        }
+
+       
+        
+    }
+
+
+    
+
     render() {
+        this.update();
+        
         this.forEachTile( (row, col, index) => {
             const ID = this.grid[index];
             const p = this.pieces[ID];
@@ -162,9 +345,10 @@ class World {
         h: 1
     };
     pieces = [];
+
     // fixed
-    wall_id = 1;
     empty_id = 0;
+    wall_id  = 1;
     block_id = 2;
 };
 
@@ -182,30 +366,11 @@ class Piece {
     }
 
     id;
+    type = PieceTypes.PASSTHROUGH;
+    tile_type = TileTypes.EMPTY;
     should_move = false;
     move_direction = 0;
-    tile_type;
     blocks = [];
-}
-
-
-const forEachTile = (cb) => {
-    
-    for (let row = 0; row < world_dimensions.h; row++ ) {
-        for (let col = 0; col < world_dimensions.w; col++) {
-            const index = row * world_dimensions.w + col;
-            cb(index, row, col);
-        }
-    }
-};
-
-
-function addBlock(world, row, col, type, game_state) {
-    const index = row * world_dimensions.w + col;
-    world[index] = type;
-    if (type > TileTypes.WALL && type < TileTypes.BLACK_BLOCK) {
-        game_state.level_colors.add(type);
-    }
 }
 
 
@@ -253,12 +418,8 @@ function main() {
         if (row < world.dimensions.h && col < world.dimensions.w) {
 
             const button = e.button;
-            if (button === MouseButtons.LEFT)  {
-                game_state.mouse.last_clicked_left = [row, col];
-            }
-            if (button === MouseButtons.RIGHT)  { 
-                game_state.mouse.last_clicked_right = [row, col];
-            }
+            world.handleClick(button, row, col);
+            
         }
         
     };
@@ -306,15 +467,14 @@ function loadLevel(index, levels, world) {
 
 
     // Pre-pass to get world dimensions...
-    let row = 0;
-    let col = 0;
+    
     world.dimensions.h = level.length;
     world.dimensions.w = level[0].length;
 
 
     // Actually load level...
-    row = 0;
-    col = 0;
+    let row = 0;
+    let col = 0;
 
     for (let line of level) {
         for (let c of line) {
@@ -380,10 +540,7 @@ function getTileCoordFromScreenCoord(x, y) {
     return {row, col};
 }
 
-const MoveDirections = {
-    LEFT: -1,
-    RIGHT: 1,
-};
+
 
 function getIndexForGrid(row, col) {
     return row * world_dimensions.w + col;
@@ -427,6 +584,9 @@ function createPiece(row, col, world, tile_type, walls = []) {
 
 function updateAndRender(world)  {
     clearBG("purple");
+
+  
+
     world.render();
     
 }
