@@ -2,11 +2,6 @@ import {levels}  from './levels2.js';
 
 let canvas, ctx;
 
-const world_dimensions = {
-    w: 14,
-    h: 8
-};
-let world  = [];
 
 class Recorder {
     history = [];
@@ -38,15 +33,9 @@ class Recorder {
 let recorder = new Recorder();
 
 
-let DEBUG_RENDER_WALLS = false;
 
-const MouseButtons = {
-    LEFT: 0,
-    MIDDLE: 1,
-    RIGHT: 2,
-    BACK: 3,
-    FORWARD: 4
-};
+
+
 
 let game_state = {
     mouse: {
@@ -59,30 +48,20 @@ let game_state = {
     has_won: false
 };
 
+let DEBUG_RENDER_WALLS = false;
 const DEFAULT_GAMESTATE = {...game_state};
 
-const TileTypes = {
-    EMPTY: 0,
-    WALL: 1,
-
-    RED_BLOCK: 10,
-    BLUE_BLOCK: 11,
-    GREEN_BLOCK: 12,
-    YELLOW_BLOCK: 13,
-
-    BLACK_BLOCK: 20,
-};
 
 
 function reset(level) {
     game_state = {...DEFAULT_GAMESTATE};
     game_state.level_colors = new Set();
-    world = [];
+    world = new World(1, 1);
     recorder = new Recorder();
    
     const level_index = level - 1;
     loadLevel(level_index, levels, world);
-    recorder.add([...world]);
+    //recorder.add([...world]);
     
     game_state.running = true;
     mainLoop();
@@ -91,19 +70,110 @@ function reset(level) {
 
 function getColorForTileType (type) {
     switch (type) {
+        case TileTypes.EMPTY: return "lightblue";
+        case TileTypes.WALL: return "gray";
+
         case TileTypes.RED_BLOCK: return "red";
         case TileTypes.BLUE_BLOCK: return "blue";
         case TileTypes.GREEN_BLOCK: return "green";
-        case TileTypes.YELLOW_BLOCK: return "yellow";
+        default: return "black"
     }
 }
 
 
+const TileTypes = {
+    EMPTY: 0,
+    WALL: 1,
 
+    RED_BLOCK: 10,
+    BLUE_BLOCK: 11,
+    GREEN_BLOCK: 12,
+
+    BLACK_BLOCK: 20,
+};
+
+
+class World {
+
+   
+
+    getIndex(row, col) {
+        return col + row * this.dimensions.w;
+    }
+
+
+    addWall(row, col) {
+        const id = this.wall_id;
+        const p = new Piece(id, TileTypes.WALL);
+        this.pieces[id] = p;
+        const index = this.getIndex(row, col);
+        this.grid[index] = id;
+    }
+
+    addEmpty(row, col) {
+        const id = this.empty_id;
+        const p = new Piece(id, TileTypes.EMPTY);
+        this.pieces[id] = p;
+        const index = this.getIndex(row, col);
+        this.grid[index] = id;
+    }
+
+    addPiece(row, col, type) {
+        if (type === TileTypes.WALL) {
+            this.addWall(row, col);
+        }
+        else if (type === TileTypes.EMPTY) {
+            this.addEmpty(row, col);
+        }
+        else {
+            let id = this.block_id++;
+            const p = new Piece(id, type);
+            this.pieces.push(p);
+            const index = this.getIndex(row, col);
+            this.grid[index] = id;
+        }
+
+
+    }
+
+  
+
+    forEachTile = (cb) => {
+        for (let row = 0; row < this.dimensions.h; row++ ) {
+            for (let col = 0; col < this.dimensions.w; col++) {
+                const index = row * this.dimensions.w + col;
+                cb(row, col, index);
+            }
+        }
+    };
+
+    render() {
+        this.forEachTile( (row, col, index) => {
+            const ID = this.grid[index];
+            const p = this.pieces[ID];
+            const type = p.tile_type;
+            drawBlock(row, col, getColorForTileType(type));
+        });
+    }
+
+    grid = [];
+    dimensions = {
+        w: 1,
+        h: 1
+    };
+    pieces = [];
+    // fixed
+    wall_id = 1;
+    empty_id = 0;
+    block_id = 2;
+};
+
+let world = new World(1, 1);
 
 class Piece {
     
-    constructor(type) {
+    constructor(id, type) {
+        this.id = id;
         this.tile_type = type;
     }
     
@@ -111,6 +181,7 @@ class Piece {
         this.blocks.push(block);
     }
 
+    id;
     should_move = false;
     move_direction = 0;
     tile_type;
@@ -128,7 +199,6 @@ const forEachTile = (cb) => {
     }
 };
 
-window.addEventListener("load", main());
 
 function addBlock(world, row, col, type, game_state) {
     const index = row * world_dimensions.w + col;
@@ -138,6 +208,18 @@ function addBlock(world, row, col, type, game_state) {
     }
 }
 
+
+
+const MouseButtons = {
+    LEFT: 0,
+    MIDDLE: 1,
+    RIGHT: 2,
+    BACK: 3,
+    FORWARD: 4
+};
+
+
+window.addEventListener("load", main());
 function main() {
     canvas = document.getElementById("grid_canvas");
     ctx = canvas.getContext("2d");
@@ -150,9 +232,9 @@ function main() {
     canvas.addEventListener("mouseup", onMouseUp);
     canvas.addEventListener("mousemove", onMouseMove);
     document.addEventListener("keypress", e => {
-        if (e.key === 'r') {
-            const prev = recorder.getPrevious();
-            world = [...prev];
+        if (e.key === 'z') {
+            //const prev = recorder.getPrevious();
+            //world = [...prev];
         }
 
         if (e.key === 'd') { 
@@ -162,15 +244,13 @@ function main() {
 
     function onMouseDown(e) {
         e.preventDefault();
-
-        const button = e.button;
     };
 
     function onMouseUp(e) {
         const {offsetX, offsetY} = e;
         const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         
-        if (row < world_dimensions.h && col < world_dimensions.w) {
+        if (row < world.dimensions.h && col < world.dimensions.w) {
 
             const button = e.button;
             if (button === MouseButtons.LEFT)  {
@@ -179,8 +259,6 @@ function main() {
             if (button === MouseButtons.RIGHT)  { 
                 game_state.mouse.last_clicked_right = [row, col];
             }
-    
-            recorder.add([...world]);
         }
         
     };
@@ -225,27 +303,36 @@ function loadLevel(index, levels, world) {
         }
     };
     const level = levels[index];
+
+
+    // Pre-pass to get world dimensions...
     let row = 0;
     let col = 0;
-    let max_col = 0;
+    world.dimensions.h = level.length;
+    world.dimensions.w = level[0].length;
+
+
+    // Actually load level...
+    row = 0;
+    col = 0;
+
     for (let line of level) {
         for (let c of line) {
+           
             const type = getTileTypeFromChar(c);
-            addBlock(world, row, col, type, game_state);
+            world.addPiece(row, col, type);
 
             col++;
-            max_col = col > max_col ? col : max_col;
         }
         col = 0;
         row++;
     }
-    world_dimensions.h = row;
-    world_dimensions.w = max_col;
 
     const cell_size = 72;
-    canvas.width  = cell_size * world_dimensions.w;
-    canvas.height = cell_size * world_dimensions.h;
-    console.log(game_state.level_colors)
+    canvas.width  = cell_size * world.dimensions.w;
+    canvas.height = cell_size * world.dimensions.h;
+
+    console.log(world)
 }
 
 function mainLoop(time) {
@@ -279,14 +366,14 @@ function drawEmpty (row, col) {
 }
 
 function getScreenCoordFromTileCoord(row, col) {
-    const tile_size = canvas.width / world_dimensions.w;
+    const tile_size = canvas.width / world.dimensions.w;
     let y = row * tile_size;
     let x = col * tile_size;
     return {x, y, tile_size};
 }
 
 function getTileCoordFromScreenCoord(x, y) {
-    const tile_size = canvas.width / world_dimensions.w;
+    const tile_size = canvas.width / world.dimensions.w;
     let row = Math.floor(y / tile_size);
     let col = Math.floor(x / tile_size);
 
@@ -339,165 +426,9 @@ function createPiece(row, col, world, tile_type, walls = []) {
 
 
 function updateAndRender(world)  {
-    
-    let move_pieces = [];
-   
-
-    if (game_state.mouse.last_clicked_left.length) {
-        const [row, col] = game_state.mouse.last_clicked_left;
-        game_state.mouse.last_clicked_left = [];
-        const tile = getTile(row, col, world);
-        if (tile !== TileTypes.WALL && tile !== TileTypes.EMPTY) {
-            const p = createPiece(row, col, world, tile);
-            p.should_move = true;
-            p.move_direction = MoveDirections.LEFT;
-            move_pieces.push(p);
-        }
-    }
-
-    if (game_state.mouse.last_clicked_right.length) {
-        const [row, col] = game_state.mouse.last_clicked_right;
-        game_state.mouse.last_clicked_right = [];
-        const tile = getTile(row, col, world);
-        if (tile !== TileTypes.WALL && tile !== TileTypes.EMPTY) {
-            const p = createPiece(row, col, world, tile);
-            p.should_move = true;
-            p.move_direction = MoveDirections.RIGHT;
-            move_pieces.push(p);
-        }
-    }
-    
-    
-    // Handle move
-    
-    if (move_pieces.length)
-    {
-        let can_move = true;
-        outer: for (let piece of move_pieces) {
-            for (let coord of piece.blocks) {
-                let {row, col} = coord;
-                col += piece.move_direction;
-                const other = getTile(row, col, world);
-                if (other === TileTypes.WALL) { 
-                    can_move = false;
-                    break outer;
-                }
-                if (other > TileTypes.WALL && other < TileTypes.BLACK_BLOCK ) {
-                    const p = createPiece(row, col, world, other);
-                    p.should_move = true;
-                    p.move_direction = piece.move_direction;
-                    move_pieces.push(p);
-                }
-            }
-        }
-        if (can_move) {
-            for (let piece of move_pieces) {
-                for (let coord of piece.blocks) {
-                    coord.col += piece.move_direction;
-                }
-            }
-        }
-
-        repopulateGrid(move_pieces, world);
-    }
-    
-    
-
-    // Apply gravity
-    {
-        let walls = new Array(world.length).fill(0);
-        const pieces = [];
-       
-       
-        forEachTile( (index, row, col) => {
-            const tile = getTile(row, col, world);
-            if (tile > TileTypes.WALL && tile < TileTypes.BLACK_BLOCK) {
-                const p = createPiece(row, col, world, tile, walls);
-                pieces.push(p);
-            }
-        });
-
-            
-        for (let piece of pieces) {
-            let can_move = true;
-
-            // Remove itself from wall-set
-            while (can_move) {
-                const tmp_walls = [...walls];
-                for (let {row, col} of piece.blocks) {  
-                    const index = getIndexForGrid(row, col);
-                    tmp_walls[index] = TileTypes.EMPTY;
-                }
-    
-                for (let coord of piece.blocks) {
-                    let {row, col} = coord;
-                    row += 1;
-                    const block_wall = getTile(row, col, tmp_walls);
-                    const other      = getTile(row, col, world);
-                    
-                    if (other === TileTypes.WALL || block_wall === TileTypes.WALL) { 
-                        can_move = false;
-                        break;
-                    }
-                    
-                }
-                if (can_move) {
-                    for (let coord of piece.blocks) {
-                        coord.row += 1;
-                    }
-                }
-            }
-            // Check win-state
-            const level_colors_count = game_state.level_colors.size;
-            if (level_colors_count === pieces.length) {
-                game_state.has_won = true;
-                game_state.running = false;
-                
-            }
-        }
-    
-
-
-        drawGrid(walls);
-
-        repopulateGrid(pieces, world);
-        
-    }
-        
-    if (!DEBUG_RENDER_WALLS) {
-        drawGrid(world);
-    }
-    
-
+    clearBG("purple");
+    world.render();
     
 }
 
 
-function repopulateGrid(pieces, grid) { 
-    for (let piece of pieces) {
-        const tile = piece.tile_type;
-        for (let {row, col} of piece.blocks) {
-            const index = getIndexForGrid(row, col);
-            grid[index] = tile;
-        }   
-    }
-}
-
-function drawGrid(grid = []) {
-
-    clearBG('purple')
-    
-    forEachTile( (index, row, col) => {
-        const tile = grid[index];
-        if (tile === TileTypes.WALL) {
-            drawWall(row, col);
-        }
-        else if (tile === TileTypes.EMPTY) {
-            drawEmpty(row, col);
-        }
-        else {
-            const color = getColorForTileType(tile);
-            drawBlock(row, col, color);
-        }
-    });
-}
