@@ -1,4 +1,6 @@
 import {levels}  from './levels2.js';
+import { Piece, PieceList,  PieceTypes } from './piece.js';
+import { TileTypes } from './tile.js'
 
 let canvas, ctx;
 
@@ -125,7 +127,6 @@ const MoveDirections = {
 
 const InstructionTypes = {
     MOVE: 0,
-    CHECK_GRAVITY: 1
 };
 
 class Instruction {
@@ -147,23 +148,6 @@ class Command {
 }
 
 
-const TileTypes = {
-    EMPTY: 0,
-    WALL: 1,
-
-    RED_BLOCK: 10,
-    BLUE_BLOCK: 11,
-    GREEN_BLOCK: 12,
-
-    BLACK_BLOCK: 20,
-};
-
-const PieceTypes = {
-    PASSTHROUGH: 0,
-    STATIC: 1,
-    MOVABLE: 2
-};
-
 class World {
 
     grid = [];
@@ -172,11 +156,12 @@ class World {
         h: 1
     };
     pieces = [];
+    piece_list = new PieceList();
 
     // fixed
     empty_id = 0;
     wall_id  = 1;
-    block_id = 2;
+   
 
     
     
@@ -186,32 +171,32 @@ class World {
     }
 
 
-    addWall(row, col) {
-        const id = this.wall_id;
-        let p = this.pieces[id];
-        if (!p) {
-            p = new Piece(id, TileTypes.WALL);
-        }
-        
-        this.pieces[id] = p;
-        p.type = PieceTypes.STATIC;
+    addPieceToList(p, type, row, col) {
+        p.type = type;
         p.blocks.push({row, col});
+        this.piece_list.list[id] = p;
         const index = this.getIndex(row, col);
         this.grid[index] = id;
     }
 
-    addEmpty(row, col) {
-        const id = this.empty_id;
-        let p = this.pieces[id];
+    addWall(row, col) {
+        const id = this.wall_id;
+        let p = this.piece_list.get(id);
         if (!p) {
-            p = new Piece(id, TileTypes.EMPTY);
+            p = new Piece(TileTypes.WALL);
         }
         
-        this.pieces[id] = p;
-        p.type = PieceTypes.PASSTHROUGH;
-        p.blocks.push({row, col});
-        const index = this.getIndex(row, col);
-        this.grid[index] = id;
+        this.addPieceToList(p, PieceTypes.STATIC, row, col);
+    }
+
+    addEmpty(row, col) {
+        const id = this.empty_id;
+        let p = this.piece_list.get(id);
+        if (!p) {
+            p = new Piece(TileTypes.EMPTY);
+        }
+        
+        this.addPieceToList(p, PieceTypes.PASSTHROUGH, row, col);
     }
 
     addPiece(row, col, type) {
@@ -222,11 +207,11 @@ class World {
             this.addEmpty(row, col);
         }
         else {
-            let id = this.block_id++;
-            const p = new Piece(id, type);
+            
+            const p = new Piece(type);
             p.type = PieceTypes.MOVABLE;
             p.blocks.push({row, col})
-            this.pieces.push(p);
+            const id = this.piece_list.add(p);
             const index = this.getIndex(row, col);
             this.grid[index] = id;
         }
@@ -287,37 +272,53 @@ class World {
 
     update() {
 
+
+        this.pieces[3].blocks.length = 0;
+        
         if (!command_buffer.hasCommands()) {
 
-            // Check and apply merge
+            let check_merge = true;
+            
+            // Check and apply gravity
             for (let piece of this.pieces) {
-                const tmp_grid = [...this.grid];
-                // Remove self from temporary grid
-                for (let {row, col} of piece.blocks) {
-                    const index = this.getIndex(row, col);
-                    tmp_grid[index] = this.empty_id;
+                let should_move = true;
+
+                for (let block of piece.blocks) { 
+                    let {row, col} = block;
+                    row++;
+                    const p = this.getPiece(row, col);
+                    if (p.type !== PieceTypes.PASSTHROUGH) {
+                        should_move = false;
+                        break;
+                    }
+                }
+
+                if (should_move) {
+                    const c = new Command(piece.id, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
+                    command_buffer.add(c);
+                    check_merge = false;
                 }
             }
 
-
-            // Apply gravity
-            for (let piece of this.pieces) {
-                let can_move = true;
-
-                for (let block of piece.blocks) {
+            if (check_merge) {
+                const tmp = [...this.pieces];
+                for (let piece of this.pieces) {
 
                 }
             }
+
         }
+        
 
-
-        while (command_buffer.hasCommands()) {
+        if (command_buffer.hasCommands()) {
             let command = command_buffer.pop();
             const {piece_id, instruction} = command;
             const p = this.pieces[piece_id];
 
-            console.log(command)
+
+       
             if (instruction.type == InstructionTypes.MOVE) {
+                
                 p.should_move = true;
                 p.move_direction = instruction.direction;
 
@@ -336,6 +337,7 @@ class World {
                         const other = this.getPiece(row, col);
                         if (other.type === PieceTypes.STATIC) {
                             can_move = false;
+                            move_pieces.length = 0;
                             break outer;
                         }
                         if (other.type === PieceTypes.MOVABLE) {
@@ -369,11 +371,13 @@ class World {
                             tmp_grid[index] = piece.id;
                         }
                         piece.should_move = false;
-                       
                     }
 
 
                     this.grid = [...tmp_grid];
+                }
+                else {
+
                 }
             }
         }
@@ -397,25 +401,6 @@ class World {
 };
 
 let world = new World();
-
-class Piece {
-    
-    constructor(id, type) {
-        this.id = id;
-        this.tile_type = type;
-    }
-    
-    addBlock(block) {
-        this.blocks.push(block);
-    }
-
-    id;
-    type = PieceTypes.PASSTHROUGH;
-    tile_type = TileTypes.EMPTY;
-    should_move = false;
-    move_direction = 0;
-    blocks = [];
-}
 
 
 
@@ -451,10 +436,10 @@ function main() {
         }
 
         if (e.key === 'r') {
+            
             recorder.add(world.getState());
             const level = game_state.level_index;
             loadLevel(level, levels, world);
-            
         }
 
         if (e.key === 'd') { 
@@ -468,10 +453,10 @@ function main() {
         const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         
         if (row < world.dimensions.h && col < world.dimensions.w) {
-
             const button = e.button;
-            world.handleClick(button, row, col);
-            
+            if (!command_buffer.hasCommands()) {
+                world.handleClick(button, row, col);
+            }
         }
         
     };
@@ -519,13 +504,13 @@ function loadLevel(index, levels, world) {
 
     console.log(world)
 
-    // Pre-pass to get world dimensions...
+    
     
     world.dimensions.h = level.length;
     world.dimensions.w = level[0].length;
 
 
-    // Actually load level...
+    // load level
     let row = 0;
     let col = 0;
 
@@ -569,13 +554,6 @@ function drawBlock(row, col, color) {
     ctx.fillRect(x, y, tile_size, tile_size);
 }
 
-function drawWall(row, col) {
-    drawBlock(row, col, "grey");
-}
-
-function drawEmpty (row, col) {
-    drawBlock(row, col, "lightblue");
-}
 
 function getScreenCoordFromTileCoord(row, col) {
     const tile_size = canvas.width / world.dimensions.w;
@@ -626,18 +604,10 @@ function floodFindOtherBlocks(world, row, col, piece, tile_type, walls = []) {
 
 
 
-function createPiece(row, col, world, tile_type, walls = []) { 
-    const p = new Piece(tile_type);
-    floodFindOtherBlocks(world, row, col, p, tile_type, walls);
-    return p;
-}
-
 
 
 function updateAndRender(world)  {
     clearBG("purple");
-
-  
 
     world.render();
     
