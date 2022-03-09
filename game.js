@@ -123,6 +123,7 @@ const MoveDirections = {
 
 const InstructionTypes = {
     MOVE: 0,
+    CHECK_GRAVITY: 1
 };
 
 class Instruction {
@@ -163,7 +164,20 @@ const PieceTypes = {
 
 class World {
 
-   
+    grid = [];
+    dimensions = {
+        w: 1,
+        h: 1
+    };
+    pieces = [];
+
+    // fixed
+    empty_id = 0;
+    wall_id  = 1;
+    block_id = 2;
+
+
+    
 
     getIndex(row, col) {
         return col + row * this.dimensions.w;
@@ -229,8 +243,9 @@ class World {
             if (button === MouseButtons.LEFT || button === MouseButtons.RIGHT) {
                 const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
                 let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
-                
                 command_buffer.add(command);
+
+                recorder.add( JSON.parse(JSON.stringify( this.getState() )) );
             }
         }
     }
@@ -245,17 +260,61 @@ class World {
         }
     };
 
+    getState() {
+        return {
+            dimensions: this.dimensions,
+            grid: this.grid,
+            pieces: this.pieces,
+            empty_id: this.empty_id,
+            wall_id: this.wall_id,
+            block_id: this.block_id
+        }
+    }
+
+
+    setState(s) {
+        const state = JSON.parse(JSON.stringify(s))
+        this.grid = state.grid;
+        this.dimensions = state.dimensions;
+        this.pieces = state.pieces;
+        this.empty_id = state.empty_id;
+        this.wall_id = state.wall_id;
+        this.block_id = state.block_id;
+    
+    }
 
     update() {
-        if (command_buffer.hasCommands()) {
-            let command = command_buffer.get();
+
+        if (!command_buffer.hasCommands()) {
+
+            // Check and apply merge
+            for (let piece of this.pieces) {
+                const tmp_grid = [...this.grid];
+                // Remove self from grid
+                for (let {row, col} of piece.blocks) {
+                    const index = this.getIndex(row, col);
+                    tmp_grid[index] = this.empty_id;
+                }
+            }
+
+
+            // Apply gravity
+            for (let piece of this.pieces) {
+                let can_move = true;
+
+                for (let block of piece.blocks) {
+
+                }
+            }
+        }
+
+
+        while (command_buffer.hasCommands()) {
+            let command = command_buffer.pop();
             const {piece_id, instruction} = command;
             const p = this.pieces[piece_id];
 
-            console.log(command, command_buffer.count)
-
-
-
+            console.log(command)
             if (instruction.type == InstructionTypes.MOVE) {
                 p.should_move = true;
                 p.move_direction = instruction.direction;
@@ -263,6 +322,7 @@ class World {
                 let move_pieces = [p];
 
                 let can_move = true;
+                
                 outer: for (let piece of move_pieces) {
                     
                     // CHECK TO SEE IF WE AND OTHER PIECES CAN MOVE
@@ -307,22 +367,14 @@ class World {
                             tmp_grid[index] = piece.id;
                         }
                         piece.should_move = false;
+                       
                     }
 
 
                     this.grid = [...tmp_grid];
-
-
-                    const c = new Command(p.id, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
-                   // command_buffer.add(c);
                 }
-
-                command_buffer.pop();
             }
         }
-
-       
-        
     }
 
 
@@ -339,20 +391,10 @@ class World {
         });
     }
 
-    grid = [];
-    dimensions = {
-        w: 1,
-        h: 1
-    };
-    pieces = [];
-
-    // fixed
-    empty_id = 0;
-    wall_id  = 1;
-    block_id = 2;
+   
 };
 
-let world = new World(1, 1);
+let world = new World();
 
 class Piece {
     
@@ -398,7 +440,11 @@ function main() {
     canvas.addEventListener("mousemove", onMouseMove);
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
-            //const prev = recorder.getPrevious();
+            const prev = recorder.getPrevious();
+            console.log(prev)
+            if (prev) {
+                world.setState(prev);
+            }
             //world = [...prev];
         }
 
@@ -465,6 +511,7 @@ function loadLevel(index, levels, world) {
     };
     const level = levels[index];
 
+    console.log(world)
 
     // Pre-pass to get world dimensions...
     
@@ -492,7 +539,6 @@ function loadLevel(index, levels, world) {
     canvas.width  = cell_size * world.dimensions.w;
     canvas.height = cell_size * world.dimensions.h;
 
-    console.log(world)
 }
 
 function mainLoop(time) {
