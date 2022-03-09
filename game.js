@@ -17,7 +17,7 @@ class Recorder {
             this.max *= 2;
             this.history.length = this.max;
         }
-        this.history[this.count] = world;
+        this.history[this.count] = JSON.parse(JSON.stringify( world ));
         this.count++;
     }
 
@@ -64,7 +64,7 @@ class CommandBuffer {
    
 
     commands = [];
-    max = 64;
+    max = 8;
     
     count = 0;
     end = 0;
@@ -78,6 +78,7 @@ let game_state = {
     running: false,
     level_colors: new Set(),
     has_won: false,
+    level_index : 0,
     mouse: {row: 0, col: 0}
 };
 
@@ -89,12 +90,13 @@ const DEFAULT_GAMESTATE = {...game_state};
 function reset(level) {
     game_state = {...DEFAULT_GAMESTATE};
     game_state.level_colors = new Set();
-    world = new World(1, 1);
+    world = new World();
     recorder = new Recorder();
     command_buffer = new CommandBuffer();
-   
+    
     const level_index = level - 1;
     loadLevel(level_index, levels, world);
+    game_state.level_index = level_index;
     
     game_state.running = true;
     mainLoop();
@@ -176,7 +178,7 @@ class World {
     wall_id  = 1;
     block_id = 2;
 
-
+    
     
 
     getIndex(row, col) {
@@ -245,7 +247,7 @@ class World {
                 let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
                 command_buffer.add(command);
 
-                recorder.add( JSON.parse(JSON.stringify( this.getState() )) );
+                recorder.add( this.getState() );
             }
         }
     }
@@ -290,7 +292,7 @@ class World {
             // Check and apply merge
             for (let piece of this.pieces) {
                 const tmp_grid = [...this.grid];
-                // Remove self from grid
+                // Remove self from temporary grid
                 for (let {row, col} of piece.blocks) {
                     const index = this.getIndex(row, col);
                     tmp_grid[index] = this.empty_id;
@@ -436,16 +438,23 @@ function main() {
     };
     
     canvas.addEventListener("mousedown", onMouseDown);
-    canvas.addEventListener("mouseup", onMouseUp);
+    
     canvas.addEventListener("mousemove", onMouseMove);
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
             const prev = recorder.getPrevious();
-            console.log(prev)
+          
             if (prev) {
                 world.setState(prev);
             }
-            //world = [...prev];
+          
+        }
+
+        if (e.key === 'r') {
+            recorder.add(world.getState());
+            const level = game_state.level_index;
+            loadLevel(level, levels, world);
+            
         }
 
         if (e.key === 'd') { 
@@ -453,11 +462,8 @@ function main() {
         }
     })
 
+    
     function onMouseDown(e) {
-        e.preventDefault();
-    };
-
-    function onMouseUp(e) {
         const {offsetX, offsetY} = e;
         const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         
