@@ -10,7 +10,6 @@ export class Piece {
     addBlock(block) {
         this.blocks.push(block);
     }
-    id = -1;
     type = PieceTypes.PASSTHROUGH;
     tile_type = TileTypes.EMPTY;
     should_move = false;
@@ -40,14 +39,33 @@ export class PieceList {
         return this.top_index - 1;
     }
 
+    cloneState() {
+        return {
+            list: [...this.list],
+            non_world_start: this.non_world_start,
+            top_index: this.top_index,
+            max: this.max
+        }
+    }
+
+    remake(state) {
+        this.list.length = state.max;
+        this.list = [...state.list];
+        this.max = state.max;
+        this.top_index = state.top_index;
+        this.non_world_start = state.non_world_start;
+    }
+
 
     get(index) {
         return this.list[index];
     }
 
     remove(index) {
-        const last = this.list[this.top_index - 1];
-        this.list[index] = last;
+        if (index < this.top_index - 1) {
+            const last = this.list[this.top_index - 1];
+            this.list[index] = last;
+        }
         this.top_index -= 1;
         if (this.top_index < this.non_world_start) {
             this.top_index = this.non_world_start;

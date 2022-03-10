@@ -99,6 +99,7 @@ function main() {
             if (prev) {
                 command_buffer.clear();
                 world.setState(prev);
+                console.log(world)
             }
           
         }
@@ -130,6 +131,7 @@ function main() {
                     let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
                     command_buffer.add(command);
                     recorder.add(world.getState());
+                    console.log(p)
                 }
             }
         }
