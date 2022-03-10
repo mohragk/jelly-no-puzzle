@@ -46,11 +46,11 @@ export class PieceList {
     }
 
     remove(index) {
-        const last = this.list[this.top_index];
+        const last = this.list[this.top_index - 1];
         this.list[index] = last;
-        this.top_index--;
-        if (this.top_index < 1) {
-            this.top_index = 1;
+        this.top_index -= 1;
+        if (this.top_index < this.non_world_start) {
+            this.top_index = this.non_world_start;
         }
     }
 
@@ -59,8 +59,9 @@ export class PieceList {
             const p = this.list[i];
             cb(p, i);
         }
-    }
+    } 
 }
+
 
 
 export const PieceTypes = {

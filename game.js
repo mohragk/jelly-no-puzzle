@@ -1,7 +1,8 @@
-import {levels}  from './levels2.js';
-import { TileTypes } from './tile.js'
+import { levels }  from './levels2.js';
+import { TileTypes } from './tile.js';
 
 import { World } from './world.js';
+import { CommandBuffer } from './command.js';
 
 let canvas, ctx;
 
@@ -33,48 +34,8 @@ class Recorder {
     }
 }
 
-let recorder = new Recorder();
-
-
-class CommandBuffer {
-
-    constructor() {
-        this.commands.length = this.max;
-    }
-
-    add(command) {
-        this.commands[this.end++] = command;
-        this.end %= this.max;
-        this.count++;
-    }
-
-    get() {
-        let c = this.commands[this.start];
-        return c;
-    }
-
-    pop() {
-        let c = this.commands[this.start++];
-        this.start %= this.max;
-        this.count--;
-        return c;
-    }
-
-    hasCommands() {
-        return this.count > 0;
-    }
-
-   
-
-    commands = [];
-    max = 8;
-    
-    count = 0;
-    end = 0;
-    start = 0;
-}
-
-let command_buffer = new CommandBuffer();
+let recorder;
+let command_buffer;
 
 
 let game_state = {
@@ -159,7 +120,7 @@ function main() {
         }
 
         if (e.key === 'r') {
-            
+            return
             recorder.add(world.getState());
             const level = game_state.level_index;
             loadLevel(level, levels, world);
@@ -225,10 +186,6 @@ function loadLevel(index, levels, world) {
     };
     const level = levels[index];
 
-    console.log(world)
-
-    
-    
     const h = level.length;
     const w = level[0].length;
     world.setDimensions(w, h);
@@ -254,6 +211,7 @@ function loadLevel(index, levels, world) {
     canvas.width  = cell_size * world.dimensions.w;
     canvas.height = cell_size * world.dimensions.h;
 
+    console.log(world)
 }
 
 function mainLoop(time) {

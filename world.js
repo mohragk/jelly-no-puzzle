@@ -15,11 +15,15 @@ export class World {
         w: 1,
         h: 1
     };
-    piece_list = new PieceList();
+    piece_list;
 
     // fixed
     empty_id = 0;
     wall_id  = 1;
+
+    constructor() {
+        this.piece_list = new PieceList();
+    }
    
 
     setDimensions(w, h) {
@@ -113,7 +117,7 @@ export class World {
         return {
             dimensions: this.dimensions,
             grid: this.grid,
-            pieces: this.pieces,
+            piece_list_list: this.piece_list.list,
             empty_id: this.empty_id,
             wall_id: this.wall_id,
             block_id: this.block_id
@@ -122,15 +126,16 @@ export class World {
 
 
     setState(s) {
-        const state = JSON.parse(JSON.stringify(s))
+        const state = JSON.parse(JSON.stringify(s));
         this.grid = state.grid;
         this.dimensions = state.dimensions;
-        this.pieces = state.pieces;
+        this.piece_list.list = state.piece_list_list;
         this.empty_id = state.empty_id;
         this.wall_id = state.wall_id;
         this.block_id = state.block_id;
-    
     }
+
+
 
     update(command_buffer) {
 
@@ -163,8 +168,79 @@ export class World {
                     command_buffer.add(c);
                 }
             }); 
-            
-            
+        }
+
+        // Check and apply merging of pieces!
+        if (!command_buffer.hasCommands()) {
+            let matching_pairs = [];
+
+
+            this.piece_list.forEach( piece => {
+
+                // remove self from lookup
+                const lookup_grid = [...this.grid];
+
+                for (let {row, col} of piece.blocks) {
+                    const index = this.getIndex(row, col);
+                    lookup_grid[index] = this.empty_id;
+                }
+ 
+                blocklabel: for (let {row, col} of piece.blocks) {
+                    
+                    
+                    // Check all neighbours of block
+                    const checkNeighbour = (row, col) => {
+                        const index = this.getIndex(row, col);
+                        const id = lookup_grid[index];
+                        const other = this.piece_list.get(id);
+                        if (other.tile_type === piece.tile_type) {
+                            matching_pairs.push([piece.id, other.id])
+                            return true;
+                        }
+
+                        return false;
+                    };
+
+                    {
+                        
+                        if ( checkNeighbour(row + 1, col) ) break blocklabel;
+                        if ( checkNeighbour(row - 1, col) ) break blocklabel;
+                        if ( checkNeighbour(row, col + 1) ) break blocklabel;
+                        if ( checkNeighbour(row, col - 1) ) break blocklabel;
+                    }
+                }
+            });
+
+            if (matching_pairs.length) {
+                // Only bother with 1 pair
+                const [f, s] = matching_pairs[0];
+                
+                const first = this.piece_list.get(f);
+                const second = this.piece_list.get(s);
+
+                // Remove other from grid
+                for (let {row, col} of second.blocks) {
+                    const index = this.getIndex(row, col);
+                    this.grid[index] = this.empty_id;
+                }
+                
+                // Copy blocks over
+                for (let block of second.blocks) {
+                    first.blocks.push(block);
+                }
+                second.blocks.length = 0;
+
+                // Remove second from list
+                this.piece_list.remove(s);
+
+                // Update grid
+                for (let {row, col} of first.blocks) {
+                    const index = this.getIndex(row, col);
+                    this.grid[index] = first.id;
+                }
+
+                console.log(this.piece_list)
+            }                
 
         }
         
@@ -203,9 +279,11 @@ export class World {
                             break outer;
                         }
                         if (other.type === PieceTypes.MOVABLE) {
-                            other.should_move = true;
-                            other.move_direction = piece.move_direction;
-                            move_pieces.push(other);
+                            if (other.id !== piece.id) {
+                                other.should_move = true;
+                                other.move_direction = piece.move_direction;
+                                move_pieces.push(other);
+                            }
                         }
                     }
                 }
