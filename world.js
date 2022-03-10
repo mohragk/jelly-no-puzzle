@@ -43,6 +43,7 @@ export class World {
         }
         const piece_type = type === TileTypes.WALL ? PieceTypes.STATIC : PieceTypes.PASSTHROUGH;
         p.type = type;
+        p.id = id;
         p.piece_type = piece_type;
         p.blocks.push({row, col});
         this.piece_list.list[id] = p;
@@ -60,6 +61,8 @@ export class World {
         else {
             
             const p = new Piece(type);
+            const ID = this.piece_list.top_index;
+            p.id = ID;
             p.type = PieceTypes.MOVABLE;
             p.blocks.push({row, col})
             const id = this.piece_list.add(p);
@@ -138,8 +141,8 @@ export class World {
         if (!command_buffer.hasCommands()) {
 
             this.piece_list.forEach( (piece, i) => {
-
-                if (piece.piece_type !== PieceTypes.MOVABLE) return;
+                
+                if (piece.type !== PieceTypes.MOVABLE) return;
 
                 
 
@@ -149,7 +152,6 @@ export class World {
                     let {row, col} = block;
                     row++;
                     const p = this.getPiece(row, col);
-                    console.log(p)
                     if (p.type !== PieceTypes.PASSTHROUGH) {
                         should_move = false;
                         break;
@@ -157,9 +159,8 @@ export class World {
                 }
     
                 if (should_move) {
-                    const c = new Command(piece.id, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
+                    const c = new Command(i, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
                     command_buffer.add(c);
-                    check_merge = false;
                 }
             }); 
             
@@ -170,7 +171,6 @@ export class World {
 
         if (command_buffer.hasCommands()) {
             let command = command_buffer.pop();
-            console.log(command)
             const {piece_id, instruction} = command;
             const p = this.piece_list.get(piece_id);
 
@@ -252,6 +252,12 @@ export class World {
         this.forEachTile( (row, col, index) => {
             const ID = this.grid[index];
             const p = this.piece_list.get(ID);
+            if (!p) {
+                console.log(index)
+                console.log(ID)
+                console.log(p)
+                console.log(this)
+            }
             const type = p.tile_type;
             drawBlock(row, col, getColorForTileType(type));
         });

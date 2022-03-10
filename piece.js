@@ -10,7 +10,7 @@ export class Piece {
     addBlock(block) {
         this.blocks.push(block);
     }
-
+    id = -1;
     type = PieceTypes.PASSTHROUGH;
     tile_type = TileTypes.EMPTY;
     should_move = false;
@@ -21,7 +21,8 @@ export class Piece {
 
 export class PieceList {
     list = [];
-    top_index = 1;
+    non_world_start = 2;
+    top_index = this.non_world_start;
     max = 16;
 
     constructor() {
@@ -54,7 +55,7 @@ export class PieceList {
     }
 
     forEach(cb) {
-        for (let i = 0 ; i < this.top_index; i++) {
+        for (let i = this.non_world_start ; i < this.top_index; i++) {
             const p = this.list[i];
             cb(p, i);
         }
