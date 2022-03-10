@@ -41,7 +41,7 @@ export class PieceList {
 
 
     get(index) {
-        this.list[index];
+        return this.list[index];
     }
 
     remove(index) {

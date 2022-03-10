@@ -3,6 +3,10 @@
     "nodemon": "^2.0.15"
   },
   "scripts": {
-    "start": "serve -s ."
+    "start": "npm run open",
+    "open" : " concurrently \"serve -s . \" \"start chrome http://localhost:3000 \" "
+  },
+  "devDependencies": {
+    "concurrently": "^7.0.0"
   }
 }

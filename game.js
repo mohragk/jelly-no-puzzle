@@ -1,6 +1,7 @@
 import {levels}  from './levels2.js';
-import { Piece, PieceList,  PieceTypes } from './piece.js';
 import { TileTypes } from './tile.js'
+
+import { World } from './world.js';
 
 let canvas, ctx;
 
@@ -105,7 +106,7 @@ function reset(level) {
 }
 
 
-function getColorForTileType (type) {
+export function getColorForTileType (type) {
     switch (type) {
         case TileTypes.EMPTY: return "lightblue";
         case TileTypes.WALL: return "gray";
@@ -119,292 +120,14 @@ function getColorForTileType (type) {
 
 
 
-const MoveDirections = {
-    LEFT:  [0, -1],
-    RIGHT: [0, 1],
-    DOWN:  [1, 0]
-};
-
-const InstructionTypes = {
-    MOVE: 0,
-};
-
-class Instruction {
-    constructor(type, direction) {
-        this.type = type;
-        this.direction = direction;
-    }
-    type      = InstructionTypes.MOVE;
-    direction = MoveDirections.LEFT;
-};
-
-class Command {
-    constructor(id, instruction) {
-        this.piece_id = id;
-        this.instruction = instruction;        
-    }
-    piece_id;
-    instruction;
-}
 
 
-class World {
-
-    grid = [];
-    dimensions = {
-        w: 1,
-        h: 1
-    };
-    pieces = [];
-    piece_list = new PieceList();
-
-    // fixed
-    empty_id = 0;
-    wall_id  = 1;
-   
-
-    
-    
-
-    getIndex(row, col) {
-        return col + row * this.dimensions.w;
-    }
-
-
-    addPieceToList(p, type, row, col) {
-        p.type = type;
-        p.blocks.push({row, col});
-        this.piece_list.list[id] = p;
-        const index = this.getIndex(row, col);
-        this.grid[index] = id;
-    }
-
-    addWall(row, col) {
-        const id = this.wall_id;
-        let p = this.piece_list.get(id);
-        if (!p) {
-            p = new Piece(TileTypes.WALL);
-        }
-        
-        this.addPieceToList(p, PieceTypes.STATIC, row, col);
-    }
-
-    addEmpty(row, col) {
-        const id = this.empty_id;
-        let p = this.piece_list.get(id);
-        if (!p) {
-            p = new Piece(TileTypes.EMPTY);
-        }
-        
-        this.addPieceToList(p, PieceTypes.PASSTHROUGH, row, col);
-    }
-
-    addPiece(row, col, type) {
-        if (type === TileTypes.WALL) {
-            this.addWall(row, col);
-        }
-        else if (type === TileTypes.EMPTY) {
-            this.addEmpty(row, col);
-        }
-        else {
-            
-            const p = new Piece(type);
-            p.type = PieceTypes.MOVABLE;
-            p.blocks.push({row, col})
-            const id = this.piece_list.add(p);
-            const index = this.getIndex(row, col);
-            this.grid[index] = id;
-        }
-    }
-
-    getPiece(row, col) {
-        const index = this.getIndex(row, col);
-        const id = this.grid[index];
-        return this.pieces[id];
-    }
-
-
-    handleClick(button, row, col) {
-        const p = this.getPiece(row, col);
-        if (p.type === PieceTypes.MOVABLE) {
-            if (button === MouseButtons.LEFT || button === MouseButtons.RIGHT) {
-                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
-                let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
-                command_buffer.add(command);
-
-                recorder.add( this.getState() );
-            }
-        }
-    }
-  
-
-    forEachTile = (cb) => {
-        for (let row = 0; row < this.dimensions.h; row++ ) {
-            for (let col = 0; col < this.dimensions.w; col++) {
-                const index = row * this.dimensions.w + col;
-                cb(row, col, index);
-            }
-        }
-    };
-
-    getState() {
-        return {
-            dimensions: this.dimensions,
-            grid: this.grid,
-            pieces: this.pieces,
-            empty_id: this.empty_id,
-            wall_id: this.wall_id,
-            block_id: this.block_id
-        }
-    }
-
-
-    setState(s) {
-        const state = JSON.parse(JSON.stringify(s))
-        this.grid = state.grid;
-        this.dimensions = state.dimensions;
-        this.pieces = state.pieces;
-        this.empty_id = state.empty_id;
-        this.wall_id = state.wall_id;
-        this.block_id = state.block_id;
-    
-    }
-
-    update() {
-
-
-        this.pieces[3].blocks.length = 0;
-        
-        if (!command_buffer.hasCommands()) {
-
-            let check_merge = true;
-            
-            // Check and apply gravity
-            for (let piece of this.pieces) {
-                let should_move = true;
-
-                for (let block of piece.blocks) { 
-                    let {row, col} = block;
-                    row++;
-                    const p = this.getPiece(row, col);
-                    if (p.type !== PieceTypes.PASSTHROUGH) {
-                        should_move = false;
-                        break;
-                    }
-                }
-
-                if (should_move) {
-                    const c = new Command(piece.id, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
-                    command_buffer.add(c);
-                    check_merge = false;
-                }
-            }
-
-            if (check_merge) {
-                const tmp = [...this.pieces];
-                for (let piece of this.pieces) {
-
-                }
-            }
-
-        }
-        
-
-        if (command_buffer.hasCommands()) {
-            let command = command_buffer.pop();
-            const {piece_id, instruction} = command;
-            const p = this.pieces[piece_id];
-
-
-       
-            if (instruction.type == InstructionTypes.MOVE) {
-                
-                p.should_move = true;
-                p.move_direction = instruction.direction;
-
-                let move_pieces = [p];
-
-                let can_move = true;
-                
-                outer: for (let piece of move_pieces) {
-                    
-                    // CHECK TO SEE IF WE AND OTHER PIECES CAN MOVE
-                    for (let block of piece.blocks) {
-                        let {row, col} = block;
-                        let [dir_row, dir_col] = piece.move_direction;
-                        col += dir_col;
-                        row += dir_row;
-                        const other = this.getPiece(row, col);
-                        if (other.type === PieceTypes.STATIC) {
-                            can_move = false;
-                            move_pieces.length = 0;
-                            break outer;
-                        }
-                        if (other.type === PieceTypes.MOVABLE) {
-                            other.should_move = true;
-                            other.move_direction = piece.move_direction;
-                            move_pieces.push(other);
-                        }
-                    }
-                }
-                    
-                if (can_move) {
-                    const tmp_grid = [...this.grid];
-                    for (let piece of move_pieces) {
-
-                        // clear movable blocks from grid state
-                        for (let block of piece.blocks) {
-                            let {row, col} = block;
-                            let index = this.getIndex(row, col);
-                            tmp_grid[index] = this.empty_id;
-                        }
-    
-                    }
-                    
-                    for (let piece of move_pieces) {
-                        for (let block of piece.blocks) {
-                            let [dir_row, dir_col] = piece.move_direction;
-                            block.col += dir_col;
-                            block.row += dir_row;
-                                    
-                            let index = this.getIndex(block.row, block.col);
-                            tmp_grid[index] = piece.id;
-                        }
-                        piece.should_move = false;
-                    }
-
-
-                    this.grid = [...tmp_grid];
-                }
-                else {
-
-                }
-            }
-        }
-    }
-
-
-    
-
-    render() {
-        this.update();
-        
-        this.forEachTile( (row, col, index) => {
-            const ID = this.grid[index];
-            const p = this.pieces[ID];
-            const type = p.tile_type;
-            drawBlock(row, col, getColorForTileType(type));
-        });
-    }
-
-   
-};
 
 let world = new World();
 
 
 
-const MouseButtons = {
+export const MouseButtons = {
     LEFT: 0,
     MIDDLE: 1,
     RIGHT: 2,
@@ -455,7 +178,7 @@ function main() {
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const button = e.button;
             if (!command_buffer.hasCommands()) {
-                world.handleClick(button, row, col);
+                world.handleClick(button, row, col, command_buffer, recorder);
             }
         }
         
@@ -506,8 +229,9 @@ function loadLevel(index, levels, world) {
 
     
     
-    world.dimensions.h = level.length;
-    world.dimensions.w = level[0].length;
+    const h = level.length;
+    const w = level[0].length;
+    world.setDimensions(w, h);
 
 
     // load level
@@ -548,7 +272,7 @@ function clearBG(color) {
     ctx.fillRect(0,0,  canvas.width, canvas.height);
 }
 
-function drawBlock(row, col, color) {
+export function drawBlock(row, col, color) {
     const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
     ctx.fillStyle = color;
     ctx.fillRect(x, y, tile_size, tile_size);
@@ -609,6 +333,7 @@ function floodFindOtherBlocks(world, row, col, piece, tile_type, walls = []) {
 function updateAndRender(world)  {
     clearBG("purple");
 
+    world.update(command_buffer);
     world.render();
     
 }
