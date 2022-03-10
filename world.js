@@ -3,10 +3,20 @@ import { Piece, PieceList,  PieceTypes } from './piece.js';
 import { Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
 import { TileTypes } from './tile.js'
 
-import { drawBlock, drawBlockText, getColorForTileType, MouseButtons } from './game.js';
+import { drawBlock, drawBlockText, MouseButtons } from './game.js';
 
 
+function getColorForTileType (type) {
+    switch (type) {
+        case TileTypes.EMPTY: return "lightblue";
+        case TileTypes.WALL: return "gray";
 
+        case TileTypes.RED_BLOCK: return "red";
+        case TileTypes.BLUE_BLOCK: return "blue";
+        case TileTypes.GREEN_BLOCK: return "green";
+        default: return "black"
+    }
+}
 
 export class World {
 
@@ -90,6 +100,9 @@ export class World {
         return id;
     }
 
+
+   
+
     handleClick(button, row, col, command_buffer, recorder) {
         const p = this.getPiece(row, col);
         if (p.type === PieceTypes.MOVABLE) {
@@ -98,7 +111,7 @@ export class World {
                 let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
                 command_buffer.add(command);
 
-                recorder.add( this.getState() );
+                //recorder.add( this.getState() );
             }
         }
     }
@@ -125,10 +138,10 @@ export class World {
 
 
     setState(s) {
-        const state = JSON.parse(JSON.stringify(s));
-        this.grid = state.grid;
+        const state = s;
+        this.grid = [...state.grid];
         this.dimensions = state.dimensions;
-        this.piece_list.list = state.piece_list_list;
+        this.piece_list.list = [...state.piece_list_list];
         this.empty_id = state.empty_id;
         this.wall_id = state.wall_id;
     }
@@ -163,7 +176,7 @@ export class World {
             }); 
         }
 
-        // Check and apply merging of pieces!
+        // Check and apply merging of pieces
         if (!command_buffer.hasCommands()) {
             let matching_pairs = [];
 
@@ -236,6 +249,7 @@ export class World {
 
         }
         
+        
 
         while (command_buffer.hasCommands()) {
             let command = command_buffer.pop();
@@ -272,6 +286,7 @@ export class World {
                         }
                         if (other.type === PieceTypes.MOVABLE) {
                             if (other.id !== piece.id) {
+                               
                                 other.should_move = true;
                                 other.move_direction = piece.move_direction;
                                 move_pieces.push(other);

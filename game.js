@@ -2,7 +2,7 @@ import { levels }  from './levels2.js';
 import { TileTypes } from './tile.js';
 
 import { World } from './world.js';
-import { CommandBuffer } from './command.js';
+import { CommandBuffer, Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
 
 let canvas, ctx;
 
@@ -16,12 +16,12 @@ class Recorder {
         this.history.length = this.max;
     }
 
-    add(world) {
+    add(state) {
         if (this.count >= this.history.length) {
             this.max *= 2;
             this.history.length = this.max;
         }
-        this.history[this.count] = JSON.parse(JSON.stringify( world ));
+        this.history[this.count] =  JSON.parse(JSON.stringify(state)) ;
         this.count++;
     }
 
@@ -49,6 +49,7 @@ let game_state = {
 let DEBUG_RENDER_WALLS = false;
 const DEFAULT_GAMESTATE = {...game_state};
 
+let world = new World();
 
 
 function reset(level) {
@@ -67,24 +68,6 @@ function reset(level) {
 }
 
 
-export function getColorForTileType (type) {
-    switch (type) {
-        case TileTypes.EMPTY: return "lightblue";
-        case TileTypes.WALL: return "gray";
-
-        case TileTypes.RED_BLOCK: return "red";
-        case TileTypes.BLUE_BLOCK: return "blue";
-        case TileTypes.GREEN_BLOCK: return "green";
-        default: return "black"
-    }
-}
-
-
-
-
-
-
-let world = new World();
 
 
 
@@ -108,7 +91,6 @@ function main() {
     
     canvas.addEventListener("mousedown", onMouseDown);
     
-    canvas.addEventListener("mousemove", onMouseMove);
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
             const prev = recorder.getPrevious();
@@ -140,18 +122,18 @@ function main() {
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const button = e.button;
             if (!command_buffer.hasCommands()) {
-                world.handleClick(button, row, col, command_buffer, recorder);
+                // world.handleClick(button, row, col, command_buffer, recorder);
+                const p = world.getPiece(row, col);
+                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
+                command_buffer.add(command);
+                recorder.add(world.getState());
             }
         }
         
     };
 
-    function onMouseMove (e) {
-        let {offsetX, offsetY} = e;
-        game_state.mouse.x = offsetX;
-        game_state.mouse.y = offsetY;
-    };
-    
+   
    
 
     // Check level selection
@@ -236,8 +218,13 @@ export function drawBlockText(row, col, text, text_color = "white") {
     ctx.fillStyle = "black";
     ctx.fillRect(x, y, tile_size, tile_size);
 
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(x, y, tile_size, tile_size);
+
     ctx.fillStyle = text_color;
-    ctx.fillText(text, x+12, y+12);
+    ctx.font = "32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x+tile_size/2, y+tile_size/2);
 }
 
 export function drawBlock(row, col, color) {
@@ -262,37 +249,6 @@ function getTileCoordFromScreenCoord(x, y) {
     return {row, col};
 }
 
-
-
-function getIndexForGrid(row, col) {
-    return row * world_dimensions.w + col;
-}
-
-function getTile(row, col, world) {
-    const index = getIndexForGrid(row, col);
-    return world[index];
-}
-
-
-
-function floodFindOtherBlocks(world, row, col, piece, tile_type, walls = []) {
-    const index = getIndexForGrid(row, col);
-    const the_tile = getTile(row, col, world);
-    if (the_tile === tile_type) {
-        
-        // Remove block from grid, add a wall to wall-grid
-        world[index] = TileTypes.EMPTY;
-        walls[index] = TileTypes.WALL;
-        
-        piece.addBlock({row, col});
-        
-        
-        floodFindOtherBlocks(world, row -1, col     , piece, tile_type, walls);
-        floodFindOtherBlocks(world, row +1, col     , piece, tile_type, walls);
-        floodFindOtherBlocks(world, row   , col - 1 , piece, tile_type, walls);
-        floodFindOtherBlocks(world, row   , col + 1 , piece, tile_type, walls);
-    }
-}
 
 
 
