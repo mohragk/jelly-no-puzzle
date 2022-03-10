@@ -1,6 +1,7 @@
 import { levels }  from './levels2.js';
 import { TileTypes } from './tile.js';
 
+import { PieceTypes } from './piece.js';
 import { World } from './world.js';
 import { CommandBuffer, Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
 
@@ -124,10 +125,12 @@ function main() {
             if (!command_buffer.hasCommands()) {
                 // world.handleClick(button, row, col, command_buffer, recorder);
                 const p = world.getPiece(row, col);
-                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
-                let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
-                command_buffer.add(command);
-                recorder.add(world.getState());
+                if (p.type === PieceTypes.MOVABLE) {
+                    const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                    let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
+                    command_buffer.add(command);
+                    recorder.add(world.getState());
+                }
             }
         }
         
