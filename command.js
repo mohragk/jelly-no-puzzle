@@ -55,6 +55,13 @@ export class CommandBuffer {
         return this.count > 0;
     }
 
+    clear() {
+        this.count = 0;
+        this.start = 0;
+        this.end = 0;
+        this.commands = [];
+        this.commands.length = this.max;
+    }
    
 
     commands = [];

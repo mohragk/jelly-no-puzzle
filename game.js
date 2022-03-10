@@ -114,6 +114,7 @@ function main() {
             const prev = recorder.getPrevious();
           
             if (prev) {
+                command_buffer.clear();
                 world.setState(prev);
             }
           
@@ -230,6 +231,15 @@ function clearBG(color) {
     ctx.fillRect(0,0,  canvas.width, canvas.height);
 }
 
+export function drawBlockText(row, col, text, text_color = "white") {
+    const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+    ctx.fillStyle = "black";
+    ctx.fillRect(x, y, tile_size, tile_size);
+
+    ctx.fillStyle = text_color;
+    ctx.fillText(text, x+12, y+12);
+}
+
 export function drawBlock(row, col, color) {
     const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
     ctx.fillStyle = color;
@@ -293,6 +303,10 @@ function updateAndRender(world)  {
 
     world.update(command_buffer);
     world.render();
+
+    if (DEBUG_RENDER_WALLS) {
+        world.debugRenderGrid();
+    }
     
 }
 

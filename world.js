@@ -3,7 +3,7 @@ import { Piece, PieceList,  PieceTypes } from './piece.js';
 import { Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
 import { TileTypes } from './tile.js'
 
-import { drawBlock, getColorForTileType, MouseButtons } from './game.js';
+import { drawBlock, drawBlockText, getColorForTileType, MouseButtons } from './game.js';
 
 
 
@@ -120,7 +120,6 @@ export class World {
             piece_list_list: this.piece_list.list,
             empty_id: this.empty_id,
             wall_id: this.wall_id,
-            block_id: this.block_id
         }
     }
 
@@ -132,16 +131,12 @@ export class World {
         this.piece_list.list = state.piece_list_list;
         this.empty_id = state.empty_id;
         this.wall_id = state.wall_id;
-        this.block_id = state.block_id;
     }
 
 
 
     update(command_buffer) {
 
-
-        
-        
         // Check and apply gravity
         if (!command_buffer.hasCommands()) {
 
@@ -149,15 +144,13 @@ export class World {
                 
                 if (piece.type !== PieceTypes.MOVABLE) return;
 
-                
-
                 let should_move = true;
     
                 for (let block of piece.blocks) { 
                     let {row, col} = block;
                     row++;
                     const p = this.getPiece(row, col);
-                    if (p.type !== PieceTypes.PASSTHROUGH) {
+                    if (p.type !== PieceTypes.PASSTHROUGH && p.id !== piece.id) {
                         should_move = false;
                         break;
                     }
@@ -239,13 +232,12 @@ export class World {
                     this.grid[index] = first.id;
                 }
 
-                console.log(this.piece_list)
             }                
 
         }
         
 
-        if (command_buffer.hasCommands()) {
+        while (command_buffer.hasCommands()) {
             let command = command_buffer.pop();
             const {piece_id, instruction} = command;
             const p = this.piece_list.get(piece_id);
@@ -322,6 +314,12 @@ export class World {
     }
 
 
+    debugRenderGrid() {
+        this.forEachTile( (r, c, index) => {
+            const text = this.grid[index];
+            drawBlockText(r, c, text);
+        });
+    }
     
 
     render() {
@@ -330,12 +328,6 @@ export class World {
         this.forEachTile( (row, col, index) => {
             const ID = this.grid[index];
             const p = this.piece_list.get(ID);
-            if (!p) {
-                console.log(index)
-                console.log(ID)
-                console.log(p)
-                console.log(this)
-            }
             const type = p.tile_type;
             drawBlock(row, col, getColorForTileType(type));
         });
