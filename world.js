@@ -1,38 +1,21 @@
-
-import { Piece, PieceList, PieceTypes } from './piece.js';
-import { Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
-import { TileTypes } from './tile.js'
-
-import { drawBlock, drawBlockText, MouseButtons } from './game.js';
+import {lerp} from './math.js';
 
 
-function getColorForTileType(type) {
-    switch (type) {
-        case TileTypes.EMPTY: return "lightblue";
-        case TileTypes.WALL: return "gray";
+import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord } from './game.js';
+import { GameplayFlags, Tile } from './tile.js';
 
-        case TileTypes.RED_BLOCK: return "red";
-        case TileTypes.BLUE_BLOCK: return "blue";
-        case TileTypes.GREEN_BLOCK: return "green";
-        default: return "black"
-    }
-}
 
 export class World {
 
-    grid = [];
     dimensions = {
         w: 1,
         h: 1
     };
-    piece_list;
-
-    // fixed
-    empty_id = 0;
-    wall_id = 1;
+    grid = [];
+    move_speed = 10.0;
 
     constructor() {
-        this.piece_list = new PieceList();
+
     }
 
 
@@ -47,63 +30,53 @@ export class World {
         return row * this.dimensions.w + col;
     }
 
-
-
-    addWallOrEmpty(row, col, type) {
-        let id = type === TileTypes.WALL ? this.wall_id : this.empty_id;
-        let p = this.piece_list.get(id);
-        if (!p) {
-            p = new Piece(type);
-        }
-        const piece_type = type === TileTypes.WALL ? PieceTypes.STATIC : PieceTypes.PASSTHROUGH;
-        p.type = type;
-        p.id = id;
-        p.piece_type = piece_type;
-        p.blocks.push({ row, col });
-        this.piece_list.list[id] = p;
+    getTile(row, col) {
         const index = this.getIndex(row, col);
-        this.grid[index] = id;
+        return this.grid[index];
+    }
 
+    putInGrid(row, col, tile) {
+        tile.world_pos.row = row;
+        tile.world_pos.col = col;
+        const grid_index = this.getIndex(row, col);
+        this.grid[grid_index] = tile;
     }
 
 
+    updateTile(tile, dt) {
+        
+        if (tile.should_move) {
 
-    addPiece(row, col, type) {
-        if (type === TileTypes.WALL || type === TileTypes.EMPTY) {
-            this.addWallOrEmpty(row, col, type);
+                tile.move_t += this.move_speed * dt;
+                
+                if (tile.move_t > 1) {
+                    tile.move_t = 0;
+                    tile.should_move = false;
+    
+                    let empty_tile = new Tile();
+                    empty_tile.gameplay_flags |= GameplayFlags.EMPTY;
+                    this.putInGrid(tile.world_pos.row, tile.world_pos.col, empty_tile);
+    
+                    tile.world_pos = tile.target_pos;
+                    this.putInGrid(tile.world_pos.row, tile.world_pos.col, tile);
+                }
+            
         }
-        else {
+        let start  = getScreenCoordFromTileCoord(tile.world_pos.row, tile.world_pos.col);
+        let target = getScreenCoordFromTileCoord(tile.target_pos.row, tile.target_pos.col);
+        
+        let x = lerp(start.x, target.x, tile.move_t);
+        let y = lerp(start.y, target.y, tile.move_t);
 
-            const p = new Piece(type);
-            const ID = this.piece_list.top_index;
-            p.id = ID;
-            p.type = PieceTypes.MOVABLE;
-            p.blocks.push({ row, col })
-            const id = this.piece_list.add(p);
-            const index = this.getIndex(row, col);
-            this.grid[index] = id;
-        }
+        tile.visual_pos[0] = x;
+        tile.visual_pos[1] = y;
+        
     }
-
-
-    getPiece(row, col) {
-        const id = this.getPieceID(row, col);
-        const p = this.piece_list.get(id);
-        p.id = id;
-        return p;
-    }
-
-
-    getPieceID(row, col) {
-        const index = this.getIndex(row, col);
-        const id = this.grid[index];
-        return id;
-    }
+    
 
 
 
-
-    forEachTile = (cb) => {
+    forEachCell = (cb) => {
         for (let row = 0; row < this.dimensions.h; row++) {
             for (let col = 0; col < this.dimensions.w; col++) {
                 const index = row * this.dimensions.w + col;
@@ -112,231 +85,36 @@ export class World {
         }
     };
 
-    getState() {
-        return {
-            dimensions: this.dimensions,
-            grid: this.grid,
-            piece_list_state: this.piece_list.cloneState(),
-            empty_id: this.empty_id,
-            wall_id: this.wall_id,
-        }
+    
+
+    update(dt) {
+        this.forEachCell((row, col, index) => {
+            this.updateTile(this.grid[index], dt);
+        })
     }
 
 
-    setState(s) {
-        const state = s;
-        this.grid = [...state.grid];
-        this.dimensions = state.dimensions;
-        this.piece_list.remake(state.piece_list_state);
-        this.empty_id = state.empty_id;
-        this.wall_id = state.wall_id;
-    }
-
-
-
-    update(command_buffer) {
-
-        // Check and apply gravity
-        if (!command_buffer.hasCommands()) {
-
-            this.piece_list.forEach((piece, i) => {
-
-                if (piece.type !== PieceTypes.MOVABLE) return;
-
-                let should_move = true;
-
-                for (let block of piece.blocks) {
-                    let { row, col } = block;
-                    row++;
-                    const p = this.getPiece(row, col);
-                    if (p.type !== PieceTypes.PASSTHROUGH && p.id !== piece.id) {
-                        should_move = false;
-                        break;
-                    }
-                }
-
-                if (should_move) {
-                    const c = new Command(i, new Instruction(InstructionTypes.MOVE, MoveDirections.DOWN));
-                    command_buffer.add(c);
-                }
-            });
-        }
-
-        // Check and apply merging of pieces
-        if (!command_buffer.hasCommands()) {
-            let matching_pairs = [];
-
-
-            this.piece_list.forEach(piece => {
-
-                // remove self from lookup
-                const lookup_grid = [...this.grid];
-
-                for (let { row, col } of piece.blocks) {
-                    const index = this.getIndex(row, col);
-                    lookup_grid[index] = this.empty_id;
-                }
-
-                blocklabel: for (let { row, col } of piece.blocks) {
-
-
-                    // Check all neighbours of block
-                    const checkNeighbour = (row, col) => {
-                        const index = this.getIndex(row, col);
-                        const id = lookup_grid[index];
-                        const other = this.piece_list.get(id);
-                        if (other.tile_type === piece.tile_type) {
-                            if (other.id !== piece.id) {
-                                matching_pairs.push([piece.id, other.id])
-                                return true;
-                            }
-                        }
-
-                        return false;
-                    };
-
-                    {
-
-                        if (checkNeighbour(row + 1, col)) break blocklabel;
-                        if (checkNeighbour(row - 1, col)) break blocklabel;
-                        if (checkNeighbour(row, col + 1)) break blocklabel;
-                        if (checkNeighbour(row, col - 1)) break blocklabel;
-                    }
-                }
-            });
-
-            if (matching_pairs.length) {
-                // Only bother with 1 pair
-                const [f, s] = matching_pairs[0].sort();
-
-                console.log(f,s)
-
-                const first  = this.piece_list.get(f);
-                const second = this.piece_list.get(s);
-
-                // Remove other from grid
-                for (let { row, col } of second.blocks) {
-                    const index = this.getIndex(row, col);
-                    this.grid[index] = this.empty_id;
-                }
-
-                // Copy blocks over
-                for (let block of second.blocks) {
-                    first.blocks.push(block);
-                }
-                second.blocks.length = 0;
-
-                // Remove second from list
-                this.piece_list.remove(s);
-
-                // Update grid
-                for (let { row, col } of first.blocks) {
-                    const index = this.getIndex(row, col);
-                    this.grid[index] = first.id;
-                }
-
-                console.log(this)
-            }
-
-        }
-
-
-
-        while (command_buffer.hasCommands()) {
-            let command = command_buffer.pop();
-            const { piece_id, instruction } = command;
-            const p = this.piece_list.get(piece_id);
-
-
-
-            if (instruction.type == InstructionTypes.MOVE) {
-
-                p.should_move = true;
-                p.move_direction = instruction.direction;
-
-                let move_pieces = [p];
-
-                let can_move = true;
-
-
-
-
-                outer: for (let piece of move_pieces) {
-
-                    // CHECK TO SEE IF WE AND OTHER PIECES CAN MOVE
-                    for (let block of piece.blocks) {
-                        let { row, col } = block;
-                        let [dir_row, dir_col] = piece.move_direction;
-                        col += dir_col;
-                        row += dir_row;
-                        const other = this.getPiece(row, col);
-                        if (other.type === PieceTypes.STATIC) {
-                            can_move = false;
-                            move_pieces.length = 0;
-                            break outer;
-                        }
-                        if (other.type === PieceTypes.MOVABLE) {
-                            if (other.id !== piece.id) {
-
-                                other.should_move = true;
-                                other.move_direction = piece.move_direction;
-                                move_pieces.push(other);
-                            }
-                        }
-                    }
-                }
-
-                if (can_move) {
-                    const tmp_grid = [...this.grid];
-                    for (let piece of move_pieces) {
-
-                        // clear movable blocks from grid state
-                        for (let block of piece.blocks) {
-                            let { row, col } = block;
-                            let index = this.getIndex(row, col);
-                            tmp_grid[index] = this.empty_id;
-                        }
-
-                    }
-
-                    for (let piece of move_pieces) {
-                        for (let block of piece.blocks) {
-                            let [dir_row, dir_col] = piece.move_direction;
-                            block.col += dir_col;
-                            block.row += dir_row;
-
-                            let index = this.getIndex(block.row, block.col);
-                            tmp_grid[index] = piece.id;
-                        }
-                        piece.should_move = false;
-                    }
-
-
-                    this.grid = [...tmp_grid];
-                }
-
-            }
-        }
-    }
-
-
-    debugRenderGrid() {
-        this.forEachTile((r, c, index) => {
-            const text = this.grid[index];
-            drawBlockText(r, c, text);
+    debugRenderCells() {
+        this.forEachCell((row, col, index) => {
+            const text = this.getTile(row, col).gameplay_flags;
+            drawBlockText(row, col, text, "red" )
         });
     }
-
-
+ 
     render() {
 
+        // Draw level
+        this.forEachCell((row, col, index) => {
+            const tile = this.grid[index];
+            if (!(tile.gameplay_flags & GameplayFlags.EMPTY)) {
+                const [x, y] = tile.visual_pos;
+                drawBlockNonUnitScale(x, y, tile.color);
+            }
 
-        this.forEachTile((row, col, index) => {
-            const ID = this.grid[index];
-            const p = this.piece_list.get(ID);
-            const type = p.tile_type;
-            drawBlock(row, col, getColorForTileType(type));
         });
+
+        
+
     }
 
 

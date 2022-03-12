@@ -1,7 +1,6 @@
 import { levels }  from './levels2.js';
-import { TileTypes } from './tile.js';
+import { GameplayFlags, Tile } from './tile.js';
 
-import { PieceTypes } from './piece.js';
 import { World } from './world.js';
 import { CommandBuffer, Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
 
@@ -44,14 +43,15 @@ let game_state = {
     level_colors: new Set(),
     has_won: false,
     level_index : 0,
-    mouse: {row: 0, col: 0}
+    mouse: {row: 0, col: 0},
+    frame_count: 0
 };
 
 let DEBUG_RENDER_WALLS = false;
 const DEFAULT_GAMESTATE = {...game_state};
 
 let world = new World();
-
+let last_time = 0;
 
 function reset(level) {
     game_state = {...DEFAULT_GAMESTATE};
@@ -96,12 +96,7 @@ function main() {
         if (e.key === 'z') {
             const prev = recorder.getPrevious();
           
-            if (prev) {
-                command_buffer.clear();
-                world.setState(prev);
-                console.log(world)
-            }
-          
+            
         }
 
         if (e.key === 'r') {
@@ -119,21 +114,19 @@ function main() {
     
     function onMouseDown(e) {
         const {offsetX, offsetY} = e;
-        const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
+        let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const button = e.button;
-            if (!command_buffer.hasCommands()) {
-                // world.handleClick(button, row, col, command_buffer, recorder);
-                const p = world.getPiece(row, col);
-                if (p.type === PieceTypes.MOVABLE) {
-                    const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
-                    let command = new Command(p.id, new Instruction(InstructionTypes.MOVE, dir));
-                    command_buffer.add(command);
-                    recorder.add(world.getState());
-                    console.log(p)
-                }
+            const tile = world.getTile(row, col);
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !tile.should_move;
+
+            if (apply) {
+                tile.should_move = true;
+                col += (button === MouseButtons.LEFT) ? -1 : 1;
+                tile.target_pos = {row, col}
             }
+            
         }
         
     };
@@ -163,13 +156,32 @@ function main() {
 
 
 function loadLevel(index, levels, world) {
-    const getTileTypeFromChar = (c) => {
+    const getTileFromChar = (c) => {
+        const t = new Tile();
         switch (c) {
-            case ' ': return TileTypes.EMPTY;
-            case 'x': return TileTypes.WALL;
-            case 'r': return TileTypes.RED_BLOCK;
-            case 'g': return TileTypes.GREEN_BLOCK;
-            case 'b': return TileTypes.BLUE_BLOCK;
+            case ' ': {
+                t.gameplay_flags |= GameplayFlags.EMPTY;
+                return t;
+            }
+            case 'x': {
+                t.color = "gray";
+                return t;
+            }
+            case 'r': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.color = "red";
+                return t;
+            }
+            case 'g': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.color = "green";
+                return t;
+            }
+            case 'b': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.color = "blue";
+                return t;
+            }
         }
     };
     const level = levels[index];
@@ -186,8 +198,8 @@ function loadLevel(index, levels, world) {
     for (let line of level) {
         for (let c of line) {
            
-            const type = getTileTypeFromChar(c);
-            world.addPiece(row, col, type);
+            const tile = getTileFromChar(c);
+            world.putInGrid(row, col, tile);
 
             col++;
         }
@@ -207,8 +219,10 @@ function mainLoop(time) {
         alert("You won!")
     }
 
+    const dt = (time - last_time) / 1000.0;
+    last_time = time;
     if (game_state.running) {
-        updateAndRender(world);
+        updateAndRender(world, dt);
         requestAnimationFrame(mainLoop);
     }
 }
@@ -239,14 +253,22 @@ export function drawBlock(row, col, color) {
 }
 
 
-function getScreenCoordFromTileCoord(row, col) {
+export function drawBlockNonUnitScale(x, y, color) {
+    const size = canvas.width / world.dimensions.w;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, size, size);
+}
+
+export function getScreenCoordFromTileCoord(row, col) {
     const tile_size = canvas.width / world.dimensions.w;
     let y = row * tile_size;
     let x = col * tile_size;
     return {x, y, tile_size};
 }
 
-function getTileCoordFromScreenCoord(x, y) {
+
+
+export function getTileCoordFromScreenCoord(x, y) {
     const tile_size = canvas.width / world.dimensions.w;
     let row = Math.floor(y / tile_size);
     let col = Math.floor(x / tile_size);
@@ -259,16 +281,15 @@ function getTileCoordFromScreenCoord(x, y) {
 
 
 
-function updateAndRender(world)  {
-    clearBG("purple");
+function updateAndRender(world, dt) {
+    clearBG("lightblue");
 
-    world.update(command_buffer);
+    world.update(dt);
     world.render();
 
     if (DEBUG_RENDER_WALLS) {
-        world.debugRenderGrid();
+        world.debugRenderCells();
     }
-    
 }
 
 
