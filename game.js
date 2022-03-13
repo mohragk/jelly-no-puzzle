@@ -114,7 +114,7 @@ function main() {
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const button = e.button;
             const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !tile.should_move;
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length;
 
             if (apply) {
                 const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
