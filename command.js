@@ -1,29 +1,16 @@
 export const MoveDirections = {
-    LEFT:  [0, -1],
-    RIGHT: [0, 1],
-    DOWN:  [1, 0]
+    LEFT:  -1,
+    RIGHT: 1,
+    DOWN:  10
 };
 
-export const InstructionTypes = {
-    MOVE: 0,
-};
-
-export class Instruction {
-    constructor(type, direction) {
-        this.type = type;
-        this.direction = direction;
+export class MoveCommand {
+    constructor(coord, direction) {
+        this.coord = coord;
+        this.direction = direction;        
     }
-    type      = InstructionTypes.MOVE;
-    direction = MoveDirections.LEFT;
-};
-
-export class Command {
-    constructor(id, instruction) {
-        this.piece_id = id;
-        this.instruction = instruction;        
-    }
-    piece_id;
-    instruction;
+    coord;
+    direction;
 }
 
 
@@ -65,7 +52,7 @@ export class CommandBuffer {
    
 
     commands = [];
-    max = 8;
+    max = 32;
     
     count = 0;
     end = 0;

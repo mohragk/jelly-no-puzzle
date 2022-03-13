@@ -2,9 +2,10 @@ import { levels }  from './levels2.js';
 import { GameplayFlags, Tile } from './tile.js';
 
 import { World } from './world.js';
-import { CommandBuffer, Command, Instruction, InstructionTypes, MoveDirections } from './command.js';
+import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 
 let canvas, ctx;
+let command_buffer;
 
 
 class Recorder {
@@ -35,7 +36,6 @@ class Recorder {
 }
 
 let recorder;
-let command_buffer;
 
 
 let game_state = {
@@ -94,16 +94,11 @@ function main() {
     
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
-            const prev = recorder.getPrevious();
-          
             
         }
 
         if (e.key === 'r') {
-            return
-            recorder.add(world.getState());
-            const level = game_state.level_index;
-            loadLevel(level, levels, world);
+
         }
 
         if (e.key === 'd') { 
@@ -122,9 +117,9 @@ function main() {
             const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !tile.should_move;
 
             if (apply) {
-                tile.should_move = true;
-                col += (button === MouseButtons.LEFT) ? -1 : 1;
-                tile.target_pos = {row, col}
+                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                const c = new MoveCommand({row, col}, dir);
+                command_buffer.add(c);
             }
             
         }
@@ -160,10 +155,10 @@ function loadLevel(index, levels, world) {
         const t = new Tile();
         switch (c) {
             case ' ': {
-                t.gameplay_flags |= GameplayFlags.EMPTY;
                 return t;
             }
             case 'x': {
+                t.gameplay_flags |= GameplayFlags.STATIC;
                 t.color = "gray";
                 return t;
             }
@@ -191,7 +186,6 @@ function loadLevel(index, levels, world) {
     world.setDimensions(w, h);
 
 
-    // load level
     let row = 0;
     let col = 0;
 
@@ -222,7 +216,7 @@ function mainLoop(time) {
     const dt = (time - last_time) / 1000.0;
     last_time = time;
     if (game_state.running) {
-        updateAndRender(world, dt);
+        updateAndRender(world, command_buffer, dt);
         requestAnimationFrame(mainLoop);
     }
 }
@@ -281,10 +275,10 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 
 
-function updateAndRender(world, dt) {
+function updateAndRender(world, command_buffer, dt) {
     clearBG("lightblue");
 
-    world.update(dt);
+    world.update(command_buffer, dt);
     world.render();
 
     if (DEBUG_RENDER_WALLS) {
