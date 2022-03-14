@@ -26,10 +26,6 @@ export class CommandBuffer {
         this.count++;
     }
 
-    get() {
-        let c = this.commands[this.start];
-        return c;
-    }
 
     pop() {
         let c = this.commands[this.start++];

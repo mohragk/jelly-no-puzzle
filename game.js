@@ -1,6 +1,8 @@
 import { levels }  from './levels2.js';
 import { GameplayFlags, Tile } from './tile.js';
 
+import { Recorder } from './recorder.js';
+
 import { World } from './world.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 
@@ -8,34 +10,7 @@ let canvas, ctx;
 let command_buffer;
 
 
-class Recorder {
-    history = [];
-    count = 0;
-    max = 16;
-
-    constructor() {
-        this.history.length = this.max;
-    }
-
-    add(state) {
-        if (this.count >= this.history.length) {
-            this.max *= 2;
-            this.history.length = this.max;
-        }
-        this.history[this.count] =  JSON.parse(JSON.stringify(state)) ;
-        this.count++;
-    }
-
-    getPrevious() {
-        this.count --;
-        if (this.count < 0) {
-            this.count = 0;
-        }
-        return this.history[this.count];
-    }
-}
-
-let recorder;
+let recorder = new Recorder();
 export const EdgePlacements = {
     TOP: 0,
     BOTTOM: 1,
@@ -60,21 +35,36 @@ let world = new World();
 let last_time = 0;
 
 function reset(level) {
-    game_state = {...DEFAULT_GAMESTATE};
-    game_state.level_colors = new Set();
-    world = new World();
-    recorder = new Recorder();
-    command_buffer = new CommandBuffer();
+
+ 
+    if (level -1 < levels.length) {
+        const select = document.getElementById("level-select");
+        select.value = level;
+
+        game_state = {...DEFAULT_GAMESTATE};
+       
+        world = new World();
+        recorder = new Recorder();
+        command_buffer = new CommandBuffer();
+        
+        const level_index = level - 1;
+        loadLevel(level_index, levels, world);
+        game_state.level_index = level_index;
+        
+        game_state.running = true;
     
-    const level_index = level - 1;
-    loadLevel(level_index, levels, world);
-    game_state.level_index = level_index;
-    
-    game_state.running = true;
-    mainLoop();
+       
+        mainLoop();
+    }
 }
 
-
+function resetWorld(levels) {
+    world = new World();
+    const level_index = game_state.level_index;
+    loadLevel(level_index, levels, world);
+    
+    game_state.running = true;
+}
 
 
 
@@ -107,7 +97,15 @@ function main() {
         }
 
         if (e.key === 'r') {
+            recorder.add(world.grid);
+            resetWorld(levels);
+            game_state.has_won = false;
+        }
 
+        if (e.key === 'n') {
+            if (game_state.has_won) {
+                reset(game_state.level_index + 2);
+            }
         }
 
         if (e.key === 'd') { 
@@ -151,11 +149,7 @@ function main() {
         const t = e.target.value;
         reset(t)
     }
-
-
-
-
-   reset(1);
+    reset(1);
 }
 
 
@@ -190,6 +184,8 @@ function loadLevel(index, levels, world) {
     };
     const level = levels[index];
 
+    
+
     const h = level.length;
     const w = level[0].length;
     world.setDimensions(w, h);
@@ -213,8 +209,6 @@ function loadLevel(index, levels, world) {
     const cell_size = 72;
     canvas.width  = cell_size * world.dimensions.w;
     canvas.height = cell_size * world.dimensions.h;
-
-    console.log(world)
 }
 
 function mainLoop(time) {
@@ -229,8 +223,7 @@ function mainLoop(time) {
 }
 
 function clearBG(color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(0,0,  canvas.width, canvas.height);
+    drawFullScreen(color);
 }
 
 export function drawBlockText(row, col, text, text_color = "white") {
@@ -253,7 +246,13 @@ export function drawBlock(row, col, color) {
     ctx.fillRect(x, y, tile_size, tile_size);
 }
 
+export function drawFullScreen(color) {
+    const w = canvas.width;
+    const h = canvas.height;
 
+    ctx.fillStyle = color;
+    ctx.fillRect(0,0, w, h);
+}
 
 
 export function drawBlockNonUnitScale(x, y, color, edges = []) {
@@ -262,7 +261,7 @@ export function drawBlockNonUnitScale(x, y, color, edges = []) {
     ctx.fillRect(x, y, size, size);
 
     ctx.fillStyle = "lightgray";
-    const edge_thickness = size / 24;
+    const edge_thickness = size / 18;
     for (let edge of edges) {
         switch (edge) {
             case EdgePlacements.TOP: {
@@ -307,22 +306,27 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 function drawWinText() {
     const text = "You won!";
-    ctx.font = "80px Arial";
+    ctx.font = "72px Arial";
     ctx.fillStyle = "black";
+    ctx.textAlign = "center"
     const {width, fontBoundingBoxAscent} = ctx.measureText(text);
 
-    ctx.fillText(text, canvas.width/2 - width/2, canvas.height/2 + fontBoundingBoxAscent/2);
+    ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
+
+    ctx.font = "28px Arial";
+    ctx.textAlign = "center"
+    ctx.fillText("Press 'N' to go to next level.", canvas.width/2, canvas.height/2 + (fontBoundingBoxAscent));
 }
 
 
 function updateAndRender(world, command_buffer, dt) {
-    clearBG("lightblue");
+    clearBG("darkgray");
 
     
     
         world.update(command_buffer, dt, game_state, recorder);
         world.render();
-    
+        
         if (game_state.has_won) {
             drawWinText();
         }

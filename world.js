@@ -1,9 +1,11 @@
 import {lerp} from './math.js';
 
 
-import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord } from './game.js';
+import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen } from './game.js';
 import { MoveCommand, MoveDirections } from './command.js'
 import { GameplayFlags, Tile } from './tile.js';
+
+
 
 
 class Piece {
@@ -23,6 +25,8 @@ export class World {
     move_speed = 9.0;
     fall_speed = 15.0;
     color_set = new Set();
+
+    screen_flash_t;
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -204,8 +208,9 @@ export class World {
            
 
             if (can_move) {
+                
                 recorder.add(this.grid);
-                console.log(recorder)
+
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
@@ -216,6 +221,7 @@ export class World {
                     }
                 }
             }
+            
 
         }
 
@@ -323,12 +329,15 @@ export class World {
             this.updateTile(this.grid[index], dt);
         })
 
-
+        
         // HANDLE WIN CONDITION
         if (pieces.length === this.color_set.size) {
             game_state.running = false;
             game_state.has_won = true;
         }
+
+        
+
     }
 
 
@@ -339,6 +348,22 @@ export class World {
         });
     }
  
+    updateFlash(dt) {
+        this.screen_flash_t -= 0.3;
+
+        if (this.screen_flash_t < 0) {
+            this.screen_flash_t = 0;
+        }
+    }
+
+    drawFlash() {
+        if (this.screen_flash_t) {
+            const alpha = 255 * this.screen_flash_t;
+            console.log(alpha)
+            drawFullScreen(`rgba(120, 120, 120, ${alpha})`);
+        }
+    }
+
     render() {
 
         // Draw level
@@ -394,8 +419,6 @@ export class World {
             }
 
         });
-
-        
 
     }
 
