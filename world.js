@@ -2,7 +2,6 @@ import {lerp} from './math.js';
 
 
 import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen } from './game.js';
-import { MoveCommand, MoveDirections } from './command.js'
 import { GameplayFlags, Tile } from './tile.js';
 
 

@@ -34,12 +34,12 @@ const DEFAULT_GAMESTATE = {...game_state};
 let world = new World();
 let last_time = 0;
 
-function reset(level) {
+function reset(level_index) {
 
  
-    if (level -1 < levels.length) {
+    if (level_index < levels.length) {
         const select = document.getElementById("level-select");
-        select.value = level;
+        select.value = level_index + 1;
 
         game_state = {...DEFAULT_GAMESTATE};
        
@@ -47,7 +47,6 @@ function reset(level) {
         recorder = new Recorder();
         command_buffer = new CommandBuffer();
         
-        const level_index = level - 1;
         loadLevel(level_index, levels, world);
         game_state.level_index = level_index;
         
@@ -104,7 +103,7 @@ function main() {
 
         if (e.key === 'n') {
             if (game_state.has_won) {
-                reset(game_state.level_index + 2);
+                reset(game_state.level_index + 1);
             }
         }
 
@@ -128,10 +127,8 @@ function main() {
                 const c = new MoveCommand({row, col}, dir);
                 command_buffer.add(c);
             }
-            
         }
-        
-    };
+    }
 
    
    
@@ -147,9 +144,11 @@ function main() {
     }
     select.onchange = function(e) {
         const t = e.target.value;
-        reset(t)
+        reset(t - 1)
     }
-    reset(1);
+    
+    // Reset to first level
+    reset(0);
 }
 
 
@@ -183,8 +182,6 @@ function loadLevel(index, levels, world) {
         }
     };
     const level = levels[index];
-
-    
 
     const h = level.length;
     const w = level[0].length;
