@@ -209,13 +209,11 @@ function loadLevel(index, levels, world) {
 }
 
 function mainLoop(time) {
-    if (game_state.has_won) {
-        alert("You won!")
-    }
+    
 
     const dt = (time - last_time) / 1000.0;
     last_time = time;
-    if (game_state.running) {
+    {
         updateAndRender(world, command_buffer, dt);
         requestAnimationFrame(mainLoop);
     }
@@ -255,8 +253,8 @@ export function drawBlockNonUnitScale(x, y, color) {
 
 export function getScreenCoordFromTileCoord(row, col) {
     const tile_size = canvas.width / world.dimensions.w;
-    let y = row * tile_size;
-    let x = col * tile_size;
+    let y = Math.floor(row * tile_size);
+    let x = Math.floor(col * tile_size);
     return {x, y, tile_size};
 }
 
@@ -278,7 +276,16 @@ export function getTileCoordFromScreenCoord(x, y) {
 function updateAndRender(world, command_buffer, dt) {
     clearBG("lightblue");
 
-    world.update(command_buffer, dt);
+    if (game_state.running) {
+        world.update(command_buffer, dt, game_state);
+    }
+    else {
+        if (game_state.has_won) {
+            alert("You won!")
+            reset(game_state.level_index + 2)
+        }
+    }
+
     world.render();
 
     if (DEBUG_RENDER_WALLS) {

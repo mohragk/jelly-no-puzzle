@@ -6,6 +6,11 @@ import { MoveCommand, MoveDirections } from './command.js'
 import { GameplayFlags, Tile } from './tile.js';
 
 
+class Piece {
+    tiles = [];
+    color = "";
+}
+
 export class World {
 
     dimensions = {
@@ -17,6 +22,7 @@ export class World {
     gravity_set = [];
     move_speed = 8.0;
     fall_speed = 13.0;
+    color_set = new Set();
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -34,23 +40,45 @@ export class World {
         return this.grid[index];
     }
 
+    getPiece(row, col, grid) {
+        const index = this.getIndex(row, col);
+        return grid[index];
+    }
+
     putInGrid(row, col, tile) {
         tile.world_pos.row = row;
         tile.world_pos.col = col;
         tile.target_pos.row = row;
         tile.target_pos.col = col;
+        if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+            this.color_set.add(tile.color);
+        }
         const grid_index = this.getIndex(row, col);
         this.grid[grid_index] = tile;
+    }
+
+    findMergeTiles(row, col, list, original, visited) {
+        const tile = this.getTile(row, col);
+        if (visited.includes(tile)) {
+            return;
+        }
+
+        
+        if (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MOVABLE) {
+            visited.push(tile);
+           
+            list.push(tile);
+            
+            this.findMergeTiles(row+1, col+0, list, original, visited);
+            this.findMergeTiles(row-1, col+0, list, original, visited);
+            this.findMergeTiles(row+0, col+1, list, original, visited);
+            this.findMergeTiles(row+0, col-1, list, original, visited);
+        }
     }
 
 
     findMovableTiles(row, col, list, dir /* row-axis */) {
         const tile = this.getTile(row, col);
-
-        if (!tile) {
-            debugger
-        }
-       
 
         if (tile.gameplay_flags & GameplayFlags.STATIC) {
             list.length = 0;
@@ -63,14 +91,12 @@ export class World {
             list.push(tile);
 
             if (merged) {
-                this.findMovableTiles(row+0, col+1, list, dir); 
-                this.findMovableTiles(row+0, col-1, list, dir); 
-                this.findMovableTiles(row+1, col+0, list, dir); 
-                this.findMovableTiles(row-1, col+0, list, dir); 
-            }
-            else  {
                 this.findMovableTiles(row, col+dir, list, dir); 
+                this.findMovableTiles(row+1, col+dir, list, dir); 
+                this.findMovableTiles(row-1, col+dir, list, dir); 
             }
+            
+            this.findMovableTiles(row, col+dir, list, dir); 
         }
     }
 
@@ -85,25 +111,22 @@ export class World {
             }
     
             const movable = tile.gameplay_flags & GameplayFlags.MOVABLE;
-            const merged  = false; // tile.gameplay_flags & GameplayFlags.MERGED;
+            const merged  = false;/// tile.gameplay_flags & GameplayFlags.MERGED;
             if (movable) {
                 list.push(tile);
     
                 if (merged) {
-                    this.fillGravityList(row+0, col+1, list, visited); 
-                    this.fillGravityList(row+0, col-1, list, visited); 
-                    this.fillGravityList(row+1, col+0, list, visited); 
-                    this.fillGravityList(row-1, col+0, list, visited); 
+                   
                 }
                 else  {
-                    this.fillGravityList(row + 1, col, list, visited); 
                 }
+                this.fillGravityList(row + 1, col, list, visited); 
             }
         }
     }
 
     updateTile(tile, dt) {
-        let start  = getScreenCoordFromTileCoord(tile.world_pos.row, tile.world_pos.col);
+        let start  = getScreenCoordFromTileCoord(tile.world_pos.row,  tile.world_pos.col);
         let target = getScreenCoordFromTileCoord(tile.target_pos.row, tile.target_pos.col);
         
         let x = lerp(start.x, target.x, tile.move_t);
@@ -141,107 +164,210 @@ export class World {
 
     
 
-    update(command_buffer, dt) {
+    update(command_buffer, dt, game_state) {
 
+        // Create pieces
+        const pieces = [];
+        const pieces_grid = [];
+        {
+            const visited = [];
+            this.forEachCell( (row, col, index) => {
+                const tile = this.getTile(row, col);
+                if (visited.includes(tile)) return 
+
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                    const piece = new Piece();
+                    piece.color = tile.color;
+    
+                    if (tile.gameplay_flags & GameplayFlags.MERGED) {
+                        const merged_tiles = [];
+                        this.findMergeTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
+                        piece.tiles = [...merged_tiles];
+                    }
+                    else {
+                        piece.tiles.push(tile);
+                        visited.push(tile);
+                    }
+
+                    pieces.push(piece);
+                }
+            });
+
+            // Fill pieces grid
+            pieces.forEach( (piece, index) => {
+                for (let tile of piece.tiles) {
+                    const grid_index = this.getIndex(tile.world_pos.row, tile.world_pos.col);
+                    pieces_grid[grid_index] = index;
+                }
+            });
+            
+            
+        }
+
+
+        
+
+        
+        
         if (command_buffer.hasCommands()) {
             const c = command_buffer.pop();
             const { coord, direction }  = c;
             const {row, col} = coord;
 
-            let t = this.getTile(coord.row, coord.col);
+            const piece_index = this.getPiece(row, col, pieces_grid);
+            const piece = pieces[piece_index];
+           
+            
             this.move_set = [];
+            this.move_set.push(piece);
 
-
-            this.move_set.push(t);
-            this.findMovableTiles(row, col+direction, this.move_set, direction);
-
-
-
-            for (let tile of this.move_set) {
-                if (!tile.should_move) {
-                    tile.should_move = true;
-                    tile.move_t = 0;
-                    tile.target_pos.col = tile.world_pos.col + direction;
+            let can_move = true;
+            moveset_outer: for (let p of this.move_set) {
+                for (let tile of p.tiles) {
+                    let r = tile.world_pos.row;
+                    let c = tile.world_pos.col;
+                    c += direction;
+                    const other = this.getTile(r, c);
+                    if (other.gameplay_flags & GameplayFlags.STATIC) {
+                        can_move = false;
+                        this.move_set.length = 0;
+                        break moveset_outer;
+                    }
+                    if (other.gameplay_flags & GameplayFlags.MOVABLE) {
+                        const other_piece_index = this.getPiece(other.world_pos.row, other.world_pos.col, pieces_grid);
+                        const other_piece = pieces[other_piece_index];
+                        if (!this.move_set.includes(other_piece)) {
+                            this.move_set.push(other_piece);
+                        }
+                    }
                 }
             }
+           
+
+            if (can_move) {
+                for (let piece of this.move_set) {
+                    for (let tile of piece.tiles) {
+                        if (!tile.should_move) {
+                            tile.should_move = true;
+                            tile.move_t = 0;
+                            tile.target_pos.col = tile.world_pos.col + direction;
+                        }
+                    }
+                }
+            }
+
         }
 
         
 
         if (this.move_set.length) {
-            for (let tile of this.move_set) {
-                
-                this.moveTile(tile, dt);
-                
+            for (let piece of this.move_set) {
+                for (let tile of piece.tiles) {
+                    this.moveTile(tile, dt);
+                }
             }
         }
-        const done = this.move_set.filter(t => !t.should_move).length > 0;
+        let done = true;
+        for (let piece of this.move_set) {
+            for (let tile of piece.tiles) {
+                if (tile.should_move) {
+                    done = false;
+                }
+            }
+        }
+
         if (done) {
             // Clear grid
-            for (let tile of this.move_set) {
-                const index = this.getIndex(tile.world_pos.row, tile.world_pos.col); 
-                this.grid[index] = new Tile();
+            for (let piece of this.move_set) {
+                for (let tile of piece.tiles) {
+                    const index = this.getIndex(tile.world_pos.row, tile.world_pos.col); 
+                    this.grid[index] = new Tile();
+                }
 
             }
 
             // Fill in grid
-            for (let tile of this.move_set) {
-                tile.world_pos.row = tile.target_pos.row;
-                tile.world_pos.col = tile.target_pos.col;
-                const cur_index = this.getIndex(tile.target_pos.row, tile.target_pos.col);
-                this.grid[cur_index] = tile;
+            for (let piece of this.move_set) { 
+                for (let tile of piece.tiles) {
+                    tile.world_pos.row = tile.target_pos.row;
+                    tile.world_pos.col = tile.target_pos.col;
+                    const cur_index = this.getIndex(tile.target_pos.row, tile.target_pos.col);
+                    this.grid[cur_index] = tile;
+                }
             }
             
             this.move_set.length = 0;
         }
         
 
-        // Check and apply gravity
         
+        // Check and apply gravity
         if (!this.move_set.length) {
-            // Apply gravity!
-            let visited = [];
-            this.forEachCell( (row, col, index) => {
-                let gravity_set = [];
+            for (let piece of pieces) {
+                let can_move = true;
+
+                outer: for (let tile of piece.tiles) {
+                    let r = tile.world_pos.row + 1;
+                    let c = tile.world_pos.col;
+                    const other_tile = this.getTile(r, c);
+
+                    if (piece.tiles.includes(other_tile)) {
+                        continue;
+                    }
+                    
+                    if (other_tile.gameplay_flags) {
+                        can_move = false;
+                        break outer;
+                    }
+                    
+
+                }
+                if (can_move) {
+                    for (let tile of piece.tiles) {
+                        tile.should_move = true;
+                        tile.move_t = 0;
+                        let distance = 1;
+
+
+                        tile.target_pos.row += distance;
+                    }
+                    this.move_set.push(piece);
+                }
+            }
+        }
+
+                
+       
+        
+        // Check and apply merge
+        if (!this.move_set.length) {
+            const visited = [];
+            this.forEachCell((row, col, index) => {
                 const tile = this.getTile(row, col);
-                if (visited.includes(tile)) {
-                    return;
-                }
 
-                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                    this.fillGravityList(tile.world_pos.row, tile.world_pos.col, gravity_set, visited);
-                }
+                if ( (tile.gameplay_flags & GameplayFlags.MOVABLE)) {
+                    const merge_list = [];
+                    this.findMergeTiles(row, col, merge_list, tile, visited);
 
-                {
-                    for (let tile of gravity_set) {
-                        if (!tile.should_move) {
-                            tile.should_move = true;
-                            tile.move_t = 0;
-
-                            let distance = 1;
-                            let r = tile.world_pos.row + 1;
-                            let c = tile.world_pos.col;
-                                
-                            while(1) {
-                                let next = this.getTile(r++, c);
-                                console.log(next)
-                                if (next.gameplay_flags) { distance--; break; }
-                                
-                                distance += 1;
-                            }
-
-                            tile.target_pos.row += distance;
-                            this.move_set.push(tile);
+                    if (merge_list.length > 1) {
+                        for (let t of merge_list) {
+                            t.gameplay_flags |= GameplayFlags.MERGED;
                         }
                     }
-                }                    
-            });
+                }
+            })
         }
-        
 
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
         })
+
+
+        // HANDLE WIN CONDITION
+        if (pieces.length === this.color_set.size) {
+            game_state.running = false;
+            game_state.has_won = true;
+        }
     }
 
 
