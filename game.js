@@ -36,6 +36,12 @@ class Recorder {
 }
 
 let recorder;
+export const EdgePlacements = {
+    TOP: 0,
+    BOTTOM: 1,
+    LEFT: 2,
+    RIGHT: 3
+};
 
 
 let game_state = {
@@ -95,6 +101,9 @@ function main() {
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
             
+            const prev = recorder.getPrevious();
+            world.setState(prev);
+            game_state.has_won = false;
         }
 
         if (e.key === 'r') {
@@ -114,7 +123,7 @@ function main() {
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const button = e.button;
             const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length;
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
 
             if (apply) {
                 const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
@@ -245,10 +254,36 @@ export function drawBlock(row, col, color) {
 }
 
 
-export function drawBlockNonUnitScale(x, y, color) {
+
+
+export function drawBlockNonUnitScale(x, y, color, edges = []) {
     const size = canvas.width / world.dimensions.w;
     ctx.fillStyle = color;
     ctx.fillRect(x, y, size, size);
+
+    ctx.fillStyle = "lightgray";
+    const edge_thickness = size / 24;
+    for (let edge of edges) {
+        switch (edge) {
+            case EdgePlacements.TOP: {
+                ctx.fillRect(x, y, size, edge_thickness);
+            }
+            break;
+            case EdgePlacements.BOTTOM: {
+                ctx.fillRect(x, y + size - edge_thickness, size, edge_thickness);
+            }
+            break;
+            case EdgePlacements.LEFT: {
+                ctx.fillRect(x, y, edge_thickness, size);
+            }
+            break;
+            case EdgePlacements.RIGHT: {
+                ctx.fillRect( x + size - edge_thickness, y, edge_thickness, size);
+            }
+            break;
+
+        }
+    }
 }
 
 export function getScreenCoordFromTileCoord(row, col) {
@@ -270,23 +305,28 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 
 
+function drawWinText() {
+    const text = "You won!";
+    ctx.font = "80px Arial";
+    ctx.fillStyle = "black";
+    const {width, fontBoundingBoxAscent} = ctx.measureText(text);
 
+    ctx.fillText(text, canvas.width/2 - width/2, canvas.height/2 + fontBoundingBoxAscent/2);
+}
 
 
 function updateAndRender(world, command_buffer, dt) {
     clearBG("lightblue");
 
-    if (game_state.running) {
-        world.update(command_buffer, dt, game_state);
-    }
-    else {
+    
+    
+        world.update(command_buffer, dt, game_state, recorder);
+        world.render();
+    
         if (game_state.has_won) {
-            alert("You won!")
-            reset(game_state.level_index + 2)
+            drawWinText();
         }
-    }
-
-    world.render();
+    
 
     if (DEBUG_RENDER_WALLS) {
         world.debugRenderCells();

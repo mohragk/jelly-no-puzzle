@@ -1,7 +1,7 @@
 import {lerp} from './math.js';
 
 
-import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord } from './game.js';
+import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord } from './game.js';
 import { MoveCommand, MoveDirections } from './command.js'
 import { GameplayFlags, Tile } from './tile.js';
 
@@ -20,8 +20,8 @@ export class World {
     grid = [];
     move_set = [];
     gravity_set = [];
-    move_speed = 8.0;
-    fall_speed = 13.0;
+    move_speed = 9.0;
+    fall_speed = 15.0;
     color_set = new Set();
 
     setDimensions(w, h) {
@@ -57,6 +57,12 @@ export class World {
         this.grid[grid_index] = tile;
     }
 
+
+    setState(new_grid) {
+        this.grid = [...new_grid];
+        this.move_set.length = 0;
+    }
+
     findMergeTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
         if (visited.includes(tile)) {
@@ -77,53 +83,6 @@ export class World {
     }
 
 
-    findMovableTiles(row, col, list, dir /* row-axis */) {
-        const tile = this.getTile(row, col);
-
-        if (tile.gameplay_flags & GameplayFlags.STATIC) {
-            list.length = 0;
-            return;
-        }
-
-        const movable = tile.gameplay_flags & GameplayFlags.MOVABLE;
-        const merged = tile.gameplay_flags & GameplayFlags.MERGED;
-        if (movable) {
-            list.push(tile);
-
-            if (merged) {
-                this.findMovableTiles(row, col+dir, list, dir); 
-                this.findMovableTiles(row+1, col+dir, list, dir); 
-                this.findMovableTiles(row-1, col+dir, list, dir); 
-            }
-            
-            this.findMovableTiles(row, col+dir, list, dir); 
-        }
-    }
-
-    fillGravityList(row, col, list, visited) {
-        const tile = this.getTile(row, col);
-        if (tile) {
-            visited.push(tile);
-    
-            if (tile.gameplay_flags & GameplayFlags.STATIC) {
-                list.length = 0;
-                return;
-            }
-    
-            const movable = tile.gameplay_flags & GameplayFlags.MOVABLE;
-            const merged  = false;/// tile.gameplay_flags & GameplayFlags.MERGED;
-            if (movable) {
-                list.push(tile);
-    
-                if (merged) {
-                   
-                }
-                else  {
-                }
-                this.fillGravityList(row + 1, col, list, visited); 
-            }
-        }
-    }
 
     updateTile(tile, dt) {
         let start  = getScreenCoordFromTileCoord(tile.world_pos.row,  tile.world_pos.col);
@@ -164,7 +123,7 @@ export class World {
 
     
 
-    update(command_buffer, dt, game_state) {
+    update(command_buffer, dt, game_state, recorder) {
 
         // Create pieces
         const pieces = [];
@@ -245,6 +204,8 @@ export class World {
            
 
             if (can_move) {
+                recorder.add(this.grid);
+                console.log(recorder)
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
@@ -385,7 +346,51 @@ export class World {
             const tile = this.grid[index];
             if ((tile.gameplay_flags > 0)) {
                 const [x, y] = tile.visual_pos;
-                drawBlockNonUnitScale(x, y, tile.color);
+                const {row, col} = tile.world_pos;
+
+                let edges = [];
+
+
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                    {
+                        let t = this.getTile(row-1, col);
+                        if (t) {
+                            if (t.color !== tile.color) {
+                                edges.push(EdgePlacements.TOP);
+                            }
+                        }
+                    }
+                    {
+                        let t = this.getTile(row+1, col);
+                        if (t) {
+                            if (t.color !== tile.color) {
+                                edges.push(EdgePlacements.BOTTOM);
+                            }
+                        }
+                    }
+    
+                    {
+                        let t = this.getTile(row, col-1);
+                        if (t) {
+                            if (t.color !== tile.color) {
+                                edges.push(EdgePlacements.LEFT);
+                            }
+                        }
+                    }
+    
+                    {
+                        let t = this.getTile(row, col+1);
+                        if (t) {
+                            if (t.color !== tile.color) {
+                                edges.push(EdgePlacements.RIGHT);
+                            }
+                        }
+                    }
+                }
+
+
+
+                drawBlockNonUnitScale(x, y, tile.color, edges);
             }
 
         });
