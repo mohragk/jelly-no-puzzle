@@ -2,6 +2,7 @@ import {lerp} from './math.js';
 
 
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord } from './game.js';
+import { MoveCommand, MoveDirections } from './command.js'
 import { GameplayFlags, Tile } from './tile.js';
 
 
@@ -15,6 +16,7 @@ export class World {
     move_set = [];
     gravity_set = [];
     move_speed = 8.0;
+    fall_speed = 13.0;
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -42,8 +44,13 @@ export class World {
     }
 
 
-    findMovableTiles(row, col, list, grid, dir /* row-axis */) {
+    findMovableTiles(row, col, list, dir /* row-axis */) {
         const tile = this.getTile(row, col);
+
+        if (!tile) {
+            debugger
+        }
+       
 
         if (tile.gameplay_flags & GameplayFlags.STATIC) {
             list.length = 0;
@@ -56,39 +63,41 @@ export class World {
             list.push(tile);
 
             if (merged) {
-                this.findMovableTiles(row+0, col+1, list, grid, dir); 
-                this.findMovableTiles(row+0, col-1, list, grid, dir); 
-                this.findMovableTiles(row+1, col+0, list, grid, dir); 
-                this.findMovableTiles(row-1, col+0, list, grid, dir); 
+                this.findMovableTiles(row+0, col+1, list, dir); 
+                this.findMovableTiles(row+0, col-1, list, dir); 
+                this.findMovableTiles(row+1, col+0, list, dir); 
+                this.findMovableTiles(row-1, col+0, list, dir); 
             }
             else  {
-                this.findMovableTiles(row, col+dir, list, grid, dir); 
+                this.findMovableTiles(row, col+dir, list, dir); 
             }
         }
     }
 
     fillGravityList(row, col, list, visited) {
         const tile = this.getTile(row, col);
-        visited.push(tile);
-
-        if (tile.gameplay_flags & GameplayFlags.STATIC) {
-            list.length = 0;
-            return;
-        }
-
-        const movable = tile.gameplay_flags & GameplayFlags.MOVABLE;
-        const merged = tile.gameplay_flags & GameplayFlags.MERGED;
-        if (movable) {
-            list.push(tile);
-
-            if (merged) {
-                this.fillGravityList(row+0, col+1, list, visited); 
-                this.fillGravityList(row+0, col-1, list, visited); 
-                this.fillGravityList(row+1, col+0, list, visited); 
-                this.fillGravityList(row-1, col+0, list, visited); 
+        if (tile) {
+            visited.push(tile);
+    
+            if (tile.gameplay_flags & GameplayFlags.STATIC) {
+                list.length = 0;
+                return;
             }
-            else  {
-                this.fillGravityList(row + 1, col, list, visited); 
+    
+            const movable = tile.gameplay_flags & GameplayFlags.MOVABLE;
+            const merged  = false; // tile.gameplay_flags & GameplayFlags.MERGED;
+            if (movable) {
+                list.push(tile);
+    
+                if (merged) {
+                    this.fillGravityList(row+0, col+1, list, visited); 
+                    this.fillGravityList(row+0, col-1, list, visited); 
+                    this.fillGravityList(row+1, col+0, list, visited); 
+                    this.fillGravityList(row-1, col+0, list, visited); 
+                }
+                else  {
+                    this.fillGravityList(row + 1, col, list, visited); 
+                }
             }
         }
     }
@@ -104,8 +113,16 @@ export class World {
         tile.visual_pos[1] = y;
     }
     
-    moveTile(tile, dt) {      
-        tile.move_t += this.move_speed * dt;
+    moveTile(tile, dt) {    
+        let fall_dist = tile.target_pos.row - tile.world_pos.row;
+
+        if( fall_dist > 0 ) {
+            tile.move_t += this.fall_speed * dt / fall_dist;
+        }
+        else {
+            tile.move_t += this.move_speed * dt;
+        }
+          
         if (tile.move_t > 1) {
             tile.move_t = 0;
             tile.should_move = false;
@@ -132,11 +149,13 @@ export class World {
             const {row, col} = coord;
 
             let t = this.getTile(coord.row, coord.col);
-            this.move_set = [t];
+            this.move_set = [];
 
-            const grid = [];
 
-            this.findMovableTiles(row, col+direction, this.move_set, grid, direction);
+            this.move_set.push(t);
+            this.findMovableTiles(row, col+direction, this.move_set, direction);
+
+
 
             for (let tile of this.move_set) {
                 if (!tile.should_move) {
@@ -147,94 +166,78 @@ export class World {
             }
         }
 
-        {
+        
 
-            if (this.move_set.length) {
-                for (let tile of this.move_set) {
-                    if (tile.should_move) {
-                        this.moveTile(tile, dt);
-                    }
-                }
-            }
-            const done = this.move_set.filter(t => !t.should_move).length > 0;
-            if (done) {
-                // Clear grid
-                for (let tile of this.move_set) {
-                    const index = this.getIndex(tile.world_pos.row, tile.world_pos.col); 
-                    this.grid[index] = new Tile();
-    
-                }
-    
-                // Fill in grid
-                for (let tile of this.move_set) {
-                    tile.world_pos.row = tile.target_pos.row;
-                    tile.world_pos.col = tile.target_pos.col;
-                    const cur_index = this.getIndex(tile.target_pos.row, tile.target_pos.col);
-                    this.grid[cur_index] = tile;
-                }
+        if (this.move_set.length) {
+            for (let tile of this.move_set) {
                 
-                this.move_set.length = 0;
+                this.moveTile(tile, dt);
+                
             }
         }
+        const done = this.move_set.filter(t => !t.should_move).length > 0;
+        if (done) {
+            // Clear grid
+            for (let tile of this.move_set) {
+                const index = this.getIndex(tile.world_pos.row, tile.world_pos.col); 
+                this.grid[index] = new Tile();
 
-        {
+            }
 
+            // Fill in grid
+            for (let tile of this.move_set) {
+                tile.world_pos.row = tile.target_pos.row;
+                tile.world_pos.col = tile.target_pos.col;
+                const cur_index = this.getIndex(tile.target_pos.row, tile.target_pos.col);
+                this.grid[cur_index] = tile;
+            }
             
-            if (!this.move_set.length && !this.gravity_set.length) {
-                // Apply gravity!
-                let visited = [];
-                this.forEachCell( (row, col, index) => {
-                    const tile = this.getTile(row, col);
-                    if (visited.includes(tile)) {
-                        return;
-                    }
-    
-                    if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                        this.fillGravityList(tile.world_pos.row, tile.world_pos.col, this.gravity_set, visited);
-                    }
-                    if (this.gravity_set.length) {
-                        for (let tile of this.gravity_set) {
-                            if (!tile.should_move) {
-                                tile.should_move = true;
-                                tile.move_t = 0;
-                                tile.target_pos.row = tile.world_pos.row + 1;
+            this.move_set.length = 0;
+        }
+        
+
+        // Check and apply gravity
+        
+        if (!this.move_set.length) {
+            // Apply gravity!
+            let visited = [];
+            this.forEachCell( (row, col, index) => {
+                let gravity_set = [];
+                const tile = this.getTile(row, col);
+                if (visited.includes(tile)) {
+                    return;
+                }
+
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                    this.fillGravityList(tile.world_pos.row, tile.world_pos.col, gravity_set, visited);
+                }
+
+                {
+                    for (let tile of gravity_set) {
+                        if (!tile.should_move) {
+                            tile.should_move = true;
+                            tile.move_t = 0;
+
+                            let distance = 1;
+                            let r = tile.world_pos.row + 1;
+                            let c = tile.world_pos.col;
+                                
+                            while(1) {
+                                let next = this.getTile(r++, c);
+                                console.log(next)
+                                if (next.gameplay_flags) { distance--; break; }
+                                
+                                distance += 1;
                             }
+
+                            tile.target_pos.row += distance;
+                            this.move_set.push(tile);
                         }
                     }
-                });
-            }
-
-            if (this.move_set.length == 0) {
-                console.log(this.gravity_set)
-
-                for (let tile of this.gravity_set) {
-                    if (tile.should_move) {
-                        console.log('moving')
-                        this.moveTile(tile, dt);
-                    }
-                }
-            }
-            const done = this.gravity_set.filter(t => !t.should_move).length > 0;
-            if (done) {
-                // Clear grid
-                for (let tile of this.gravity_set) {
-                    const index = this.getIndex(tile.world_pos.row, tile.world_pos.col); 
-                    this.grid[index] = new Tile();
-    
-                }
-    
-                // Fill in grid
-                for (let tile of this.gravity_set) {
-                    tile.world_pos.row = tile.target_pos.row;
-                    tile.world_pos.col = tile.target_pos.col;
-                    const cur_index = this.getIndex(tile.target_pos.row, tile.target_pos.col);
-                    this.grid[cur_index] = tile;
-                }
-                
-                this.gravity_set.length = 0;
-                
-            }
+                }                    
+            });
         }
+        
 
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
