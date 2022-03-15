@@ -22,7 +22,7 @@ export class World {
     move_set = [];
     gravity_set = [];
     move_speed = 9.0;
-    fall_speed = 15.0;
+    fall_speed = 9.0;
     color_set = new Set();
 
     screen_flash_t;
@@ -102,7 +102,7 @@ export class World {
         let fall_dist = tile.target_pos.row - tile.world_pos.row;
 
         if( fall_dist > 0 ) {
-            tile.move_t += this.fall_speed * dt / fall_dist;
+            tile.move_t += (this.fall_speed * dt);
         }
         else {
             tile.move_t += this.move_speed * dt;
@@ -231,7 +231,7 @@ export class World {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
                             tile.should_move = true;
-                            //tile.move_t = 0;
+                            tile.move_t = 0;
                             tile.target_pos.col = tile.world_pos.col + direction;
                         }
                     }
@@ -289,6 +289,7 @@ export class World {
         if (!this.move_set.length) {
             for (let piece of pieces) {
                 let can_move = true;
+               
 
                 outer: for (let tile of piece.tiles) {
                     let r = tile.world_pos.row + 1;
@@ -307,14 +308,34 @@ export class World {
 
                 }
                 if (can_move) {
+                    // Pre-pass to get travel distance
+                    let max_distance = Infinity;
+                    for (let tile of piece.tiles) {
+                        let distance = 0;
+
+                        let r = tile.world_pos.row;
+                        let c = tile.world_pos.col;
+
+                        while (1) {
+                            const next = this.getTile(++r, c);
+                            if (piece.tiles.includes(next)) {
+                                continue;
+                            }
+                            if (next.gameplay_flags) {
+                                break;
+                            }
+                            distance += 1;
+                        }
+                        max_distance = Math.min(max_distance, distance);
+                    }
+
+                    // Apply travel distance
                     for (let tile of piece.tiles) {
                         tile.should_move = true;
-                        tile.move_t = 0;
-                        let distance = 1;
-
-
-                        tile.target_pos.row += distance;
+                        tile.move_t  = 0;
+                        tile.target_pos.row += max_distance;
                     }
+                    console.log(max_distance)
                     this.move_set.push(piece);
                 }
             }
