@@ -143,6 +143,7 @@ function main() {
     }
 
     function onMouseDown(e) {
+        e.preventDefault();
         const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
        
@@ -156,15 +157,15 @@ function main() {
                 if (TEST_HALF_CLICK) {
                     let {x, tile_size} = getScreenCoordFromTileCoord(row, col);
                    
-    
                     let mouse_x = offsetX;
                     let center_x = lerp(x, x + tile_size, 0.5);
-                    dir = mouse_x < center_x ?  MoveDirections.LEFT : MoveDirections.RIGHT;
+                    dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
                 }
 
                 const c = new MoveCommand({row, col}, dir);
                 command_buffer.add(c);
             }
+            
         }
     }
 
@@ -189,7 +190,6 @@ function main() {
     function onTouchStart(e) {
         e.preventDefault();
         const touches = e.changedTouches;
-        console.log(touches)
 
         const {offsetX, offsetY} = getTouchCoord(canvas, e);
         
@@ -316,6 +316,9 @@ function loadLevel(index, levels, world) {
                 t.color = "gray";
                 return t;
             }
+
+           
+
             case 'r': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
@@ -447,13 +450,37 @@ export function drawFullScreen(color) {
     ctx.fillRect(0,0, w, h);
 }
 
+function drawArrowLeft(x, center_y, height, color = "black") {
 
+    let start_x = x - height;
+    ctx.beginPath();
+    ctx.moveTo(start_x, center_y);
+    ctx.lineTo(x, center_y - height/2);
+    ctx.lineTo(x, center_y + height/2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+}
+
+
+function drawArrowRight(x, center_y, height, color = "black") {
+
+    let start_x = x + height;
+    ctx.beginPath();
+    ctx.moveTo(start_x, center_y);
+    ctx.lineTo(x, center_y - height/2);
+    ctx.lineTo(x, center_y + height/2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+}
 
 
 export function drawMoveArrow(row, col, mouse_x, mouse_y) {
     if (!TEST_HALF_CLICK) return;
 
 
+    ctx.globalAlpha = 0.6;
     let {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
 
     let center_x = lerp(x, x + tile_size, 0.5);
@@ -464,7 +491,7 @@ export function drawMoveArrow(row, col, mouse_x, mouse_y) {
     const left = mouse_x < center_x;
     let start_x = left ? x : center_x;
     
-    let color = left ? "white" : "gray";
+    let color = "white";
     ctx.fillStyle = color;
     
     let r_x = start_x
@@ -472,6 +499,16 @@ export function drawMoveArrow(row, col, mouse_x, mouse_y) {
     let r_w = tile_size /2;
     let r_h = tile_size;
     ctx.fillRect(r_x, r_y, r_w, r_h);
+
+    let h = tile_size / 4;
+    if (left) {
+        drawArrowRight(center_x, center_y, h, color);
+    }
+    else {
+        drawArrowLeft(center_x, center_y, h, color);
+    }
+
+    ctx.globalAlpha = 1.0;
 
 }
 

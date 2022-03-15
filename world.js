@@ -3,6 +3,7 @@ import {lerp} from './math.js';
 
 import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
+import { CommandTypes, ImpossibleCommand } from './command.js';
 
 
 
@@ -190,54 +191,67 @@ export class World {
         
         if (command_buffer.hasCommands()) {
             const c = command_buffer.pop();
+
+           
             const { coord, direction }  = c;
             const {row, col} = coord;
 
-            const piece_index = this.getPiece(row, col, pieces_grid);
-            const piece = pieces[piece_index];
-           
-            
-            this.move_set = [];
-            this.move_set.push(piece);
+            if (c.type === CommandTypes.MOVE) {
 
-            let can_move = true;
-            moveset_outer: for (let p of this.move_set) {
-                for (let tile of p.tiles) {
-                    let r = tile.world_pos.row;
-                    let c = tile.world_pos.col;
-                    c += direction;
-                    const other = this.getTile(r, c);
-                    if (other.gameplay_flags & GameplayFlags.STATIC) {
-                        can_move = false;
-                        this.move_set.length = 0;
-                        break moveset_outer;
-                    }
-                    if (other.gameplay_flags & GameplayFlags.MOVABLE) {
-                        const other_piece_index = this.getPiece(other.world_pos.row, other.world_pos.col, pieces_grid);
-                        const other_piece = pieces[other_piece_index];
-                        if (!this.move_set.includes(other_piece)) {
-                            this.move_set.push(other_piece);
-                        }
-                    }
-                }
-            }
-           
-
-            if (can_move) {
+                const piece_index = this.getPiece(row, col, pieces_grid);
+                const piece = pieces[piece_index];
+               
                 
-                recorder.add(this.grid);
-
-                for (let piece of this.move_set) {
-                    for (let tile of piece.tiles) {
-                        if (!tile.should_move) {
-                            tile.should_move = true;
-                            tile.move_t = 0;
-                            tile.target_pos.col = tile.world_pos.col + direction;
+                this.move_set = [];
+                this.move_set.push(piece);
+    
+                let can_move = true;
+                moveset_outer: for (let p of this.move_set) {
+                    for (let tile of p.tiles) {
+                        let r = tile.world_pos.row;
+                        let c = tile.world_pos.col;
+                        c += direction;
+                        const other = this.getTile(r, c);
+                        if (other.gameplay_flags & GameplayFlags.STATIC) {
+                            can_move = false;
+                            this.move_set.length = 0;
+                            break moveset_outer;
+                        }
+                        if (other.gameplay_flags & GameplayFlags.MOVABLE) {
+                            const other_piece_index = this.getPiece(other.world_pos.row, other.world_pos.col, pieces_grid);
+                            const other_piece = pieces[other_piece_index];
+                            if (!this.move_set.includes(other_piece)) {
+                                this.move_set.push(other_piece);
+                            }
                         }
                     }
                 }
+               
+    
+                if (can_move) {
+                    
+                    recorder.add(this.grid);
+    
+                    for (let piece of this.move_set) {
+                        for (let tile of piece.tiles) {
+                            if (!tile.should_move) {
+                                tile.should_move = true;
+                                tile.move_t = 0;
+                                tile.target_pos.col = tile.world_pos.col + direction;
+                            }
+                        }
+                    }
+                }
+                else {
+                    const c = new ImpossibleCommand(coord);
+                    command_buffer.add(c);
+                }    
             }
-            
+
+            if (c.type === CommandTypes.IMPOSSIBLE) {
+                drawFullScreen("white")
+            }
+
             
 
         }
@@ -335,7 +349,6 @@ export class World {
                         tile.move_t  = 0;
                         tile.target_pos.row += max_distance;
                     }
-                    console.log(max_distance)
                     this.move_set.push(piece);
                 }
             }

@@ -4,6 +4,11 @@ export const MoveDirections = {
     DOWN:  10
 };
 
+export const CommandTypes = {
+    MOVE: 0,
+    IMPOSSIBLE: 1
+};
+
 export class MoveCommand {
     constructor(coord, direction) {
         this.coord = coord;
@@ -11,8 +16,17 @@ export class MoveCommand {
     }
     coord;
     direction;
+    type = CommandTypes.MOVE;
 }
 
+
+export class ImpossibleCommand {
+    constructor(coord) {
+        this.coord = coord;
+    }
+    coord;
+    type = CommandTypes.IMPOSSIBLE;
+}
 
 
 export class CommandBuffer {
@@ -49,7 +63,7 @@ export class CommandBuffer {
    
 
     commands = [];
-    max = 32;
+    max = 8;
     
     count = 0;
     end = 0;
