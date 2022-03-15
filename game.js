@@ -1,6 +1,8 @@
 import { levels }  from './levels2.js';
 import { GameplayFlags, Tile } from './tile.js';
 
+import {lerp} from './math.js';
+
 import { Recorder } from './recorder.js';
 
 import { World } from './world.js';
@@ -24,11 +26,19 @@ let game_state = {
     level_colors: new Set(),
     has_won: false,
     level_index : 0,
-    mouse: {row: 0, col: 0},
+    mouse: {
+        dragging: false,
+        start_drag: [0,0],
+        end_drag:   [0,0],
+        start_tile: {row:0, col:0},
+        screen_coord: {x: 0, y: 0}
+    },
     frame_count: 0
 };
 
 let DEBUG_RENDER_WALLS = false;
+let TEST_HALF_CLICK = false;
+
 const DEFAULT_GAMESTATE = {...game_state};
 
 let world = new World();
@@ -84,53 +94,193 @@ function main() {
     canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
+
+    canvas.addEventListener("touchstart", onTouchStart);
+    canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchmove", onTouchMove);
     
     canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("mousemove", onMouseMove);
     
     document.addEventListener("keypress", e => {
         if (e.key === 'z') {
-            
-            const prev = recorder.getPrevious();
-            world.setState(prev);
-            game_state.has_won = false;
+            handleUndo();
         }
 
         if (e.key === 'r') {
-            recorder.add(world.grid);
-            resetWorld(levels);
-            game_state.has_won = false;
+           handleReset();
         }
 
         if (e.key === 'n') {
-            if (game_state.has_won) {
-                reset(game_state.level_index + 1);
-            }
+            handleNext();
         }
 
         if (e.key === 'd') { 
             DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
         }
+
+        if (e.key === 't') {
+            TEST_HALF_CLICK = !TEST_HALF_CLICK;
+        }
     })
 
-    
+    function handleUndo() {
+        const prev = recorder.getPrevious();
+            world.setState(prev);
+            game_state.has_won = false;
+    }
+
+    function handleReset() {
+        recorder.add(world.grid);
+        resetWorld(levels);
+        game_state.has_won = false;
+    }
+
+    function handleNext() {
+        if (game_state.has_won) {
+            reset(game_state.level_index + 1);
+        }
+    }
+
     function onMouseDown(e) {
-        const {offsetX, offsetY} = e;
+        const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
-        
+       
+
         if (row < world.dimensions.h && col < world.dimensions.w) {
-            const button = e.button;
             const tile = world.getTile(row, col);
             const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
 
             if (apply) {
-                const dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                if (TEST_HALF_CLICK) {
+                    let {x, tile_size} = getScreenCoordFromTileCoord(row, col);
+                   
+    
+                    let mouse_x = offsetX;
+                    let center_x = lerp(x, x + tile_size, 0.5);
+                    dir = mouse_x < center_x ?  MoveDirections.LEFT : MoveDirections.RIGHT;
+                }
+
                 const c = new MoveCommand({row, col}, dir);
                 command_buffer.add(c);
             }
         }
     }
 
-   
+    function onMouseMove(e) {
+        const {offsetX, offsetY} = e;
+        game_state.mouse.screen_coord.x = offsetX;
+        game_state.mouse.screen_coord.y = offsetY;
+    }
+
+    function getTouchCoord(canvas, e) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.changedTouches[0];
+        if (!touch) {
+            debugger
+        }
+        return {
+            offsetX: touch.clientX - rect.left,
+            offsetY: touch.clientY - rect.top
+        }
+    }
+    
+    function onTouchStart(e) {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        console.log(touches)
+
+        const {offsetX, offsetY} = getTouchCoord(canvas, e);
+        
+        let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
+        
+        {
+            const tile = world.getTile(row, col);
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
+
+            if (apply) {
+                game_state.mouse.start_drag = [offsetX, offsetY];
+                game_state.mouse.start_tile = {row, col};
+                game_state.mouse.dragging = true;
+            }
+
+        }
+    }
+
+    function onTouchEnd(e) {
+        e.preventDefault();
+
+        const {offsetX, offsetY} = getTouchCoord(canvas, e);
+
+        {
+            game_state.mouse.end_drag = [offsetX, offsetY];
+            
+            const {row, col} = game_state.mouse.start_tile;
+            const tile = world.getTile(row, col);
+            
+            
+            
+            const apply = game_state.mouse.dragging && tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
+            game_state.mouse.dragging = false;
+            
+            if (apply) {
+                // Determine direction
+                
+                const direction = (game_state.mouse.end_drag[0] - game_state.mouse.start_drag[0]) < 0 ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                
+                const command = new MoveCommand({row, col}, direction);
+                command_buffer.add(command);
+            }
+            
+        }
+    }
+
+
+    function onTouchMove(e) {
+        e.preventDefault();
+        const { offsetX } = getTouchCoord(canvas, e);
+
+        if (game_state.mouse.dragging) {
+            const {row, col} = game_state.mouse.start_tile;
+            const tile = world.getTile(row, col);
+
+            const direction = (offsetX - game_state.mouse.start_drag[0]) < 0 ? MoveDirections.LEFT : MoveDirections.RIGHT;
+            tile.target_pos = {row, col: col + direction};
+
+            const start = getScreenCoordFromTileCoord(row, col);
+
+            const center_x = lerp(start.x, start.x + start.tile_size, 0.5);
+            const drag_distance = Math.abs(offsetX - center_x);
+            
+            let delta =  start.tile_size;
+            let t = drag_distance / delta;
+            tile.move_t = Math.min(t, 0.5);
+        }
+    }
+
+
+
+    // Add button behaviours
+    {
+        const button = document.getElementById("undo_button");
+        button.onclick = e => {
+            handleUndo();
+        };
+    }
+    
+    {
+        const button = document.getElementById("reset_button");
+        button.onclick = e => {
+            handleReset();
+        };
+    }
+    {
+        const button = document.getElementById("next_button");
+        button.onclick = e => {
+            handleNext();
+        };
+    }
    
 
     // Check level selection
@@ -152,6 +302,8 @@ function main() {
 }
 
 
+
+
 function loadLevel(index, levels, world) {
     const getTileFromChar = (c) => {
         const t = new Tile();
@@ -166,16 +318,37 @@ function loadLevel(index, levels, world) {
             }
             case 'r': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "red";
                 return t;
             }
             case 'g': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "green";
                 return t;
             }
             case 'b': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
+                t.color = "blue";
+                return t;
+            }
+            case 'sr': {
+                t.gameplay_flags |= GameplayFlags.STATIC;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
+                t.color = "red";
+                return t;
+            }
+            case 'sg': {
+                t.gameplay_flags |= GameplayFlags.STATIC;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
+                t.color = "green";
+                return t;
+            }
+            case 'sb': {
+                t.gameplay_flags |= GameplayFlags.STATIC;
+                t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "blue";
                 return t;
             }
@@ -192,13 +365,19 @@ function loadLevel(index, levels, world) {
     let col = 0;
 
     for (let line of level) {
-        for (let c of line) {
-           
+
+        for (let index = 0; index < line.length; index++) {
+            let c = line[index];
+            if (c === 's') {
+                c += line[++index];
+            }
+            
             const tile = getTileFromChar(c);
             world.putInGrid(row, col, tile);
-
             col++;
         }
+
+       
         col = 0;
         row++;
     }
@@ -206,6 +385,23 @@ function loadLevel(index, levels, world) {
     const cell_size = 72;
     canvas.width  = cell_size * world.dimensions.w;
     canvas.height = cell_size * world.dimensions.h;
+
+    // First time merge checking!
+    const visited = [];
+    world.forEachCell((row, col, index) => {
+        const tile = world.getTile(row, col);
+
+        if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
+            const merge_list = [];
+            world.findMergeTiles(row, col, merge_list, tile, visited);
+
+            if (merge_list.length > 1) {
+                for (let t of merge_list) {
+                    t.gameplay_flags |= GameplayFlags.MERGED;
+                }
+            }
+        }
+    })
 }
 
 function mainLoop(time) {
@@ -251,6 +447,33 @@ export function drawFullScreen(color) {
     ctx.fillRect(0,0, w, h);
 }
 
+
+
+
+export function drawMoveArrow(row, col, mouse_x, mouse_y) {
+    if (!TEST_HALF_CLICK) return;
+
+
+    let {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+
+    let center_x = lerp(x, x + tile_size, 0.5);
+    let center_y = lerp(y, y + tile_size, 0.5);
+
+    let size = tile_size /2;
+    
+    const left = mouse_x < center_x;
+    let start_x = left ? x : center_x;
+    
+    let color = left ? "white" : "gray";
+    ctx.fillStyle = color;
+    
+    let r_x = start_x
+    let r_y = y;
+    let r_w = tile_size /2;
+    let r_h = tile_size;
+    ctx.fillRect(r_x, r_y, r_w, r_h);
+
+}
 
 export function drawBlockNonUnitScale(x, y, color, edges = []) {
     const size = canvas.width / world.dimensions.w;
@@ -322,7 +545,7 @@ function updateAndRender(world, command_buffer, dt) {
     
     
         world.update(command_buffer, dt, game_state, recorder);
-        world.render();
+        world.render(game_state);
         
         if (game_state.has_won) {
             drawWinText();

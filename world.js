@@ -1,7 +1,7 @@
 import {lerp} from './math.js';
 
 
-import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen } from './game.js';
+import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 
 
@@ -73,7 +73,7 @@ export class World {
         }
 
         
-        if (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MOVABLE) {
+        if (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
             visited.push(tile);
            
             list.push(tile);
@@ -137,7 +137,7 @@ export class World {
                 const tile = this.getTile(row, col);
                 if (visited.includes(tile)) return 
 
-                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                if (tile.gameplay_flags & GameplayFlags.MERGEABLE && tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     const piece = new Piece();
                     piece.color = tile.color;
     
@@ -214,12 +214,13 @@ export class World {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
                             tile.should_move = true;
-                            tile.move_t = 0;
+                            //tile.move_t = 0;
                             tile.target_pos.col = tile.world_pos.col + direction;
                         }
                     }
                 }
             }
+            
             
 
         }
@@ -311,13 +312,20 @@ export class World {
             this.forEachCell((row, col, index) => {
                 const tile = this.getTile(row, col);
 
-                if ( (tile.gameplay_flags & GameplayFlags.MOVABLE)) {
+                if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
                     const merge_list = [];
                     this.findMergeTiles(row, col, merge_list, tile, visited);
+
+                    const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
+
 
                     if (merge_list.length > 1) {
                         for (let t of merge_list) {
                             t.gameplay_flags |= GameplayFlags.MERGED;
+                            if (is_static) {
+                                t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                                t.gameplay_flags |= GameplayFlags.STATIC;
+                            }
                         }
                     }
                 }
@@ -363,7 +371,7 @@ export class World {
         }
     }
 
-    render() {
+    render(game_state) {
 
         // Draw level
         this.forEachCell((row, col, index) => {
@@ -415,6 +423,22 @@ export class World {
 
 
                 drawBlockNonUnitScale(x, y, tile.color, edges);
+
+                // Check whether mouse is within cell
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE && this.move_set.length < 1) {
+                    let {x, y} = game_state.mouse.screen_coord;
+                    const top_left = getScreenCoordFromTileCoord(row, col);
+                    const bottom_right = {
+                        x: top_left.x + top_left.tile_size, 
+                        y: top_left.y + top_left.tile_size
+                    };
+
+                    if ( (x >= top_left.x && x < bottom_right.x) && (y >= top_left.y && y < bottom_right.y) ) {
+
+                        drawMoveArrow(row, col, x, y);
+                    }
+
+                }
             }
 
         });

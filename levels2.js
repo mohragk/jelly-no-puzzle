@@ -5,15 +5,15 @@ export const levels = [
     ["xxxxxxxxxxxxxx", "x            x", "x       r    x", "x       b    x", "x       x    x", "x b r        x", "x b r      b x", "xxx x      xxx", "xxxxx xxxxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "xrg  gg      x", "xxx xxxx xx  x", "xrg          x", "xxxxx  xx   xx", "xxxxxx xx  xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxxxxxx      x", "xxxxxxx g    x", "x       xx   x", "x r   b      x", "x x xxx x g  x", "x         x bx", "x       r xxxx", "x   xxxxxxxxxx", "xxxxxxxxxxxxxx"], 
+    ["xxxxxxxxxxxxxx", "x            x", "x          r x", "x          x x", "x     b   b  x", "x     x  rr  x", "x         x  x", "x r  bx x x  x", "x x  xx x x  x", "xxxxxxxxxxxxxx"], 
+    ["xxxxxxxxxxxxxx", "xxxx x  x xxxx", "xxx  g  b  xxx", "xx   x  x   xx", "xx   sb  sg   xx", "xxg        bxx", "xxxg      bxxx", "xxxx      xxxx", "xxxxxxxxxxxxxx"], 
+    ["xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx", "xxxxx gr xxxxx", "xxxxx rb xxxxx", "xxxxx gr xxxxx", "xxxxx bg xxxxx", "xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx"], 
 ];
 const broken = [
-    ["xxxxxxxxxxxxxx", "x            x", "x          r x", "x          x x", "x     b   b  x", "x     x  rr  x", "x         x  x", "x r  bx x x  x", "x x  xx x x  x", "xxxxxxxxxxxxxx"], 
-    ["xxxxxxxxxxxxxx", "xxxx x  x xxxx", "xxx  g  b  xxx", "xx   x  x   xx", "xx   b  g   xx", "xxg        bxx", "xxxg      bxxx", "xxxx      xxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "x          rbx", "x    x     xxx", "xb        00xx", "xx  rx  x xxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x   gr       x", "x   00 1     x", "x    x x xxxxx", "x            x", "x  x  x      x", "x        x  rx", "xx   x     gxx", "x          xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x      g00g gx", "x       xxx xx", "x           gx", "x11         xx", "xxx          x", "x       g    x", "x   x xxx   gx", "x   xxxxxx xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxr rr  rr rxx", "xxx  x  x  xxx", "x            x", "xb          bx", "xx          xx", "x            x", "x            x", "x   xxxxxx   x", "xxxxxxxxxxxxxx"], 
-    ["xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx", "xxxxx gr xxxxx", "xxxxx rb xxxxx", "xxxxx gr xxxxx", "xxxxx bg xxxxx", "xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxxxxxxxx   rx", "xxxxxxxxx   gx", "xxxxxxxxx   gx", "x1122       gx", "x1122       gx", "x0033      xxx", "x0033      xxx", "xxr x gxxx xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xr r r      rx", "xg x x      gx", "xb          bx", "xxxxx     xxxx", "xxxxxx   xxxxx", "xxxxxx   xxxxx", "xxxxxx   xxxxx", "xxxxxxgggxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xx   0001233rx", "xx   0411233xx", "xx   444122xxx", "xx     xxxxxxx", "xr     xxxxxxx", "xx     xxxxxxx", "xx     xxxxxxx", "xx     xxxxxxx", "xxxxxxxxxxxxxx"], 

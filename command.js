@@ -14,6 +14,7 @@ export class MoveCommand {
 }
 
 
+
 export class CommandBuffer {
 
     constructor() {
