@@ -303,14 +303,14 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 function drawWinText() {
     const text = "You won!";
-    ctx.font = "72px Arial";
+    ctx.font = "72px sans-serif";
     ctx.fillStyle = "black";
     ctx.textAlign = "center"
     const {width, fontBoundingBoxAscent} = ctx.measureText(text);
 
     ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
 
-    ctx.font = "28px Arial";
+    ctx.font = "28px sans-serif";
     ctx.textAlign = "center"
     ctx.fillText("Press 'N' to go to next level.", canvas.width/2, canvas.height/2 + (fontBoundingBoxAscent));
 }
