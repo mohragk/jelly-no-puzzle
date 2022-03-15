@@ -131,13 +131,14 @@ export class World {
         // Create pieces
         const pieces = [];
         const pieces_grid = [];
+        const static_pieces = [];
         {
             const visited = [];
             this.forEachCell( (row, col, index) => {
                 const tile = this.getTile(row, col);
                 if (visited.includes(tile)) return 
 
-                if (tile.gameplay_flags & GameplayFlags.MERGEABLE && tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     const piece = new Piece();
                     piece.color = tile.color;
     
@@ -152,6 +153,22 @@ export class World {
                     }
 
                     pieces.push(piece);
+                }
+                else if (tile.gameplay_flags & GameplayFlags.STATIC && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
+                    const piece = new Piece();
+                    piece.color = tile.color;
+    
+                    if (tile.gameplay_flags & GameplayFlags.MERGED) {
+                        const merged_tiles = [];
+                        this.findMergeTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
+                        piece.tiles = [...merged_tiles];
+                    }
+                    else {
+                        piece.tiles.push(tile);
+                        visited.push(tile);
+                    }
+
+                    static_pieces.push(piece);
                 }
             });
 
@@ -338,7 +355,7 @@ export class World {
 
         
         // HANDLE WIN CONDITION
-        if (pieces.length === this.color_set.size) {
+        if (pieces.length + static_pieces.length === this.color_set.size) {
             game_state.running = false;
             game_state.has_won = true;
         }
