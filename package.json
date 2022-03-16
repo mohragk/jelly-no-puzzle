@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "serve -s ."
+    "start": "serve -s public"
   },
   "devDependencies": {
     "serve": "^13.0.2"
