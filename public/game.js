@@ -1,32 +1,20 @@
 import { levels }  from './levels2.js';
-import { GameplayFlags, Tile } from './tile.js';
 
 import {lerp} from './math.js';
+import { GameplayFlags, Tile } from './tile.js';
 
+import { World, Neighbours } from './world.js';
 import { Recorder } from './recorder.js';
-
-import { World } from './world.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 
 let canvas, ctx;
+let game_state; 
 let command_buffer;
+let recorder;
 
 
-let recorder = new Recorder();
-export const Neighbours = {
-    TOP:            (1 << 0),
-    BOTTOM:         (1 << 1),
-    LEFT:           (1 << 2),
-    RIGHT:          (1 << 3),
 
-    TOP_LEFT:       (1 << 4),
-    TOP_RIGHT:      (1 << 5),
-    BOTTOM_LEFT:    (1 << 6),
-    BOTTOM_RIGHT:   (1 << 7),
-};
-
-
-let game_state = {
+const DEFAULT_GAMESTATE = {
     running: false,
     level_colors: new Set(),
     has_won: false,
@@ -40,7 +28,6 @@ let game_state = {
     },
     frame_count: 0
 };
-const DEFAULT_GAMESTATE = {...game_state};
 
 
 let DEBUG_RENDER_WALLS = false;

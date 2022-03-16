@@ -1,10 +1,23 @@
 import {lerp} from './math.js';
 
 
-import { drawBlockNonUnitScale, Neighbours, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
+import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';
 
+// NOTE: Neighbours in this case means; tiles that are different 
+// in color (or id in case of black tiles) from the current tile.
+export const Neighbours = {
+    TOP:            (1 << 0),
+    BOTTOM:         (1 << 1),
+    LEFT:           (1 << 2),
+    RIGHT:          (1 << 3),
+
+    TOP_LEFT:       (1 << 4),
+    TOP_RIGHT:      (1 << 5),
+    BOTTOM_LEFT:    (1 << 6),
+    BOTTOM_RIGHT:   (1 << 7),
+};
 
 
 
@@ -77,19 +90,11 @@ export class World {
         if (visited.includes(tile)) {
             return;
         }
-
         
-        if (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
-            visited.push(tile);
-           
-            list.push(tile);
-            
-            this.findMergeTiles(row+1, col+0, list, original, visited);
-            this.findMergeTiles(row-1, col+0, list, original, visited);
-            this.findMergeTiles(row+0, col+1, list, original, visited);
-            this.findMergeTiles(row+0, col-1, list, original, visited);
-        }
-        if (tile.color === 'black' && original.id === tile.id) {
+        if ( 
+            (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ||
+            ((tile.color === 'black' && original.id === tile.id))
+         ) {
             visited.push(tile);
            
             list.push(tile);
@@ -148,7 +153,6 @@ export class World {
         const pieces = [];
         const pieces_grid = [];
         const static_pieces = [];
-        const black_pieces = [];
         {
             const visited = [];
             this.forEachCell( (row, col, index) => {
@@ -158,8 +162,6 @@ export class World {
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     const piece = new Piece();
                     piece.color = tile.color;
-
-                  
     
                     if (tile.gameplay_flags & GameplayFlags.MERGED) {
                         const merged_tiles = [];
@@ -198,8 +200,6 @@ export class World {
                     pieces_grid[grid_index] = index;
                 }
             });
-            
-            
         }
 
 
@@ -267,14 +267,9 @@ export class World {
             }
 
             if (c.type === CommandTypes.IMPOSSIBLE) {
-               
                 drawFullScreen("white")
             }
-
-            
-
         }
-
         
 
         if (this.move_set.length) {
@@ -413,9 +408,6 @@ export class World {
             game_state.running = false;
             game_state.has_won = true;
         }
-
-        
-
     }
 
 
@@ -426,26 +418,11 @@ export class World {
         });
     }
  
-    updateFlash(dt) {
-        this.screen_flash_t -= 0.3;
-
-        if (this.screen_flash_t < 0) {
-            this.screen_flash_t = 0;
-        }
-    }
-
-    drawFlash() {
-        if (this.screen_flash_t) {
-            const alpha = 255 * this.screen_flash_t;
-            console.log(alpha)
-            drawFullScreen(`rgba(120, 120, 120, ${alpha})`);
-        }
-    }
 
     render(game_state) {
 
         // Draw level
-        this.forEachCell((row, col, index) => {
+        this.forEachCell((row_, col_, index) => {
             const tile = this.grid[index];
             if ((tile.gameplay_flags > 0)) {
                 const [x, y] = tile.visual_pos;
@@ -472,14 +449,11 @@ export class World {
                     addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
                     addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
                     addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
-
                 }
-
-
 
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
 
-                // Check whether mouse is within cell
+                // For unified mouse click mode
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE && this.move_set.length < 1) {
                     let {x, y} = game_state.mouse.screen_coord;
                     const top_left = getScreenCoordFromTileCoord(row, col);
@@ -487,18 +461,14 @@ export class World {
                         x: top_left.x + top_left.tile_size, 
                         y: top_left.y + top_left.tile_size
                     };
-
+                    
+                    // Check whether mouse is within cell
                     if ( (x >= top_left.x && x < bottom_right.x) && (y >= top_left.y && y < bottom_right.y) ) {
-
                         drawMoveArrow(row, col, x, y);
                     }
-
                 }
             }
 
         });
-
     }
-
-
 };
