@@ -55,7 +55,12 @@ export class World {
         tile.target_pos.row = row;
         tile.target_pos.col = col;
         if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-            this.color_set.add(tile.color);
+            if (tile.color === 'black') {
+                this.color_set.add(`${tile.color}_${tile.id}`);
+            }
+            else {
+                this.color_set.add(tile.color);
+            }
         }
         const grid_index = this.getIndex(row, col);
         this.grid[grid_index] = tile;
@@ -75,6 +80,16 @@ export class World {
 
         
         if (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
+            visited.push(tile);
+           
+            list.push(tile);
+            
+            this.findMergeTiles(row+1, col+0, list, original, visited);
+            this.findMergeTiles(row-1, col+0, list, original, visited);
+            this.findMergeTiles(row+0, col+1, list, original, visited);
+            this.findMergeTiles(row+0, col-1, list, original, visited);
+        }
+        if (tile.color === 'black' && original.id === tile.id) {
             visited.push(tile);
            
             list.push(tile);
@@ -133,6 +148,7 @@ export class World {
         const pieces = [];
         const pieces_grid = [];
         const static_pieces = [];
+        const black_pieces = [];
         {
             const visited = [];
             this.forEachCell( (row, col, index) => {
@@ -142,6 +158,8 @@ export class World {
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     const piece = new Piece();
                     piece.color = tile.color;
+
+                  
     
                     if (tile.gameplay_flags & GameplayFlags.MERGED) {
                         const merged_tiles = [];
@@ -152,8 +170,8 @@ export class World {
                         piece.tiles.push(tile);
                         visited.push(tile);
                     }
-
                     pieces.push(piece);
+
                 }
                 else if (tile.gameplay_flags & GameplayFlags.STATIC && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
                     const piece = new Piece();
@@ -301,6 +319,7 @@ export class World {
         
         // Check and apply gravity
         if (!this.move_set.length) {
+            
             for (let piece of pieces) {
                 let can_move = true;
                
@@ -435,40 +454,21 @@ export class World {
 
 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                    {
-                        let t = this.getTile(row-1, col);
+
+                    const placeEdge = (row, col, placement) => {
+                        let t = this.getTile(row, col);
                         if (t) {
-                            if (t.color !== tile.color) {
-                                edges.push(EdgePlacements.TOP);
+                            if (t.color !== tile.color || t.id !== tile.id) {
+                                edges.push(placement);
                             }
                         }
                     }
-                    {
-                        let t = this.getTile(row+1, col);
-                        if (t) {
-                            if (t.color !== tile.color) {
-                                edges.push(EdgePlacements.BOTTOM);
-                            }
-                        }
-                    }
-    
-                    {
-                        let t = this.getTile(row, col-1);
-                        if (t) {
-                            if (t.color !== tile.color) {
-                                edges.push(EdgePlacements.LEFT);
-                            }
-                        }
-                    }
-    
-                    {
-                        let t = this.getTile(row, col+1);
-                        if (t) {
-                            if (t.color !== tile.color) {
-                                edges.push(EdgePlacements.RIGHT);
-                            }
-                        }
-                    }
+
+                    placeEdge(row-1, col, EdgePlacements.TOP);
+                    placeEdge(row+1, col, EdgePlacements.BOTTOM);
+                    placeEdge(row, col-1, EdgePlacements.LEFT);
+                    placeEdge(row, col+1, EdgePlacements.RIGHT);
+
                 }
 
 

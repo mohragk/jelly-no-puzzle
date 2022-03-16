@@ -7,6 +7,7 @@ export const GameplayFlags = {
 };
 
 export class Tile {
+    id = -1;
     visual_pos = [0, 0];
     world_pos  = {row: 0, col: 0};
     target_pos = {row: 0, col: 0};
@@ -15,6 +16,7 @@ export class Tile {
     should_move = false;
 
     gameplay_flags = 0;
+
 
     color = "";
 }

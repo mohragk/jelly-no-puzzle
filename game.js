@@ -298,7 +298,7 @@ function main() {
     }
     
     // Reset to first level
-    reset(0);
+    reset(10);
 }
 
 
@@ -309,53 +309,114 @@ function loadLevel(index, levels, world) {
         const t = new Tile();
         switch (c) {
             case ' ': {
-                return t;
             }
+            break;
             case 'x': {
                 t.gameplay_flags |= GameplayFlags.STATIC;
                 t.color = "gray";
-                return t;
             }
+            break;
+            
+            case '0': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 0;
+            }
+            break;
 
-           
+            case '1': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 1;
+            }
+            break;
+
+            case '2': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 2;
+            }
+            break;
+
+            case '3': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 3;
+            }
+            break;
+            
+            case '4': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 4;
+            }
+            break;
+
+            case '5': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 4;
+            }
+            break;
+
+            case '6': {
+                t.gameplay_flags |= GameplayFlags.MOVABLE;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                t.color = 'black';
+                t.id = 6;
+            }
+            break;
 
             case 'r': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "red";
-                return t;
             }
+            break;
+
             case 'g': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "green";
-                return t;
             }
+            break;
+
             case 'b': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "blue";
-                return t;
             }
+            break;
+
             case 'sr': {
                 t.gameplay_flags |= GameplayFlags.STATIC;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "red";
-                return t;
             }
+            break;
+
             case 'sg': {
                 t.gameplay_flags |= GameplayFlags.STATIC;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "green";
-                return t;
             }
+            break;
+
             case 'sb': {
                 t.gameplay_flags |= GameplayFlags.STATIC;
                 t.gameplay_flags |= GameplayFlags.MERGEABLE;
                 t.color = "blue";
-                return t;
             }
+            break;
         }
+
+        return t;
     };
     const level = levels[index];
 
@@ -405,6 +466,8 @@ function loadLevel(index, levels, world) {
             }
         }
     })
+
+    console.log(world)
 }
 
 function mainLoop(time) {
