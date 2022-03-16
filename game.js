@@ -138,7 +138,9 @@ function main() {
 
     function handleNext() {
         if (game_state.has_won) {
-            reset(game_state.level_index + 1);
+            const index = game_state.level_index + 1;
+            reset(index);
+            localStorage.setItem('last_level', index);
         }
     }
 
@@ -295,10 +297,13 @@ function main() {
     select.onchange = function(e) {
         const t = e.target.value;
         reset(t - 1)
+        localStorage.setItem('last_level', JSON.stringify(t-1));
     }
     
-    // Reset to first level
-    reset(10);
+    // Reset to last_saved level
+    let level_index = parseInt(localStorage.getItem('last_level')) || 0;
+    select.value = `${level_index + 1}`;
+    reset(level_index);
 }
 
 
