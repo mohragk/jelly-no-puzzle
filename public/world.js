@@ -452,10 +452,9 @@ export class World {
                 const {row, col} = tile.world_pos;
 
                 let edges = [];
-
+                
 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-
                     const placeEdge = (row, col, placement) => {
                         let t = this.getTile(row, col);
                         if (t) {
