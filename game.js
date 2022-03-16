@@ -41,7 +41,6 @@ const DEFAULT_GAMESTATE = {...game_state};
 let DEBUG_RENDER_WALLS = false;
 let TEST_HALF_CLICK = false;
 
-let highest_level = 0;
 
 let world = new World();
 let last_time = 0;
@@ -305,7 +304,8 @@ function main() {
 
     // Check level selection
     const select = document.getElementById("level-select");
-    const highest = parseInt(localStorage.getItem('highest_level')) || 0;
+    let highest = parseInt(localStorage.getItem('highest_level')) || 0;
+    
     for (let i = 0; i < highest + 1; i++) {
         let option = document.createElement("option");
         let val = `${i+1}`;
