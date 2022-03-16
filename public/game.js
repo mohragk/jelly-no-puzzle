@@ -146,20 +146,24 @@ function main() {
         if (game_state.has_won) {
             const index = game_state.level_index + 1;
             localStorage.setItem('last_level', index);
-            const highest = parseInt(localStorage.getItem('highest_level')) || 0;
+            let highest = parseInt(localStorage.getItem('highest_level')) || 0;
             if (highest < index) {
-                localStorage.setItem('highest_level', `${index}`);
+                highest = index;
+                localStorage.setItem('highest_level', `${highest}`);
             }
             
             // Update select options
             const select = document.getElementById("level-select");
-          
-    
-            let option = document.createElement("option");
-            let val = `${index+1}`;
-            option.value = val;
-            option.text = val;
-            select.add(option);
+            const options = select.options;
+            console.log(options)
+            if (options.length - 1 < highest) {
+
+                let option = document.createElement("option");
+                let val = `${index+1}`;
+                option.value = val;
+                option.text = val;
+                select.add(option);
+            }
         
 
             reset(index);
