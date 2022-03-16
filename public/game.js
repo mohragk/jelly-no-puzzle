@@ -13,11 +13,16 @@ let command_buffer;
 
 
 let recorder = new Recorder();
-export const EdgePlacements = {
-    TOP: 0,
-    BOTTOM: 1,
-    LEFT: 2,
-    RIGHT: 3,
+export const Neighbours = {
+    TOP:            (1 << 0),
+    BOTTOM:         (1 << 1),
+    LEFT:           (1 << 2),
+    RIGHT:          (1 << 3),
+
+    TOP_LEFT:       (1 << 4),
+    TOP_RIGHT:      (1 << 5),
+    BOTTOM_LEFT:    (1 << 6),
+    BOTTOM_RIGHT:   (1 << 7),
 };
 
 
@@ -197,9 +202,7 @@ function main() {
     function getTouchCoord(canvas, e) {
         const rect = canvas.getBoundingClientRect();
         const touch = e.changedTouches[0];
-        if (!touch) {
-            debugger
-        }
+        
         return {
             offsetX: touch.clientX - rect.left,
             offsetY: touch.clientY - rect.top
@@ -493,8 +496,6 @@ function loadLevel(index, levels, world) {
 }
 
 function mainLoop(time) {
-    
-
     const dt = (time - last_time) / 1000.0;
     last_time = time;
     {
@@ -521,11 +522,6 @@ export function drawBlockText(row, col, text, text_color = "white") {
     ctx.fillText(text, x+tile_size/2, y+tile_size/2);
 }
 
-export function drawBlock(row, col, color) {
-    const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, tile_size, tile_size);
-}
 
 export function drawFullScreen(color) {
     const w = canvas.width;
@@ -597,329 +593,26 @@ export function drawMoveArrow(row, col, mouse_x, mouse_y) {
 
 }
 
-function drawEdge(center_x, center_y, size, thickness, placement) {
-    switch (placement) {
-        case EdgePlacements.TOP: {
-            ctx.beginPath();
-
-            // Top left
-            let [x, y] = [ center_x - size/2, center_y - size/2 ];
-            ctx.moveTo(x, y);
-
-            // Top right
-            x += size;  
-            ctx.lineTo(x, y);
-            
-            // Down
-            x -= thickness;
-            y += thickness;
-            ctx.lineTo( x, y );
-
-            // Straight left
-            x = center_x - size/2 + thickness;
-            ctx.lineTo(x, y);
-
-            ctx.fill();
-        }
-        break;
-
-        case EdgePlacements.EMPTY_TOP: {
-            {
-                ctx.beginPath();
-    
-                // Top left
-                let [x, y] = [ center_x - size/2, center_y - size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight right
-                x += thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight down
-                y += thickness;
-                ctx.lineTo( x, y );
-    
-                // up-left
-                x = center_x - size/2;
-                y = center_y - size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-            {
-                ctx.beginPath();
-    
-                // Top right
-                let [x, y] = [ center_x + size/2, center_y - size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight left
-                x -= thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight down
-                y += thickness;
-                ctx.lineTo( x, y );
-    
-                // up-right
-                x = center_x + size/2;
-                y = center_y - size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-        }
-        break;
-
-        case EdgePlacements.BOTTOM: {
-            ctx.beginPath();
-
-            // Bottom left
-            let [x, y] = [ center_x - size/2, center_y + size/2 ];
-            ctx.moveTo(x, y);
-
-            // Bottom right
-            x += size;  
-            ctx.lineTo(x, y);
-            
-            // Up-left
-            x -= thickness;
-            y -= thickness;
-            ctx.lineTo( x, y );
-
-            // Straight left
-            x = center_x - size/2 + thickness;
-            ctx.lineTo(x, y);
-          
-            ctx.fill();
-        }
-        break;
-
-        case EdgePlacements.EMPTY_BOTTOM: {
-            {
-                ctx.beginPath();
-    
-                // bottom left
-                let [x, y] = [ center_x - size/2, center_y + size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight right
-                x += thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight up
-                y -= thickness;
-                ctx.lineTo( x, y );
-    
-                // bottom-left
-                x = center_x - size/2;
-                y = center_y + size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-            {
-                ctx.beginPath();
-    
-                // bottom right
-                let [x, y] = [ center_x + size/2, center_y + size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight left
-                x -= thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight up
-                y -= thickness;
-                ctx.lineTo( x, y );
-    
-                // bottom right
-                x = center_x + size/2;
-                y = center_y + size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-        }
-        break;
-
-        case EdgePlacements.LEFT: {
-            ctx.beginPath();
-
-            // Top left
-            let [x, y] = [ center_x - size/2, center_y - size/2 ];
-            ctx.moveTo(x, y);
-
-            // Straight down
-            y += size;  
-            ctx.lineTo(x, y);
-            
-            // Up-right
-            x += thickness;
-            y -= thickness;
-            ctx.lineTo( x, y );
-
-            // Straight up
-            y = center_y - size/2 + thickness;
-            ctx.lineTo(x, y);
-          
-            ctx.fill();
-        }
-        break;
-
-        case EdgePlacements.EMPTY_LEFT: {
-            {
-                ctx.beginPath();
-    
-                // top left
-                let [x, y] = [ center_x - size/2, center_y - size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight down
-                y += thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight right
-                x += thickness;
-                ctx.lineTo( x, y );
-    
-                // top left
-                x = center_x - size/2;
-                y = center_y - size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-            {
-                ctx.beginPath();
-    
-                // bottom left
-                let [x, y] = [ center_x - size/2, center_y + size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight up
-                y -= thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight right
-                x += thickness;
-                ctx.lineTo( x, y );
-    
-                // bottom left
-                x = center_x - size/2;
-                y = center_y + size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-        }
-        break;
-
-       
-      
-        case EdgePlacements.RIGHT: {
-            ctx.beginPath();
-
-            // Top right
-            let [x, y] = [ center_x + size/2, center_y - size/2 ];
-            ctx.moveTo(x, y);
-
-            // Straight down
-            y += size;  
-            ctx.lineTo(x, y);
-            
-            // Up-left
-            x -= thickness;
-            y -= thickness;
-            ctx.lineTo( x, y );
-
-            // Straight up
-            y = center_y - size/2 + thickness;
-            ctx.lineTo(x, y);
-          
-            ctx.fill();
-        }
-        break;
 
 
-        case EdgePlacements.EMPTY_RIGHT: {
-            {
-                ctx.beginPath();
-    
-                // top right
-                let [x, y] = [ center_x + size/2, center_y - size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight down
-                y += thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight left
-                x -= thickness;
-                ctx.lineTo( x, y );
-    
-                // top right
-                x = center_x + size/2;
-                y = center_y - size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-            {
-                ctx.beginPath();
-    
-                // bottom right
-                let [x, y] = [ center_x + size/2, center_y + size/2 ];
-                ctx.moveTo(x, y);
-    
-                // straight up
-                y -= thickness;  
-                ctx.lineTo(x, y);
-                
-                // straight left
-                x -= thickness;
-                ctx.lineTo( x, y );
-    
-                // bottom right
-                x = center_x + size/2;
-                y = center_y + size/2
-                ctx.lineTo(x, y);
-    
-                ctx.fill();
-            }
-
-        }
-        break;
-
-    }
-}
-
-
-function drawSubOuterTopLeft(center_x, center_y, thickness, size, color, alpha = 0.3) {
+function drawSubOuterTopLeft(center_x, center_y, thickness, size, alpha = 0.3) {
 
     const dim = size / 2;
-    ctx.fillStyle = color;
     let [x, y] = [center_x - dim, center_y - dim];
-    ctx.fillRect(x, y, dim, dim);
-
+    
+    ctx.fillStyle = "white"
     ctx.globalAlpha = alpha;
     ctx.beginPath();
+   
 
     // top left
     ctx.moveTo(x, y);
 
     // straight down
-    y += thickness;
+    y += dim;
     ctx.lineTo(x, y);
 
-    // straight left
+    // straight right
     x += thickness;
     ctx.lineTo(x, y);
 
@@ -931,81 +624,466 @@ function drawSubOuterTopLeft(center_x, center_y, thickness, size, color, alpha =
     x = center_x;
     ctx.lineTo(x, y);
 
+    // straight up
+    y = center_y - dim;
+    ctx.lineTo(x, y);
+
     // home
     x = center_x - dim;
     y = center_y - dim;
-    lineTo(x, y);
+    ctx.lineTo(x, y);
 
+    
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
 }
 
-function drawSubOuterTopRight(x, y, thickness, size, color) {
-
-}
-
-function drawSubOuterBottomLeft(x, y, thickness, size, color) {
-
-}
-
-function drawSubOuterBottomRight(x, y, thickness, size, color) {
-
-}
-
-function drawSubInnerTopLeft(x, y, thickness, size, color) {
-
-}
-
-function drawSubInnerTopRight(x, y, thickness, size, color) {
-
-}
-
-function drawSubInnerBottomLeft(x, y, thickness, size, color) {
-
-}
-
-function drawSubInnerBottomRight(x, y, thickness, size, color) {
+function drawSubOuterTopRight(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x + dim, center_y - dim];
     
-}
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
 
-function drawSubEdgeLeft(x, y, thickness, size, color) {
+    // top right
+    ctx.moveTo(x, y);
 
-}
+    // straight down
+    y += dim;
+    ctx.lineTo(x, y);
 
+    // straight left
+    x -= thickness;
+    ctx.lineTo(x, y);
 
-function drawSubEdgeRight(x, y, thickness, size, color) {
+    // straight up
+    y -= dim - thickness;
+    ctx.lineTo(x, y);
     
-}
+    // straight right
+    x = center_x;
+    ctx.lineTo(x, y);
 
-function drawSubEdgeTop(x, y, thickness, size, color) {
+    // straight up
+    y = center_y - dim;
+    ctx.lineTo(x, y);
 
-}
+    // home
+    x = center_x - dim;
+    y = center_y - dim;
+    ctx.lineTo(x, y);
 
-
-function drawSubEdgeBottom(x, y, thickness, size, color) {
     
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubOuterBottomLeft(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y + dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // bottom left
+    ctx.moveTo(x, y);
+
+    // straight up
+    y -= dim;
+    ctx.lineTo(x, y);
+
+    // straight right
+    x += thickness;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y += dim - thickness;
+    ctx.lineTo(x, y);
+    
+    // straight right
+    x = center_x;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y = center_y + dim;
+    ctx.lineTo(x, y);
+
+    // home
+    x = center_x - dim;
+    y = center_y + dim;
+    ctx.lineTo(x, y);
+
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubOuterBottomRight(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x + dim, center_y + dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // bottom right
+    ctx.moveTo(x, y);
+
+    // straight up
+    y -= dim;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y += dim - thickness;
+    ctx.lineTo(x, y);
+    
+    // straight left
+    x = center_x;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y = center_y + dim;
+    ctx.lineTo(x, y);
+
+    // home
+    x = center_x + dim;
+    y = center_y + dim;
+    ctx.lineTo(x, y);
+
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubInnerTopLeft(center_x, center_y, thickness, size, alpha) {
+    
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y - dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // top left
+    ctx.moveTo(x, y);
+
+    // straight down
+    y += thickness;
+    ctx.lineTo(x, y);
+
+    // straight right
+    x += thickness;
+    ctx.lineTo(x, y);
+
+    // straight up
+    y -= thickness;
+    ctx.lineTo(x, y);
+    
+
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubInnerTopRight(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x + dim, center_y - dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // top right
+    ctx.moveTo(x, y);
+
+    // straight down
+    y += thickness;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight up
+    y -= thickness;
+    ctx.lineTo(x, y);
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubInnerBottomLeft(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y + dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // bottom left
+    ctx.moveTo(x, y);
+
+    // straight up
+    y -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight right
+    x += thickness;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y += thickness;
+    ctx.lineTo(x, y);
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubInnerBottomRight(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x + dim, center_y + dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // bottom right
+    ctx.moveTo(x, y);
+
+    // straight up
+    y -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y += thickness;
+    ctx.lineTo(x, y);
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubEdgeLeft(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y - dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // top left
+    ctx.moveTo(x, y);
+
+    // straight down
+    y += dim;
+    ctx.lineTo(x, y);
+
+    // straight right
+    x += thickness;
+    ctx.lineTo(x, y);
+
+    // straight up
+    y = center_y - dim;
+    ctx.lineTo(x, y);
+    
+   
+
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
 }
 
 
-export function drawBlockNonUnitScale(x, y, color, edges = []) {
+function drawSubEdgeRight(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x + dim, center_y - dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // top right
+    ctx.moveTo(x, y);
+
+    // straight down
+    y += dim;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight up
+    y = center_y - dim;
+    ctx.lineTo(x, y);
+    
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+function drawSubEdgeTop(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y - dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // top left
+    ctx.moveTo(x, y);
+
+    // straight right
+    x += dim;
+    ctx.lineTo(x, y);
+
+    // straight down
+    y += thickness;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x = center_x - dim;
+    ctx.lineTo(x, y);
+    
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+
+function drawSubEdgeBottom(center_x, center_y, thickness, size, alpha) {
+    const dim = size / 2;
+    let [x, y] = [center_x - dim, center_y + dim];
+    
+    ctx.fillStyle = "white"
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+   
+
+    // bottom left
+    ctx.moveTo(x, y);
+
+    // straight right
+    x += dim;
+    ctx.lineTo(x, y);
+
+    // straight up
+    y -= thickness;
+    ctx.lineTo(x, y);
+
+    // straight left
+    x = center_x - dim;
+    ctx.lineTo(x, y);
+    
+    
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
+
+
+export function drawBlockNonUnitScale(x, y, color, neighbours) {
     const size = canvas.width / world.dimensions.w;
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, size, size);
+   
 
     const center_x = lerp(x, x + size, 0.5);
     const center_y = lerp(y, y + size, 0.5);
 
-    
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "white";
-    const edge_thickness = size / 14;
-   
-    for (let edge of edges) {
-        drawEdge(center_x, center_y, size, edge_thickness, edge);
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, size, size);
+
+    // draw all quadrants
+    const thickness = size / 8;
+    const alpha = 0.3;
+    // Top left
+    {
+        if (neighbours & Neighbours.TOP_LEFT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.LEFT) ) {
+            drawSubInnerTopLeft( center_x, center_y, thickness, size, alpha);
+        } 
+        else if (neighbours & Neighbours.TOP && neighbours & Neighbours.LEFT) {
+            drawSubOuterTopLeft(center_x, center_y, thickness, size, alpha);
+        }
+
+        else if (neighbours & Neighbours.LEFT) {
+            drawSubEdgeLeft(center_x, center_y, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.TOP) {
+            drawSubEdgeTop(center_x, center_y, thickness, size, alpha);
+        }
+       
     }
 
-    ctx.globalAlpha = 1.0;
+    // Top right 
+    {
+        if (neighbours & Neighbours.TOP_RIGHT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.RIGHT) ) {
+            drawSubInnerTopRight(center_x, center_y, thickness, size, alpha);
+        }
+
+        else if (neighbours & Neighbours.TOP && neighbours & Neighbours.RIGHT) {
+            drawSubOuterTopRight(center_x, center_y, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.RIGHT) {
+            drawSubEdgeRight(center_x, center_y, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.TOP) {
+            drawSubEdgeTop(x + size, center_y, thickness, size, alpha);
+        }
+    }
+
+    // Bottom left
+    {
+        if (neighbours & Neighbours.BOTTOM_LEFT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.LEFT) ) {
+            drawSubInnerBottomLeft(center_x, center_y, thickness, size, alpha)
+        }
+
+        else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.LEFT) {
+            drawSubOuterBottomLeft(center_x, center_y, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.LEFT) {
+            drawSubEdgeLeft(center_x, y + size, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.BOTTOM) {
+            drawSubEdgeBottom(center_x, center_y, thickness, size, alpha);
+        }
+        
+    }
+
+    // Bottom right
+    {
+        
+        if (neighbours & Neighbours.BOTTOM_RIGHT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.RIGHT) ) {
+            drawSubInnerBottomRight(center_x, center_y, thickness, size, alpha)
+        }
+        else
+        if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.RIGHT) {
+            drawSubOuterBottomRight(center_x, center_y, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.RIGHT) {
+            drawSubEdgeRight(center_x, y + size, thickness, size, alpha);
+        }
+        else if (neighbours & Neighbours.BOTTOM) {
+            drawSubEdgeBottom(x + size, center_y, thickness, size, alpha);
+        }
+    }
 }
 
 export function getScreenCoordFromTileCoord(row, col) {

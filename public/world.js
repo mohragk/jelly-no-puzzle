@@ -1,7 +1,7 @@
 import {lerp} from './math.js';
 
 
-import { drawBlockNonUnitScale, EdgePlacements, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
+import { drawBlockNonUnitScale, Neighbours, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';
 
@@ -451,29 +451,33 @@ export class World {
                 const [x, y] = tile.visual_pos;
                 const {row, col} = tile.world_pos;
 
-                let edges = [];
-                
+                let neighbours = 0;
 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                    const placeEdge = (row, col, placement) => {
+                    const addNeigbour = (row, col, placement) => {
                         let t = this.getTile(row, col);
                         if (t) {
                             if (t.color !== tile.color || t.id !== tile.id) {
-                                edges.push(placement);
+                                neighbours |= placement;
                             }
                         }
                     }
 
-                    placeEdge(row-1, col, EdgePlacements.TOP);
-                    placeEdge(row+1, col, EdgePlacements.BOTTOM);
-                    placeEdge(row, col-1, EdgePlacements.LEFT);
-                    placeEdge(row, col+1, EdgePlacements.RIGHT);
+                    addNeigbour(row-1, col, Neighbours.TOP);
+                    addNeigbour(row+1, col, Neighbours.BOTTOM);
+                    addNeigbour(row, col-1, Neighbours.LEFT);
+                    addNeigbour(row, col+1, Neighbours.RIGHT);
+
+                    addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
+                    addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
+                    addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
+                    addNeigbour(row-1, col+1, Neighbours.BOTTOM_RIGHT);
 
                 }
 
 
 
-                drawBlockNonUnitScale(x, y, tile.color, edges);
+                drawBlockNonUnitScale(x, y, tile.color, neighbours);
 
                 // Check whether mouse is within cell
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE && this.move_set.length < 1) {
