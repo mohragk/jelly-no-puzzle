@@ -35,11 +35,13 @@ let game_state = {
     },
     frame_count: 0
 };
+const DEFAULT_GAMESTATE = {...game_state};
+
 
 let DEBUG_RENDER_WALLS = false;
 let TEST_HALF_CLICK = false;
 
-const DEFAULT_GAMESTATE = {...game_state};
+let highest_level = 0;
 
 let world = new World();
 let last_time = 0;
@@ -139,8 +141,24 @@ function main() {
     function handleNext() {
         if (game_state.has_won) {
             const index = game_state.level_index + 1;
-            reset(index);
             localStorage.setItem('last_level', index);
+            const highest = parseInt(localStorage.getItem('highest_level')) || 0;
+            if (highest < index) {
+                localStorage.setItem('highest_level', `${index}`);
+            }
+            
+            // Update select options
+            const select = document.getElementById("level-select");
+          
+    
+            let option = document.createElement("option");
+            let val = `${index+1}`;
+            option.value = val;
+            option.text = val;
+            select.add(option);
+        
+
+            reset(index);
         }
     }
 
@@ -287,7 +305,8 @@ function main() {
 
     // Check level selection
     const select = document.getElementById("level-select");
-    for (let i = 0; i < levels.length; i++) {
+    const highest = parseInt(localStorage.getItem('highest_level')) || 0;
+    for (let i = 0; i < highest + 1; i++) {
         let option = document.createElement("option");
         let val = `${i+1}`;
         option.value = val;

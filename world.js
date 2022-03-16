@@ -267,6 +267,7 @@ export class World {
             }
 
             if (c.type === CommandTypes.IMPOSSIBLE) {
+               
                 drawFullScreen("white")
             }
 
