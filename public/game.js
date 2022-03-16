@@ -1130,10 +1130,6 @@ function updateAndRender(world, command_buffer, dt) {
     if (game_state.has_won) {
         drawWinText();
     }
-    
-    if (DEBUG_RENDER_WALLS) {
-        world.debugRenderCells();
-    }
 }
 
 

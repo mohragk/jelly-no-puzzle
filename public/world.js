@@ -471,7 +471,7 @@ export class World {
                     addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
                     addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
                     addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
-                    addNeigbour(row-1, col+1, Neighbours.BOTTOM_RIGHT);
+                    addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
 
                 }
 
