@@ -490,8 +490,6 @@ function loadLevel(index, levels, world) {
             }
         }
     })
-
-    console.log(world)
 }
 
 function mainLoop(time) {
@@ -653,7 +651,8 @@ function drawWinText() {
     ctx.font = "72px sans-serif";
     ctx.fillStyle = "black";
     ctx.textAlign = "center"
-    const {width, fontBoundingBoxAscent} = ctx.measureText(text);
+    let {fontBoundingBoxAscent} = ctx.measureText(text);
+    fontBoundingBoxAscent = fontBoundingBoxAscent ? fontBoundingBoxAscent : 48;
 
     ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
 
