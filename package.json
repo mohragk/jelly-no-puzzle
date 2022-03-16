@@ -1,7 +1,4 @@
 {
-  "dependencies": {
-    "nodemon": "^2.0.15"
-  },
   "scripts": {
     "start": "serve -s ."
   }
