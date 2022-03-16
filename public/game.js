@@ -31,7 +31,7 @@ const DEFAULT_GAMESTATE = {
 
 
 let DEBUG_RENDER_WALLS = false;
-let TEST_HALF_CLICK = false;
+let ENABLE_UNIFIED_CLICK = false;
 
 
 let world = new World();
@@ -108,12 +108,8 @@ function main() {
             handleNext();
         }
 
-        if (e.key === 'd') { 
-            DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
-        }
-
         if (e.key === 't') {
-            TEST_HALF_CLICK = !TEST_HALF_CLICK;
+            ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
         }
     })
 
@@ -169,7 +165,7 @@ function main() {
 
             if (apply) {
                 let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
-                if (TEST_HALF_CLICK) {
+                if (ENABLE_UNIFIED_CLICK) {
                     let {x, tile_size} = getScreenCoordFromTileCoord(row, col);
                    
                     let mouse_x = offsetX;
@@ -549,7 +545,7 @@ function drawArrowRight(x, center_y, height, color = "black") {
 
 
 export function drawMoveArrow(row, col, mouse_x, mouse_y) {
-    if (!TEST_HALF_CLICK) return;
+    if (!ENABLE_UNIFIED_CLICK) return;
 
 
     ctx.globalAlpha = 0.6;
