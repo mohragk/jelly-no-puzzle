@@ -17,6 +17,5 @@ export class Tile {
 
     gameplay_flags = 0;
 
-
     color = "";
 }
