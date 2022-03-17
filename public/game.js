@@ -41,8 +41,12 @@ function reset(level_index) {
 
  
     if (level_index < levels.length) {
+        const button = document.getElementById("next_button");
+        button.style.visibility = "hidden";
+
         const select = document.getElementById("level-select");
         select.value = level_index + 1;
+
 
         game_state = {...DEFAULT_GAMESTATE};
        
@@ -1115,18 +1119,23 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 
 function drawWinText() {
+    const cell_size = canvas.width / world.dimensions.w;
     const text = "You won!";
-    ctx.font = "72px sans-serif";
-    ctx.fillStyle = "black";
-    ctx.textAlign = "center"
-    let {fontBoundingBoxAscent} = ctx.measureText(text);
-    fontBoundingBoxAscent = fontBoundingBoxAscent ? fontBoundingBoxAscent : 48;
+    
+        const font_size = `${cell_size * 0.75}px`
+        ctx.font = font_size+" sans-serif";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center"
+        let {fontBoundingBoxAscent} = ctx.measureText(text);
+        fontBoundingBoxAscent = fontBoundingBoxAscent ? fontBoundingBoxAscent : 48;
+    
+        ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
+    
 
-    ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
-
-    ctx.font = "28px sans-serif";
+    const font_size_sm = `${cell_size * 0.4}px`;
+    ctx.font = font_size_sm+" sans-serif";
     ctx.textAlign = "center"
-    ctx.fillText("Press 'N' to go to next level.", canvas.width/2, canvas.height/2 + (fontBoundingBoxAscent));
+    ctx.fillText("Press 'next' to go to next level.", canvas.width/2, canvas.height/2 + (fontBoundingBoxAscent));
 }
 
 
@@ -1138,6 +1147,8 @@ function updateAndRender(world, command_buffer, dt) {
     
     if (game_state.has_won) {
         drawWinText();
+        const button = document.getElementById("next_button");
+        button.style.visibility = "visible";
     }
 }
 
