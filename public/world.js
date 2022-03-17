@@ -355,7 +355,7 @@ export class World {
                             }
                             distance += 1;
                         }
-                        max_distance = Math.min(max_distance, distance);
+                        max_distance = Math.min(  Math.min(max_distance, distance), 100 );
                     }
 
                     // Apply travel distance

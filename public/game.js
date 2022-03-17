@@ -78,8 +78,29 @@ export const MouseButtons = {
     FORWARD: 4
 };
 
+function resizeCanvas(canvas) {
+    const getCellSize = (prefer_width, world_dim) => {
+        const window_dim = prefer_width ? window.outerWidth : window.outerHeight;
+        const window_w = Math.min(window_dim , 1024);
+        return Math.floor(window_w / world_dim);
+    };
+    
+    let cell_size = getCellSize(true, world.dimensions.w);
+    let new_h = cell_size * world.dimensions.h;
+    if (new_h > window.outerHeight) {
+        cell_size = getCellSize(false, world.dimensions.h);
+        new_h = cell_size * world.dimensions.h;
+    }
+    let new_w = cell_size * world.dimensions.w;
 
-window.addEventListener("load", main());
+    canvas.width  = new_w;
+    canvas.height = new_h;
+}
+
+window.addEventListener("load", main);
+window.addEventListener("orientationchange", () => { resizeCanvas(canvas) });
+window.addEventListener("resize", () => { resizeCanvas(canvas) });
+
 function main() {
     canvas = document.getElementById("grid_canvas");
     ctx = canvas.getContext("2d");
@@ -87,6 +108,7 @@ function main() {
     canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
+
 
     canvas.addEventListener("touchstart", onTouchStart);
     canvas.addEventListener("touchend", onTouchEnd);
@@ -138,7 +160,6 @@ function main() {
             // Update select options
             const select = document.getElementById("level-select");
             const options = select.options;
-            console.log(options)
             if (options.length - 1 < highest) {
 
                 let option = document.createElement("option");
@@ -250,7 +271,7 @@ function main() {
         e.preventDefault();
         const { offsetX } = getTouchCoord(canvas, e);
 
-        if (game_state.mouse.dragging) {
+        if (false && game_state.mouse.dragging) {
             const {row, col} = game_state.mouse.start_tile;
             const tile = world.getTile(row, col);
 
@@ -460,9 +481,7 @@ function loadLevel(index, levels, world) {
         row++;
     }
 
-    const cell_size = 72;
-    canvas.width  = cell_size * world.dimensions.w;
-    canvas.height = cell_size * world.dimensions.h;
+    resizeCanvas(canvas);
 
     // First time merge checking!
     const visited = [];
