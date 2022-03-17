@@ -39,7 +39,8 @@ let last_time = 0;
 
 function reset(level_index) {
 
- 
+    canvas.classList.remove("add_victory_animation");
+    
     if (level_index < levels.length) {
         const button = document.getElementById("next_button");
         button.style.visibility = "hidden";
@@ -85,16 +86,14 @@ export const MouseButtons = {
 function resizeCanvas(canvas) {
     const getCellSize = (prefer_width, world_dim) => {
         const div = document.getElementById("canvas-container");
-        console.log(div.offsetWidth)
-
-        const window_dim = prefer_width ? div.clientWidth : window.outerHeight - 20;
+        const window_dim = prefer_width ? div.clientWidth : window.innerHeight - 20;
         const window_w = Math.min(window_dim);
         return Math.floor(window_w / world_dim);
     };
     
     let cell_size = getCellSize(true, world.dimensions.w);
     let new_h = cell_size * world.dimensions.h;
-    if (new_h > window.outerHeight) {
+    if (new_h > window.innerHeight) {
         cell_size = getCellSize(false, world.dimensions.h);
         new_h = cell_size * world.dimensions.h;
     }
@@ -1150,6 +1149,7 @@ function updateAndRender(world, command_buffer, dt) {
     
     if (game_state.has_won) {
         drawWinText();
+        canvas.classList.add("add_victory_animation");
         const button = document.getElementById("next_button");
         button.style.visibility = "visible";
     }

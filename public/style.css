@@ -10,6 +10,24 @@ button {
     padding: 6px 14px;
 }
 
+.add_shake {
+    animation: canvas_shake 0.20s;
+}
+
+.add_gravity_shake_heavy {
+    animation: canvas_shake_down_heavy 0.35s;
+}
+
+
+.add_gravity_shake_mild {
+    animation: canvas_shake_down_mild 0.35s;
+}
+
+.add_victory_animation {
+    animation: canvas_victory 2s;
+    animation-iteration-count: infinite;
+}
+
 #button-container {
     padding: 10px;
 }
@@ -35,15 +53,47 @@ button {
         padding: 0;
     }
 
-    
-#button-container {
-    padding: 4px;
-}
-
-    
-#button-container {
-    padding: 4px;
-}
+        
+    #button-container {
+        padding: 4px;
+    }
 
         
+    #button-container {
+        padding: 4px;
+    }
+}
+
+@keyframes canvas_victory {
+    0%   { transform: rotate(-2deg); }
+    49%  { transform: rotate(-2deg); }
+    50%  { transform: rotate( 2deg); }
+    100% { transform: rotate( 2deg); }
+}
+
+@keyframes canvas_shake {
+    0%      { transform: translateX(-10px) }
+    10%      { transform: translateX(+10px) }
+    30%     { transform: translateX(-5px) }
+    50%     { transform: translateX(+5px) }
+    70%     { transform: translateX( 0px) }
+    100%    { transform: translateX( 0px) }
+}
+
+@keyframes canvas_shake_down_heavy {
+    0%      { transform: translateY(-8px) }
+    10%      { transform: translateY(+8px) }
+    30%     { transform: translateY(-5px) }
+    50%     { transform: translateY(+5px) }
+    70%     { transform: translateY( 0px) }
+    100%    { transform: translateY( 0px) }
+}
+
+@keyframes canvas_shake_down_mild {
+    0%      { transform: translateY(-3px) }
+    15%      { transform: translateY(+3px) }
+    40%     { transform: translateY(-1px) }
+    60%     { transform: translateY(+1px) }
+    70%     { transform: translateY( 0px) }
+    100%    { transform: translateY( 0px) }
 }

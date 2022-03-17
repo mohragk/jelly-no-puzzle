@@ -39,6 +39,8 @@ export class World {
     fall_speed = 9.0;
     color_set = new Set();
 
+    canvas_shake_timeout;
+
     screen_flash_t;
 
     setDimensions(w, h) {
@@ -122,7 +124,8 @@ export class World {
     moveTile(tile, dt) {    
         let fall_dist = tile.target_pos.row - tile.world_pos.row;
 
-        if( fall_dist > 0 ) {
+        // NOTE: shouldn't this be > 1 ?
+        if( fall_dist > 1 ) {
             tile.move_t += (this.fall_speed * dt);
         }
         else {
@@ -132,6 +135,19 @@ export class World {
         if (tile.move_t > 1) {
             tile.move_t = 0;
             tile.should_move = false;
+
+            const canvas = document.getElementById("grid_canvas");
+            if (fall_dist > 1 && fall_dist <= 3) {
+                const name =  "add_gravity_shake_mild";
+                canvas.classList.add(name);
+                window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+            }
+            if (fall_dist > 3) {
+                debugger
+                const name =  "add_gravity_shake_heavy";
+                canvas.classList.add(name);
+                window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+            }
         }        
     }
 
@@ -268,6 +284,11 @@ export class World {
 
             if (c.type === CommandTypes.IMPOSSIBLE) {
                 drawFullScreen("white")
+                const canvas = document.getElementById("grid_canvas");
+                
+                canvas.classList.add("add_shake")
+                this.canvas_shake_timeout = window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+
             }
         }
         
