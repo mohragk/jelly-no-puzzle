@@ -143,7 +143,6 @@ export class World {
                 window.setTimeout(() => {canvas.classList.remove(name);}, 350)
             }
             if (fall_dist > 3) {
-                debugger
                 const name =  "add_gravity_shake_heavy";
                 canvas.classList.add(name);
                 window.setTimeout(() => {canvas.classList.remove(name);}, 350)

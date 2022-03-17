@@ -40,7 +40,7 @@ let last_time = 0;
 function reset(level_index) {
 
     canvas.classList.remove("add_victory_animation");
-    
+
     if (level_index < levels.length) {
         const button = document.getElementById("next_button");
         button.style.visibility = "hidden";
@@ -66,6 +66,7 @@ function reset(level_index) {
 }
 
 function resetWorld(levels) {
+    canvas.classList.remove("add_victory_animation");
     world = new World();
     const level_index = game_state.level_index;
     loadLevel(level_index, levels, world);
@@ -142,6 +143,7 @@ function main() {
     })
 
     function handleUndo() {
+        canvas.classList.remove("add_victory_animation");
         const prev = recorder.getPrevious();
             world.setState(prev);
             game_state.has_won = false;
@@ -507,7 +509,9 @@ function loadLevel(index, levels, world) {
                 }
             }
         }
-    })
+    });
+
+   
 }
 
 function mainLoop(time) {
