@@ -80,8 +80,11 @@ export const MouseButtons = {
 
 function resizeCanvas(canvas) {
     const getCellSize = (prefer_width, world_dim) => {
-        const window_dim = prefer_width ? window.outerWidth : window.outerHeight;
-        const window_w = Math.min(window_dim , 1024);
+        const div = document.getElementById("canvas-container");
+        console.log(div.offsetWidth)
+
+        const window_dim = prefer_width ? div.clientWidth : window.outerHeight - 20;
+        const window_w = Math.min(window_dim);
         return Math.floor(window_w / world_dim);
     };
     
