@@ -302,6 +302,7 @@ function main() {
     {
         const button = document.getElementById("undo_button");
         button.onclick = e => {
+            e.preventDefault();
             handleUndo();
         };
     }
@@ -309,12 +310,14 @@ function main() {
     {
         const button = document.getElementById("reset_button");
         button.onclick = e => {
+            e.preventDefault();
             handleReset();
         };
     }
     {
         const button = document.getElementById("next_button");
         button.onclick = e => {
+            e.preventDefault();
             handleNext();
         };
     }
