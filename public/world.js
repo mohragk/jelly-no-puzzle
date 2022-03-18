@@ -37,7 +37,7 @@ export class World {
     move_set = [];
     gravity_set = [];
     move_speed = 9.0;
-    fall_speed = 9.0;
+    fall_speed = 16.0;
     color_set = new Set();
 
     canvas_shake_timeout;
@@ -123,14 +123,20 @@ export class World {
     }
     
     moveTile(tile, dt) {    
-        let fall_dist = tile.target_pos.row - tile.world_pos.row;
-
-        // NOTE: shouldn't this be > 1 ?
-        if( fall_dist > 1 ) {
+        
+        let delta_row = tile.target_pos.row - tile.world_pos.row;
+        if (delta_row) {
             tile.move_t += (this.fall_speed * dt);
         }
         else {
             tile.move_t += this.move_speed * dt;
+        }
+        
+        // NOTE: shouldn't this be > 1 ?
+        let fall_dist = tile.target_pos.row - tile.world_pos.row;
+        if( fall_dist > 1 ) {
+        }
+        else {
         }
           
         if (tile.move_t > 1) {
@@ -138,16 +144,12 @@ export class World {
             tile.should_move = false;
 
             const canvas = document.getElementById("grid_canvas");
-            if (fall_dist > 1 && fall_dist <= 3) {
+            if (delta_row >= 1) {
                 const name =  "add_gravity_shake_mild";
                 canvas.classList.add(name);
                 window.setTimeout(() => {canvas.classList.remove(name);}, 350)
             }
-            if (fall_dist > 3) {
-                const name =  "add_gravity_shake_heavy";
-                canvas.classList.add(name);
-                window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-            }
+            
         }        
     }
 
