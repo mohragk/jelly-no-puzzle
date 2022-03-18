@@ -33,6 +33,7 @@ export class World {
         h: 1
     };
     grid = [];
+    debug_grid = [];
     move_set = [];
     gravity_set = [];
     move_speed = 9.0;
@@ -351,7 +352,7 @@ export class World {
                         const {row, col} = tile.world_pos;
                         const other_index = this.getIndex(row+1, col);
                         const other = staticised_grid[other_index];
-    
+                        
                         if (other.gameplay_flags & GameplayFlags.STATIC) {
                             can_move = false;
                             break;
@@ -382,25 +383,14 @@ export class World {
                     for (let tile of piece.tiles) {
                         let r = tile.world_pos.row;
                         let c = tile.world_pos.col;
-                        let distance = 0;
+                        let distance = 1;
                         
-                        //@BUG: ignore convex shapes for now...
-                        while (1) {
-                            const other = this.getTile(++r, c);
-                            if (other.color === tile.color)   {
-                                continue;
-                            }
-
-                            if (other.gameplay_flags) {
-                                break;
-                            }
-                            distance += 1;
-                        }
-
+                        
+                        
                         max_travel = Math.min(distance, max_travel);
                     }
 
-
+                    
                     // Apply travel distance
                     for (let tile of piece.tiles) {
                         tile.target_pos.row += max_travel;
@@ -410,17 +400,19 @@ export class World {
                     this.move_set.push(piece);
                 }
             }
-        }
 
-                
-       
+
+        }
+        
+        
+        
         
         // Check and apply merge
         if (!this.move_set.length) {
             const visited = [];
             this.forEachCell((row, col, index) => {
                 const tile = this.getTile(row, col);
-
+                
                 if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
                     const merge_list = [];
                     this.findMergeTiles(row, col, merge_list, tile, visited);
@@ -455,10 +447,11 @@ export class World {
 
 
     debugRender() {
-        this.forEachCell((row, col, index) => {
-            const text = this.getTile(row, col).gameplay_flags;
-            drawBlockText(row, col, text, "red" )
-        });
+        this.debug_grid.forEach((tile) => {
+            const text = tile.gameplay_flags & GameplayFlags.STATIC;
+            const {row, col} = tile.world_pos;
+            drawBlockText(text, row, col, "blue");
+        })
     }
  
 
