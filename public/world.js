@@ -17,13 +17,7 @@ export const Neighbours = {
     BOTTOM_RIGHT:   (1 << 7),
 };
 
-const div = document.createElement("div");
-div.style = "margin:10px";
-div.id = "DEBUG_DIV"
-const content = document.createTextNode("Hi there and greetings!");
-div.appendChild(content)
-const canvas_wrapper = document.getElementById("canvas-container");
-canvas_wrapper.appendChild(div);
+const canvas = document.getElementById("grid_canvas");
 
 class Piece {
     tiles = [];
@@ -145,10 +139,16 @@ export class World {
             tile.move_t = 0;
             tile.should_move = false;
 
-            if (0) {
-                const canvas = document.getElementById("grid_canvas");
-                if (delta_row >= 1) {
+            if (delta_row) {
+                
+                if (delta_row >= 1 && delta_row < 3) {
                     const name =  "add_gravity_shake_mild";
+                    canvas.classList.add(name);
+                    window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+                }
+
+                if (delta_row >= 4) {
+                    const name =  "add_gravity_shake_heavy";
                     canvas.classList.add(name);
                     window.setTimeout(() => {canvas.classList.remove(name);}, 350)
                 }
