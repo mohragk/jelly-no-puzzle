@@ -1,4 +1,4 @@
-import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
+import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, debugTileText } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';
 import { lerpToInt } from './math.js';
@@ -17,7 +17,13 @@ export const Neighbours = {
     BOTTOM_RIGHT:   (1 << 7),
 };
 
-
+const div = document.createElement("div");
+div.style = "margin:10px";
+div.id = "DEBUG_DIV"
+const content = document.createTextNode("Hi there and greetings!");
+div.appendChild(content)
+const canvas_wrapper = document.getElementById("canvas-container");
+canvas_wrapper.appendChild(div);
 
 class Piece {
     tiles = [];
@@ -31,16 +37,16 @@ export class World {
         h: 1
     };
     grid = [];
-    debug_grid = [];
     move_set = [];
     gravity_set = [];
-    move_speed = 9.0;
-    fall_speed = 16.0;
+    move_speed = 7.0;
+    fall_speed = 9.0;
     color_set = new Set();
-
+    
     canvas_shake_timeout;
-
-    screen_flash_t;
+    
+    debug_grid = [];
+    update_state = "";
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -110,8 +116,11 @@ export class World {
 
 
     updateTile(tile, dt) {
+
         let start  = getScreenCoordFromTileCoord(tile.world_pos.row,  tile.world_pos.col);
         let target = getScreenCoordFromTileCoord(tile.target_pos.row, tile.target_pos.col);
+
+       
         
         let x = lerpToInt(start.x, target.x, tile.move_t);
         let y = lerpToInt(start.y, target.y, tile.move_t);
@@ -130,22 +139,19 @@ export class World {
             tile.move_t += this.move_speed * dt;
         }
         
-        // NOTE: shouldn't this be > 1 ?
-        let fall_dist = tile.target_pos.row - tile.world_pos.row;
-        if( fall_dist > 1 ) {
-        }
-        else {
-        }
+      
           
         if (tile.move_t > 1) {
             tile.move_t = 0;
             tile.should_move = false;
 
-            const canvas = document.getElementById("grid_canvas");
-            if (delta_row >= 1) {
-                const name =  "add_gravity_shake_mild";
-                canvas.classList.add(name);
-                window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+            if (0) {
+                const canvas = document.getElementById("grid_canvas");
+                if (delta_row >= 1) {
+                    const name =  "add_gravity_shake_mild";
+                    canvas.classList.add(name);
+                    window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+                }
             }
             
         }        
@@ -165,6 +171,8 @@ export class World {
 
     update(command_buffer, dt, game_state, recorder) {
 
+        
+       
         // Create pieces
         const pieces = [];
         const pieces_grid = [];
@@ -219,14 +227,13 @@ export class World {
         }
 
 
-        
+       
 
         
         
         if (command_buffer.hasCommands()) {
-            const c = command_buffer.pop();
 
-           
+            const c = command_buffer.pop();
             const { coord, direction }  = c;
             const {row, col} = coord;
 
@@ -293,22 +300,16 @@ export class World {
         }
         
 
-        if (this.move_set.length) {
-            for (let piece of this.move_set) {
-                for (let tile of piece.tiles) {
-                    this.moveTile(tile, dt);
-                }
-            }
-        }
         let done = true;
-        for (let piece of this.move_set) {
+        ff: for (let piece of this.move_set) {
             for (let tile of piece.tiles) {
+                this.moveTile(tile, dt);
                 if (tile.should_move) {
                     done = false;
                 }
             }
         }
-
+        
         if (done) {
             // Clear grid
             for (let piece of this.move_set) {
@@ -329,65 +330,99 @@ export class World {
                 }
             }
             
+            this.move_set = [];
             this.move_set.length = 0;
         }
+
+
+
+
         
 
+
+
+        
         
         // Check and apply gravity
         if (!this.move_set.length) {
+            
             // To check whether pieces should move, recursively fill out a 
             // temporary grid by checking a piece for mobility and paint in all 
             // pieces that are static. All the leftover pieces are movable and 
             // should have gravity applied to them.
-            const staticised_grid = JSON.parse(JSON.stringify(this.grid));
+            const staticised_grid = this.grid.map(t => t.gameplay_flags); 
+            this.debug_grid = staticised_grid;
             const movables = [...pieces];
             let changed = true;
             while (changed) {
-                // Go through array in reverse to handle removal
                 let piece_changed = false;
                 movables.forEach((piece, i) => {
                     let can_move = true;
                     for (let tile of piece.tiles) {
                         const {row, col} = tile.world_pos;
                         const other_index = this.getIndex(row+1, col);
-                        const other = staticised_grid[other_index];
+                        const flags = staticised_grid[other_index];
                         
-                        if (other.gameplay_flags & GameplayFlags.STATIC) {
+                        if (flags & GameplayFlags.STATIC) {
                             can_move = false;
                             break;
                         }
                     }
-                    
                     if (!can_move) {
                         // Update staticised grid
                         for (let tile of piece.tiles) {
                             const {row, col} = tile.world_pos;
                             const index = this.getIndex(row, col);
-                            staticised_grid[index].gameplay_flags |= GameplayFlags.STATIC;
-                            staticised_grid[index].gameplay_flags &= ~GameplayFlags.MOVABLE;
+                            staticised_grid[index] = GameplayFlags.STATIC;
                         }
                         movables.splice(i, 1);
                         piece_changed = true;
                     }
-                
-                })
                     
+                })
+                
                 changed = piece_changed;
             }
-
+            
+            
             if (movables.length) {
                 for (let piece of movables) {
                     // pre pass to get maximum travel distance
-                    let max_travel = this.dimensions.h * 2;
-                    for (let tile of piece.tiles) {
-                        let r = tile.world_pos.row;
-                        let c = tile.world_pos.col;
-                        let distance = 1;
-                        
-                        
-                        
-                        max_travel = Math.min(distance, max_travel);
+                    let max_travel = this.dimensions.h;
+                    
+                    if (1) {
+                        for (let tile of piece.tiles) {
+                            
+                            let r = tile.world_pos.row;
+                            let c = tile.world_pos.col;
+                            let distance = 0;
+
+                            while(1) {
+                                
+                                const other = this.getTile(++r, c);
+                                if (other.gameplay_flags & GameplayFlags.STATIC) {
+                                    break;
+                                }
+                                
+                                if (other.color === tile.color) {
+                                    if (other.id === tile.id) {
+                                        distance = 0;
+                                        continue;
+                                    }
+                                }
+                                
+                                if (other.gameplay_flags & GameplayFlags.MOVABLE) {
+                                    distance = 0;
+                                }
+                                else {
+                                    distance += 1
+                                }
+                                
+                            }
+                            
+                            distance = Math.max(1, distance);
+                            max_travel = Math.min(distance, max_travel);
+                        }
                     }
 
                     
@@ -400,13 +435,11 @@ export class World {
                     this.move_set.push(piece);
                 }
             }
-
-
         }
         
         
-        
-        
+    
+       
         // Check and apply merge
         if (!this.move_set.length) {
             const visited = [];
@@ -418,7 +451,6 @@ export class World {
                     this.findMergeTiles(row, col, merge_list, tile, visited);
 
                     const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
-
 
                     if (merge_list.length > 1) {
                         for (let t of merge_list) {
@@ -432,6 +464,12 @@ export class World {
                 }
             })
         }
+       
+
+        
+        
+        
+        
 
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
@@ -447,10 +485,38 @@ export class World {
 
 
     debugRender() {
-        this.debug_grid.forEach((tile) => {
-            const text = tile.gameplay_flags & GameplayFlags.STATIC;
-            const {row, col} = tile.world_pos;
-            drawBlockText(text, row, col, "blue");
+
+        const getText = (flags, tile = null) => {
+            let text = " ";
+
+            if (flags & GameplayFlags.MOVABLE) {
+                text = ".";
+            }
+            if (flags & GameplayFlags.STATIC) {
+                text ="#";
+            }
+            if (flags & GameplayFlags.MERGED) {
+                text ="+";
+            }
+
+           
+            return text
+        }
+        
+        
+        this.forEachCell((row, col) => {
+            const tile = this.getTile(row, col)
+            let text = getText(tile.gameplay_flags, tile)
+            drawBlockText( row, col, text);
+            
+        })
+        
+        
+        this.forEachCell((row, col) => {
+            const index = this.getIndex(row, col);
+            const flags = this.debug_grid[index];
+            let text = getText(flags);
+            debugTileText( row, col, text, "red");
         })
     }
  
@@ -506,5 +572,6 @@ export class World {
             }
 
         });
+
     }
 };

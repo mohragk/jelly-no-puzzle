@@ -531,6 +531,15 @@ function clearBG(color) {
     drawFullScreen(color);
 }
 
+export function debugTileText(row, col, text, color = "white") {
+    const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+
+    ctx.fillStyle = color;
+    ctx.font = "32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(text, x+tile_size/2, y+tile_size/2);
+}
+
 export function drawBlockText(row, col, text, text_color = "white") {
     const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
     ctx.fillStyle = "black";
@@ -1151,15 +1160,17 @@ function drawWinText() {
 
 function updateAndRender(world, command_buffer, dt) {
     clearBG("darkgray");
-    
     world.update(command_buffer, dt, game_state, recorder);
-    world.render(game_state);
     
-    if (game_state.has_won) {
-        drawWinText();
-        canvas.classList.add("add_victory_animation");
-        const button = document.getElementById("next_button");
-        button.style.visibility = "visible";
+    if (1) {
+        world.render(game_state);
+        
+        if (game_state.has_won) {
+            drawWinText();
+            canvas.classList.add("add_victory_animation");
+            const button = document.getElementById("next_button");
+            button.style.visibility = "visible";
+        }
     }
 
     if (DEBUG_RENDER_WALLS) {
