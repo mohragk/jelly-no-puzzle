@@ -14,7 +14,7 @@ export const levels = [
     ["xxxxxxxxxxxxxx", "xxxxxxxxx   rx", "xxxxxxxxx   gx", "xxxxxxxxx   gx", "x1122       gx", "x1122       gx", "x0033      xxx", "x0033      xxx", "xxsr x sgxxx xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xr r r      rx", "xg x x      gx", "xsb          bx", "xxxxx     xxxx", "xxxxxx   xxxxx", "xxxxxx   xxxxx", "xxxxxx   xxxxx", "xxxxxxsgggxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xx   0001233rx", "xx   0411233xx", "xx   444122xxx",  "xx     xxxxxxx", "xsr     xxxxxxx","xx     xxxxxxx", "xx     xxxxxxx", "xx     xxxxxxx",  "xxxxxxxxxxxxxx"], 
-    ["xxxxxxxxxxxxxx", "xxxx000xxxgb x", "xxxx0     bg x", "xxxx0    11xxx", "xxxx000xxxxxxx", "x 222  xxxxxxx", "xxxx     xxsgxx", "xxxx   g    sbx", "xxxx   x     x", "xxxxxxxxxxxxxx"], 
+/*D*/    ["xxxxxxxxxxxxxx", "xxxx000xxxgb x", "xxxx0     bg x", "xxxx0    11xxx", "xxxx000xxxxxxx", "x 222  xxxxxxx", "xxxx     xxsgxx", "xxxx   g    sbx", "xxxx   x     x", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "xb01         x", "xb0gg     g  x", "xb023     g4sbx", "xxxxx g   xxxx", "xxxxx gg  xxxx", "xxxxx ggg xxxx", "xxxxx ggggxxxx", "xxxxxxxxxxxxxx"], 
     
     ["xxxxxxxxxxxxxx", "xrrrr   rggxxx", "xxxb    xxxxxx", "xxxx       xsbx", "xx           x", "xx           x", "xx     x     x", "xx x         x", "xx        x  x", "xxxxxxxxxxxxxx"], 

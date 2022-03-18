@@ -137,6 +137,10 @@ function main() {
             handleNext();
         }
 
+        if (e.key === 'd') {
+            DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
+        }
+
         if (e.key === 't') {
             ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
         }
@@ -1156,6 +1160,10 @@ function updateAndRender(world, command_buffer, dt) {
         canvas.classList.add("add_victory_animation");
         const button = document.getElementById("next_button");
         button.style.visibility = "visible";
+    }
+
+    if (DEBUG_RENDER_WALLS) {
+        world.debugRender();
     }
 }
 

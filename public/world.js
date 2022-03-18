@@ -335,54 +335,77 @@ export class World {
         
         // Check and apply gravity
         if (!this.move_set.length) {
-            
-            for (let piece of pieces) {
-                let can_move = true;
-               
-
-                outer: for (let tile of piece.tiles) {
-                    let r = tile.world_pos.row + 1;
-                    let c = tile.world_pos.col;
-                    const other_tile = this.getTile(r, c);
-
-                    if (piece.tiles.includes(other_tile)) {
-                        continue;
-                    }
-                    
-                    if (other_tile.gameplay_flags) {
-                        can_move = false;
-                        break outer;
-                    }
-                    
-
-                }
-                if (can_move) {
-                    // Pre-pass to get travel distance
-                    let max_distance = Infinity;
+            // To check whether pieces should move, recursively fill out a 
+            // temporary grid by checking a piece for mobility and paint in all 
+            // pieces that are static. All the leftover pieces are movable and 
+            // should have gravity applied to them.
+            const staticised_grid = JSON.parse(JSON.stringify(this.grid));
+            const movables = [...pieces];
+            let changed = true;
+            while (changed) {
+                // Go through array in reverse to handle removal
+                let piece_changed = false;
+                movables.forEach((piece, i) => {
+                    let can_move = true;
                     for (let tile of piece.tiles) {
-                        let distance = 0;
+                        const {row, col} = tile.world_pos;
+                        const other_index = this.getIndex(row+1, col);
+                        const other = staticised_grid[other_index];
+    
+                        if (other.gameplay_flags & GameplayFlags.STATIC) {
+                            can_move = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!can_move) {
+                        // Update staticised grid
+                        for (let tile of piece.tiles) {
+                            const {row, col} = tile.world_pos;
+                            const index = this.getIndex(row, col);
+                            staticised_grid[index].gameplay_flags |= GameplayFlags.STATIC;
+                            staticised_grid[index].gameplay_flags &= ~GameplayFlags.MOVABLE;
+                        }
+                        movables.splice(i, 1);
+                        piece_changed = true;
+                    }
+                
+                })
+                    
+                changed = piece_changed;
+            }
 
+            if (movables.length) {
+                for (let piece of movables) {
+                    // pre pass to get maximum travel distance
+                    let max_travel = this.dimensions.h * 2;
+                    for (let tile of piece.tiles) {
                         let r = tile.world_pos.row;
                         let c = tile.world_pos.col;
-
+                        let distance = 0;
+                        
+                        //@BUG: ignore convex shapes for now...
                         while (1) {
-                            const next = this.getTile(++r, c);
-                            if (piece.tiles.includes(next)) {
+                            const other = this.getTile(++r, c);
+                            if (other.color === tile.color)   {
                                 continue;
                             }
-                            if (next.gameplay_flags) {
+
+                            if (other.gameplay_flags) {
                                 break;
                             }
                             distance += 1;
                         }
-                        max_distance = Math.min(  Math.min(max_distance, distance), 100 );
+
+                        max_travel = Math.min(distance, max_travel);
                     }
+
 
                     // Apply travel distance
                     for (let tile of piece.tiles) {
+                        tile.target_pos.row += max_travel;
                         tile.should_move = true;
-                        tile.move_t  = 0;
-                        tile.target_pos.row += max_distance;
+                        tile.move_t = 0;
                     }
                     this.move_set.push(piece);
                 }
@@ -431,7 +454,7 @@ export class World {
     }
 
 
-    debugRenderCells() {
+    debugRender() {
         this.forEachCell((row, col, index) => {
             const text = this.getTile(row, col).gameplay_flags;
             drawBlockText(row, col, text, "red" )
