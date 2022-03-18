@@ -4,6 +4,7 @@ import {lerp} from './math.js';
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';
+import { lerpToInt } from './math.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -115,8 +116,8 @@ export class World {
         let start  = getScreenCoordFromTileCoord(tile.world_pos.row,  tile.world_pos.col);
         let target = getScreenCoordFromTileCoord(tile.target_pos.row, tile.target_pos.col);
         
-        let x = lerp(start.x, target.x, tile.move_t);
-        let y = lerp(start.y, target.y, tile.move_t);
+        let x = lerpToInt(start.x, target.x, tile.move_t);
+        let y = lerpToInt(start.y, target.y, tile.move_t);
 
         tile.visual_pos[0] = x;
         tile.visual_pos[1] = y;
