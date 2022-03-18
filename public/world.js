@@ -1,6 +1,3 @@
-import {lerp} from './math.js';
-
-
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';

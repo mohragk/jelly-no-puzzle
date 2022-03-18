@@ -1,6 +1,6 @@
 import { levels }  from './levels2.js';
 
-import {lerp, lerpToInt} from './math.js';
+import {lerp} from './math.js';
 import { GameplayFlags, Tile } from './tile.js';
 
 import { World, Neighbours } from './world.js';
@@ -202,7 +202,7 @@ function main() {
                     let {x, tile_size} = getScreenCoordFromTileCoord(row, col);
                    
                     let mouse_x = offsetX;
-                    let center_x = lerpToInt(x, x + tile_size, 0.5);
+                    let center_x = lerp(x, x + tile_size, 0.5);
                     dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
                 }
 
@@ -292,7 +292,7 @@ function main() {
 
             const start = getScreenCoordFromTileCoord(row, col);
 
-            const center_x = lerpToInt(start.x, start.x + start.tile_size, 0.5);
+            const center_x = lerp(start.x, start.x + start.tile_size, 0.5);
             const drag_distance = Math.abs(offsetX - center_x);
             
             let delta =  start.tile_size;
@@ -587,8 +587,8 @@ export function drawMoveArrow(row, col, mouse_x, mouse_y) {
     ctx.globalAlpha = 0.6;
     let {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
 
-    let center_x = lerpToInt(x, x + tile_size, 0.5);
-    let center_y = lerpToInt(y, y + tile_size, 0.5);
+    let center_x = lerp(x, x + tile_size, 0.5);
+    let center_y = lerp(y, y + tile_size, 0.5);
 
     let size = tile_size /2;
     
@@ -1028,8 +1028,8 @@ export function drawBlockNonUnitScale(x, y, color, neighbours) {
     const size = canvas.width / world.dimensions.w;
    
 
-    const center_x = lerpToInt(x, x + size, 0.5);
-    const center_y = lerpToInt(y, y + size, 0.5);
+    const center_x = lerp(x, x + size, 0.5);
+    const center_y = lerp(y, y + size, 0.5);
 
     ctx.fillStyle = color;
     ctx.fillRect(x, y, size, size);
