@@ -1150,17 +1150,15 @@ function updateAndRender(world, command_buffer, dt) {
     clearBG("darkgray");
     world.update(command_buffer, dt, game_state, recorder);
     
-    if (DEBUG_RENDER_WALLS) {
-        world.render(game_state);
-        
-        if (game_state.has_won) {
-            drawWinText();
-            canvas.classList.add("add_victory_animation");
-            const button = document.getElementById("next_button");
-            button.style.visibility = "visible";
-        }
+    world.render(game_state);
+    
+    if (game_state.has_won) {
+        drawWinText();
+        canvas.classList.add("add_victory_animation");
+        const button = document.getElementById("next_button");
+        button.style.visibility = "visible";
     }
-
+    
     if (false) {
         world.debugRender();
     }

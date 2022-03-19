@@ -24,6 +24,36 @@ class Piece {
     color = "";
 }
 
+class DelayedTrigger {
+    #duration = 1.0;
+    #elapsed  = 0.0;
+    armed = false;
+    callback  = () => {};
+
+    constructor(duration, cb) {
+        this.#duration = duration;
+        this.callback = cb;
+    }
+
+    update(dt) {
+        if (!this.armed) return;
+        
+        this.#elapsed += dt;
+        if (this.#elapsed > this.#duration) {
+            this.callback();
+            this.armed = false;
+        }
+    }
+
+    arm(value) {
+        this.armed = value;
+    }
+
+    reset() {
+        this.#elapsed = 0.0;
+    }
+}
+
 export class World {
 
     dimensions = {
@@ -34,13 +64,12 @@ export class World {
     move_set = [];
     gravity_set = [];
     move_speed = 7.0;
-    fall_speed = 9.0;
+    fall_speed = 16.0;
     color_set = new Set();
     
-    canvas_shake_timeout;
+    canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
     
     debug_grid = [];
-    update_state = "";
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -85,6 +114,22 @@ export class World {
         this.grid = [...new_grid];
         this.move_set.length = 0;
     }
+
+    shakeCanvas() {
+        if (1) {
+            const name =  "add_gravity_shake_mild";
+            canvas.classList.add(name);
+            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+        }
+        else        
+        {
+            const name =  "add_gravity_shake_heavy";
+            canvas.classList.add(name);
+            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
+        }
+        
+    }
+
 
     findMergeTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
@@ -179,22 +224,6 @@ export class World {
         if (tile.move_t > 1) {
             tile.move_t = 0;
             tile.should_move = false;
-
-            if (delta_row) {
-                
-                if (delta_row >= 1 && delta_row < 3) {
-                    const name =  "add_gravity_shake_mild";
-                    canvas.classList.add(name);
-                    window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-                }
-
-                if (delta_row >= 4) {
-                    const name =  "add_gravity_shake_heavy";
-                    canvas.classList.add(name);
-                    window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-                }
-            }
-            
         }        
     }
 
@@ -276,8 +305,7 @@ export class World {
             const canvas = document.getElementById("grid_canvas");
             
             canvas.classList.add("add_shake")
-            this.canvas_shake_timeout = window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-
+            window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
         }
     }
 
@@ -412,6 +440,12 @@ export class World {
         
         
         if (movables.length) {
+
+            // Arm and reset canvas shake trigger
+            this.canvas_shake_trigger.arm(true);
+            this.canvas_shake_trigger.reset();
+
+
             for (let piece of movables) 
             {
            
@@ -504,32 +538,31 @@ export class World {
         const pieces_grid = [];
         const static_pieces = [];
         this.createPieces(pieces, static_pieces, pieces_grid);
-        this.debugRenderPieces(pieces);
 
-        if (1) {
-
-            this.handleCommands(command_buffer, recorder, pieces, pieces_grid);
-            
-            this.updateMoveset(dt);
-                    
-            
-            // Check and apply gravity
-            if (!this.move_set.length) {
-                this.applyGravity(pieces);
-            }
-            
-            
-            // Check and apply merge
-            if (!this.move_set.length) {
-                this.applyMerge();
-            }
-           
+        this.handleCommands(command_buffer, recorder, pieces, pieces_grid);
+        
+        this.updateMoveset(dt);
+                
+        const is_moving = this.move_set.length;
+        
+        if (!is_moving) {
+            this.applyGravity(pieces);
         }
+        
+        
+     
+        if (!is_moving) {
+            this.applyMerge();
+        }
+       
 
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
         })
 
+
+        // Canvas shake
+        this.canvas_shake_trigger.update(dt);
         
         // HANDLE WIN CONDITION
         if (pieces.length + static_pieces.length === this.color_set.size) {
