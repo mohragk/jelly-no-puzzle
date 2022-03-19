@@ -355,6 +355,7 @@ function main() {
 
 
 function loadLevel(index, levels, world) {
+    
     const getTileFromChar = (c) => {
         const t = new Tile();
         switch (c) {
@@ -468,6 +469,7 @@ function loadLevel(index, levels, world) {
 
         return t;
     };
+
     const level = levels[index];
 
     const h = level.length;
@@ -499,21 +501,7 @@ function loadLevel(index, levels, world) {
     resizeCanvas(canvas);
 
     // First time merge checking!
-    const visited = [];
-    world.forEachCell((row, col, index) => {
-        const tile = world.getTile(row, col);
-
-        if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
-            const merge_list = [];
-            world.findMergeTiles(row, col, merge_list, tile, visited);
-
-            if (merge_list.length > 1) {
-                for (let t of merge_list) {
-                    t.gameplay_flags |= GameplayFlags.MERGED;
-                }
-            }
-        }
-    });
+    world.applyMerge();
 
    
 }
@@ -1162,7 +1150,7 @@ function updateAndRender(world, command_buffer, dt) {
     clearBG("darkgray");
     world.update(command_buffer, dt, game_state, recorder);
     
-    if (1) {
+    if (DEBUG_RENDER_WALLS) {
         world.render(game_state);
         
         if (game_state.has_won) {
@@ -1173,7 +1161,7 @@ function updateAndRender(world, command_buffer, dt) {
         }
     }
 
-    if (DEBUG_RENDER_WALLS) {
+    if (false) {
         world.debugRender();
     }
 }
