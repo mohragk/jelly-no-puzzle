@@ -34,7 +34,7 @@ export class World {
     move_set = [];
     gravity_set = [];
     move_speed = 7.0;
-    fall_speed = 9.0;
+    fall_speed = 1.0;
     color_set = new Set();
     
     canvas_shake_timeout;
@@ -398,8 +398,14 @@ export class World {
                             let distance = 0;
 
                             while(1) {
-                                
-                                const other = this.getTile(++r, c);
+                                const other_index = this.getIndex(++r, c)
+                                const flags = staticised_grid[other_index];
+
+                                if (flags & GameplayFlags.STATIC) {
+                                    break
+                                }
+
+                                const other = this.getTile(r,c);
                                 if (other.gameplay_flags & GameplayFlags.STATIC) {
                                     break;
                                 }
@@ -420,7 +426,7 @@ export class World {
                                 
                             }
                             
-                            distance = Math.max(1, distance);
+                            distance = Math.max(0, distance);
                             max_travel = Math.min(distance, max_travel);
                         }
                     }
@@ -466,7 +472,7 @@ export class World {
         }
        
 
-        
+        this.debugRenderPieces(pieces);
         
         
         
@@ -484,19 +490,34 @@ export class World {
     }
 
 
+    debugRenderPieces(pieces) {
+        let index = 0;
+        for (let piece of pieces) {
+            const text = index;
+
+            for (let tile of piece.tiles) {
+                const {row, col} = tile.world_pos;
+                drawBlockText(row, col, text, "blue");
+            }
+
+            index++;
+        }
+    }
+
+
     debugRender() {
 
         const getText = (flags, tile = null) => {
             let text = " ";
-
+            
+            if (flags & GameplayFlags.MERGED) {
+                //text ="+";
+            }
             if (flags & GameplayFlags.MOVABLE) {
                 text = ".";
             }
             if (flags & GameplayFlags.STATIC) {
                 text ="#";
-            }
-            if (flags & GameplayFlags.MERGED) {
-                text ="+";
             }
 
            
