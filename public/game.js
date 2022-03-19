@@ -26,7 +26,8 @@ const DEFAULT_GAMESTATE = {
         start_tile: {row:0, col:0},
         screen_coord: {x: 0, y: 0}
     },
-    frame_count: 0
+    frame_count: 0,
+    debug_time_enabled : false
 };
 
 
@@ -141,6 +142,10 @@ function main() {
             DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
         }
 
+        if (e.key === 'p') {
+            game_state.debug_time_enabled = !game_state.debug_time_enabled;
+        }
+
         if (e.key === 't') {
             ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
         }
@@ -194,7 +199,7 @@ function main() {
 
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.merge_delay_trigger.running && !game_state.has_won;
 
             if (apply) {
                 let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
@@ -480,6 +485,8 @@ function loadLevel(index, levels, world) {
     let row = 0;
     let col = 0;
 
+    let tile_id = 100;
+
     for (let line of level) {
 
         for (let index = 0; index < line.length; index++) {
@@ -489,6 +496,9 @@ function loadLevel(index, levels, world) {
             }
             
             const tile = getTileFromChar(c);
+            if (tile.id < 0 && (tile.gameplay_flags & GameplayFlags.MOVABLE) ) {
+                tile.id = tile_id++;
+            }
             world.putInGrid(row, col, tile);
             col++;
         }
@@ -1159,8 +1169,8 @@ function updateAndRender(world, command_buffer, dt) {
         button.style.visibility = "visible";
     }
     
-    if (false) {
-        world.debugRender();
+    if (DEBUG_RENDER_WALLS) {
+        world.debugRenderTileIDs();
     }
 }
 

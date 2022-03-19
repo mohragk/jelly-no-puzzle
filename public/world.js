@@ -28,6 +28,7 @@ class DelayedTrigger {
     #duration = 1.0;
     #elapsed  = 0.0;
     armed = false;
+    running = false;
     callback  = () => {};
 
     constructor(duration, cb) {
@@ -37,11 +38,12 @@ class DelayedTrigger {
 
     update(dt) {
         if (!this.armed) return;
-        
+        this.running = true;
         this.#elapsed += dt;
         if (this.#elapsed > this.#duration) {
             this.callback();
             this.armed = false;
+            this.running = false;
         }
     }
 
@@ -68,6 +70,8 @@ export class World {
     color_set = new Set();
     
     canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
+    impossible_trigger = new DelayedTrigger(0.1, this.playImpossibleEffect);
+    merge_delay_trigger = new DelayedTrigger(0.15, () => {});
     
     debug_grid = [];
 
@@ -130,6 +134,13 @@ export class World {
         
     }
 
+    playImpossibleEffect() {
+        drawFullScreen("white")
+        const canvas = document.getElementById("grid_canvas");
+        
+        canvas.classList.add("add_shake")
+        window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+    }
 
     findMergeTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
@@ -155,23 +166,7 @@ export class World {
         }
     }
 
-    findBlackMergedTiles(row, col, list, original, visited ) {
-        const tile = this.getTile(row, col);
-        if (visited.includes(tile)) {
-            return;
-        }
-
-        if (tile.color === "black" && tile.gameplay_flags & GameplayFlags.MERGED && tile.id !== original.id) {
-            visited.push(tile);
-            list.push(tile); 
-
-               
-            this.findBlackMergedTiles(row+1, col+0, list, original, visited);
-            this.findBlackMergedTiles(row-1, col+0, list, original, visited);
-            this.findBlackMergedTiles(row+0, col+1, list, original, visited);
-            this.findBlackMergedTiles(row+0, col-1, list, original, visited);
-        }
-     }
+   
 
     findMergedTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
@@ -180,8 +175,8 @@ export class World {
         }
         
         if ( 
-            (tile.color === "black" && original.color === "black" && tile.id === original.id) ||
-            (tile.color !== "black" && original.color !== "black" && tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGED) 
+            
+            (tile.id === original.id && tile.gameplay_flags & GameplayFlags.MERGED) 
          ) {
             visited.push(tile);
            
@@ -282,6 +277,10 @@ export class World {
 
             if (can_move) {
                 
+                this.merge_delay_trigger.arm(true);
+                this.merge_delay_trigger.reset();
+
+
                 recorder.add(this.grid);
 
                 for (let piece of this.move_set) {
@@ -295,18 +294,13 @@ export class World {
                 }
             }
             else {
-                const c = new ImpossibleCommand(coord);
-                command_buffer.add(c);
+               
+
+                this.impossible_trigger.arm(true);
+                this.impossible_trigger.reset();
             }    
         }
-
-        if (c.type === CommandTypes.IMPOSSIBLE) {
-            drawFullScreen("white")
-            const canvas = document.getElementById("grid_canvas");
-            
-            canvas.classList.add("add_shake")
-            window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-        }
+       
     }
 
     createPieces(pieces, static_pieces, pieces_grid) {
@@ -445,6 +439,9 @@ export class World {
             this.canvas_shake_trigger.arm(true);
             this.canvas_shake_trigger.reset();
 
+            this.merge_delay_trigger.arm(true);
+            this.merge_delay_trigger.reset();
+
 
             for (let piece of movables) 
             {
@@ -520,6 +517,7 @@ export class World {
 
                 if (merge_list.length > 1) {
                     for (let t of merge_list) {
+                        t.id = tile.id;
                         t.gameplay_flags |= GameplayFlags.MERGED;
                         if (is_static) {
                             t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
@@ -541,20 +539,20 @@ export class World {
 
         this.handleCommands(command_buffer, recorder, pieces, pieces_grid);
         
+        
         this.updateMoveset(dt);
-                
         const is_moving = this.move_set.length;
         
         if (!is_moving) {
             this.applyGravity(pieces);
         }
         
+       
         
-     
-        if (!is_moving) {
+        if (!is_moving && !this.merge_delay_trigger.running) {
             this.applyMerge();
         }
-       
+        
 
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
@@ -562,7 +560,9 @@ export class World {
 
 
         // Canvas shake
+        this.merge_delay_trigger.update(dt);
         this.canvas_shake_trigger.update(dt);
+        this.impossible_trigger.update(dt);
         
         // HANDLE WIN CONDITION
         if (pieces.length + static_pieces.length === this.color_set.size) {
@@ -584,6 +584,15 @@ export class World {
 
             index++;
         }
+    }
+
+
+    debugRenderTileIDs() {
+        this.forEachCell( (row, col) => {
+            const t = this.getTile(row, col);
+            const id = t.id;
+            drawBlockText(row, col, id)
+        })
     }
 
 
