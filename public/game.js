@@ -12,6 +12,7 @@ let game_state;
 let command_buffer;
 let recorder;
 
+const DEV_MODE = false;
 
 
 const DEFAULT_GAMESTATE = {
@@ -31,7 +32,7 @@ const DEFAULT_GAMESTATE = {
 };
 
 
-let DEBUG_RENDER_WALLS = false;
+let DEBUG_RENDER = false;
 let ENABLE_UNIFIED_CLICK = false;
 
 
@@ -137,17 +138,20 @@ function main() {
             handleNext();
         }
 
-        if (e.key === 'd') {
-            DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
-        }
-
-        if (e.key === '-') {
-            time_step_f *= 2;
+        
+        if (DEV_MODE) {
+            if (e.key === 'd') {
+                DEBUG_RENDER = !DEBUG_RENDER;
+            }
+            // Time dilation
+            if (e.key === '-') {
+                time_step_f *= 2;
+            }
+            if (e.key === '=') {
+                time_step_f /= 2;
+            }
         }
         
-        if (e.key === '=') {
-            time_step_f /= 2;
-        }
 
         if (e.key === 't') {
             ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
@@ -188,7 +192,6 @@ function main() {
                 option.text = val;
                 select.add(option);
             }
-        
 
             reset(index);
         }
@@ -202,7 +205,7 @@ function main() {
 
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.merge_delay_trigger.running && !game_state.has_won;
+            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
 
             if (apply) {
                 let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
@@ -514,7 +517,6 @@ function loadLevel(index, levels, world) {
     resizeCanvas(canvas);
 
     // First time merge checking!
-    //world.applyMerge();
     let merge_lists = [];
     merge_lists = world.prefindMerges();
     world.applyMerges(merge_lists);
@@ -1191,7 +1193,7 @@ function render(world) {
         button.style.visibility = "visible";
     }
     
-    if (DEBUG_RENDER_WALLS) {
+    if (DEBUG_RENDER) {
         world.debugRender();
         world.debugRenderPieces(world.debug_pieces);
     }

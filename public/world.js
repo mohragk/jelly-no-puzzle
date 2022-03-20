@@ -74,7 +74,6 @@ export class World {
     
     canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
     impossible_trigger = new DelayedTrigger(0.1, this.playImpossibleEffect);
-    merge_delay_trigger = new DelayedTrigger(0.15, () => {});
     
     debug_grid = [];
 
@@ -279,11 +278,6 @@ export class World {
             
 
             if (can_move) {
-                
-                this.merge_delay_trigger.arm(true);
-                this.merge_delay_trigger.reset();
-
-
                 recorder.add(this.grid);
 
                 for (let piece of this.move_set) {
@@ -444,8 +438,7 @@ export class World {
             this.canvas_shake_trigger.arm(true);
             this.canvas_shake_trigger.reset();
 
-            this.merge_delay_trigger.arm(true);
-            this.merge_delay_trigger.reset();
+         
 
 
             for (let piece of movables) 
@@ -564,7 +557,6 @@ export class World {
         if(!is_moving) {
 
             this.createPieces(pieces, static_pieces, pieces_grid);
-            this.debug_pieces = pieces;
 
             let merge_lists = [];
             merge_lists = this.prefindMerges();
@@ -584,7 +576,6 @@ export class World {
 
 
         // Canvas shake
-        this.merge_delay_trigger.update(dt);
         this.canvas_shake_trigger.update(dt);
         this.impossible_trigger.update(dt);
         
