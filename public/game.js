@@ -6,13 +6,84 @@ import { GameplayFlags, Tile } from './tile.js';
 import { World, Neighbours } from './world.js';
 import { Recorder } from './recorder.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
+import { Events } from './events.js';
+
+
+
+
+
+class DelayedTrigger {
+    #duration = 1.0;
+    #elapsed  = 0.0;
+    armed = false;
+    running = false;
+    callback  = () => {};
+
+    constructor(duration, cb) {
+        this.#duration = duration;
+        this.callback = cb;
+    }
+
+    update(dt) {
+        if (!this.armed) return;
+        this.running = true;
+        this.#elapsed += dt;
+        if (this.#elapsed > this.#duration) {
+            this.callback();
+            this.armed = false;
+            this.running = false;
+        }
+    }
+
+    arm(value) {
+        this.armed = value;
+    }
+
+    reset() {
+        this.#elapsed = 0.0;
+    }
+
+    armAndReset() {
+        this.arm(true);
+        this.reset();
+    }
+}
+
+
+
+
+let impossible_trigger = new DelayedTrigger(0.1, () => {
+    canvas.classList.add("add_shake")
+    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+});
+let fallen_trigger = new DelayedTrigger(0.1, () => {
+    canvas.classList.add("add_gravity_shake_mild")
+    window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
+});
+
 
 let canvas, ctx;
 let game_state; 
 let command_buffer;
 let recorder;
+let event_listener = {
+    handleEvent: (e) => {
+        if (e === Events.IMPOSSIBLE) {
+            impossible_trigger.armAndReset();
+        }
+
+        if (e === Events.BEGIN_FALL) {
+            fallen_trigger.armAndReset();
+        }
+    }
+}
 
 const DEV_MODE = false;
+
+
+
+
+
 
 
 const DEFAULT_GAMESTATE = {
@@ -38,6 +109,11 @@ let ENABLE_UNIFIED_CLICK = false;
 
 let world = new World();
 
+
+function playImpossibleEffect() {
+   
+}
+
 function reset(level_index) {
 
     canvas.classList.remove("add_victory_animation");
@@ -61,6 +137,7 @@ function reset(level_index) {
         
         game_state.running = true;
     
+        world.addListener(event_listener);
        
         mainLoop();
     }
@@ -1178,7 +1255,8 @@ function drawWinText() {
 
 function update(world, command_buffer, dt) {
     world.update(command_buffer, dt, game_state, recorder);
-
+    impossible_trigger.update(dt);
+    fallen_trigger.update(dt);
 }
 
 function render(world) {

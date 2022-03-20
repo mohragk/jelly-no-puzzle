@@ -2,6 +2,7 @@ import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, draw
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes } from './command.js';
 import { lerpToInt } from './math.js';
+import { EventManager, Events } from './events.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -24,37 +25,6 @@ class Piece {
     color = "";
 }
 
-class DelayedTrigger {
-    #duration = 1.0;
-    #elapsed  = 0.0;
-    armed = false;
-    running = false;
-    callback  = () => {};
-
-    constructor(duration, cb) {
-        this.#duration = duration;
-        this.callback = cb;
-    }
-
-    update(dt) {
-        if (!this.armed) return;
-        this.running = true;
-        this.#elapsed += dt;
-        if (this.#elapsed > this.#duration) {
-            this.callback();
-            this.armed = false;
-            this.running = false;
-        }
-    }
-
-    arm(value) {
-        this.armed = value;
-    }
-
-    reset() {
-        this.#elapsed = 0.0;
-    }
-}
 
 export class World {
 
@@ -71,9 +41,8 @@ export class World {
 
     // DEBUGGING
     debug_pieces = [];
-    
-    canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
-    impossible_trigger = new DelayedTrigger(0.1, this.playImpossibleEffect);
+
+    event_manager = new EventManager();
     
     debug_grid = [];
 
@@ -81,6 +50,10 @@ export class World {
         this.dimensions.w = w;
         this.dimensions.h = h;
         this.grid.length = w * h;
+    }
+
+    addListener(listener) {
+        this.event_manager.addListener(listener);
     }
 
 
@@ -121,28 +94,9 @@ export class World {
         this.move_set.length = 0;
     }
 
-    shakeCanvas() {
-        if (1) {
-            const name =  "add_gravity_shake_mild";
-            canvas.classList.add(name);
-            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-        }
-        else        
-        {
-            const name =  "add_gravity_shake_heavy";
-            canvas.classList.add(name);
-            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-        }
-        
-    }
+    
 
-    playImpossibleEffect() {
-        drawFullScreen("white")
-        const canvas = document.getElementById("grid_canvas");
-        
-        canvas.classList.add("add_shake")
-        window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-    }
+    
 
     findMergeableTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
@@ -280,6 +234,8 @@ export class World {
             if (can_move) {
                 recorder.add(this.grid);
 
+                this.event_manager.pushEvent(Events.MOVE)
+
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
@@ -291,10 +247,7 @@ export class World {
                 }
             }
             else {
-               
-
-                this.impossible_trigger.arm(true);
-                this.impossible_trigger.reset();
+                this.event_manager.pushEvent(Events.IMPOSSIBLE)
             }    
         }
        
@@ -435,9 +388,8 @@ export class World {
         if (movables.length) {
             has_gravity_tiles = true;
             // Arm and reset canvas shake trigger
-            this.canvas_shake_trigger.arm(true);
-            this.canvas_shake_trigger.reset();
-
+          
+            this.event_manager.pushEvent(Events.BEGIN_FALL);
          
 
 
@@ -576,8 +528,6 @@ export class World {
 
 
         // Canvas shake
-        this.canvas_shake_trigger.update(dt);
-        this.impossible_trigger.update(dt);
         
         // HANDLE WIN CONDITION
         if (pieces.length + static_pieces.length === this.color_set.size) {
