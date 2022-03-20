@@ -1,7 +1,6 @@
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, drawTileText } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
-import { CommandTypes, ImpossibleCommand } from './command.js';
-import { DelayedTrigger } from './delayedtrigger.js';
+import { CommandTypes } from './command.js';
 import { lerpToInt } from './math.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
@@ -23,6 +22,38 @@ const canvas = document.getElementById("grid_canvas");
 class Piece {
     tiles = [];
     color = "";
+}
+
+class DelayedTrigger {
+    #duration = 1.0;
+    #elapsed  = 0.0;
+    armed = false;
+    running = false;
+    callback  = () => {};
+
+    constructor(duration, cb) {
+        this.#duration = duration;
+        this.callback = cb;
+    }
+
+    update(dt) {
+        if (!this.armed) return;
+        this.running = true;
+        this.#elapsed += dt;
+        if (this.#elapsed > this.#duration) {
+            this.callback();
+            this.armed = false;
+            this.running = false;
+        }
+    }
+
+    arm(value) {
+        this.armed = value;
+    }
+
+    reset() {
+        this.#elapsed = 0.0;
+    }
 }
 
 export class World {
