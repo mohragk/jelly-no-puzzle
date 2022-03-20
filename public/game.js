@@ -36,7 +36,6 @@ let ENABLE_UNIFIED_CLICK = false;
 
 
 let world = new World();
-let last_time = 0;
 
 function reset(level_index) {
 
@@ -142,8 +141,12 @@ function main() {
             DEBUG_RENDER_WALLS = !DEBUG_RENDER_WALLS;
         }
 
-        if (e.key === 'p') {
-            game_state.debug_time_enabled = !game_state.debug_time_enabled;
+        if (e.key === '-') {
+            time_step_f *= 2;
+        }
+        
+        if (e.key === '=') {
+            time_step_f /= 2;
         }
 
         if (e.key === 't') {
@@ -511,16 +514,29 @@ function loadLevel(index, levels, world) {
     resizeCanvas(canvas);
 
     // First time merge checking!
-    world.applyMerge();
-
-   
+    //world.applyMerge();
 }
 
-function mainLoop(time) {
-    const dt = (time - last_time) / 1000.0;
-    last_time = time;
+function timestamp() {
+    return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
+}
+
+let time_step = 1/120;
+let time_step_f = 1.0;
+let delta_time = 0;
+let last_time = timestamp();
+function mainLoop() {
+    const now = timestamp();
+    const slow_time_step = time_step * time_step_f;
+    const frame_delta = (now - last_time) / 1000.0;
+    delta_time += Math.min(1, frame_delta);
+    last_time = now;
     {
-        updateAndRender(world, command_buffer, dt);
+        while (delta_time > slow_time_step) {
+            delta_time -= slow_time_step;
+            update(world, command_buffer, time_step);
+        }
+        render(world);
         requestAnimationFrame(mainLoop);
     }
 }
@@ -529,7 +545,7 @@ function clearBG(color) {
     drawFullScreen(color);
 }
 
-export function debugTileText(row, col, text, color = "white") {
+export function drawTileText(row, col, text, color = "white") {
     const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
 
     ctx.fillStyle = color;
@@ -1155,10 +1171,13 @@ function drawWinText() {
     ctx.fillText("Press 'next' to go to next level.", canvas.width/2, canvas.height/2 + (fontBoundingBoxAscent));
 }
 
-
-function updateAndRender(world, command_buffer, dt) {
-    clearBG("darkgray");
+function update(world, command_buffer, dt) {
     world.update(command_buffer, dt, game_state, recorder);
+
+}
+
+function render(world) {
+    clearBG("darkgray");
     
     world.render(game_state);
     
@@ -1170,7 +1189,8 @@ function updateAndRender(world, command_buffer, dt) {
     }
     
     if (DEBUG_RENDER_WALLS) {
-        world.debugRenderTileIDs();
+        world.debugRender();
+        world.debugRenderPieces(world.debug_pieces);
     }
 }
 

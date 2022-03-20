@@ -1,4 +1,4 @@
-import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, debugTileText } from './game.js';
+import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, drawTileText } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, ImpossibleCommand } from './command.js';
 import { lerpToInt } from './math.js';
@@ -68,6 +68,9 @@ export class World {
     move_speed = 7.0;
     fall_speed = 16.0;
     color_set = new Set();
+
+    // DEBUGGING
+    debug_pieces = [];
     
     canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
     impossible_trigger = new DelayedTrigger(0.1, this.playImpossibleEffect);
@@ -142,7 +145,7 @@ export class World {
         window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
     }
 
-    findMergeTiles(row, col, list, original, visited) {
+    findMergeableTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
         if (visited.includes(tile)) {
             return;
@@ -159,10 +162,10 @@ export class World {
            
             list.push(tile);
             
-            this.findMergeTiles(row+1, col+0, list, original, visited);
-            this.findMergeTiles(row-1, col+0, list, original, visited);
-            this.findMergeTiles(row+0, col+1, list, original, visited);
-            this.findMergeTiles(row+0, col-1, list, original, visited);
+            this.findMergeableTiles(row+1, col+0, list, original, visited);
+            this.findMergeableTiles(row-1, col+0, list, original, visited);
+            this.findMergeableTiles(row+0, col+1, list, original, visited);
+            this.findMergeableTiles(row+0, col-1, list, original, visited);
         }
     }
 
@@ -344,6 +347,8 @@ export class World {
         });
         
         
+        
+        
 
         // Fill pieces grid
         pieces.forEach( (piece, index) => {
@@ -399,9 +404,9 @@ export class World {
         // pieces that are static. All the leftover pieces are movable and 
         // should have gravity applied to them.
         const staticised_grid = this.grid.map(t => t.gameplay_flags); 
-        this.debug_grid = staticised_grid;
         const movables = [...pieces];
         let changed = true;
+        let has_gravity_tiles = false;
         while (changed) {
             let piece_changed = false;
             movables.forEach((piece, i) => {
@@ -434,7 +439,7 @@ export class World {
         
         
         if (movables.length) {
-
+            has_gravity_tiles = true;
             // Arm and reset canvas shake trigger
             this.canvas_shake_trigger.arm(true);
             this.canvas_shake_trigger.reset();
@@ -502,58 +507,85 @@ export class World {
                 this.move_set.push(piece);
             }
         }
+
+        return has_gravity_tiles;
     }
 
-    applyMerge() {
+
+    prefindMerges() {
         const visited = [];
+        let merge_lists = [];
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
             
             if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
                 const merge_list = [];
-                this.findMergeTiles(row, col, merge_list, tile, visited);
+                this.findMergeableTiles(row, col, merge_list, tile, visited);
 
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
                 if (merge_list.length > 1) {
-                    for (let t of merge_list) {
-                        t.id = tile.id;
-                        t.gameplay_flags |= GameplayFlags.MERGED;
-                        if (is_static) {
-                            t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
-                            t.gameplay_flags |= GameplayFlags.STATIC;
-                        }
-                    }
+                    merge_lists.push({
+                        list: merge_list,
+                        tile_info: tile,
+                        is_static : is_static
+                    });
                 }
             }
         })
+
+        return merge_lists;
+    }
+
+    applyMerges(merge_lists) {
+
+        for (let merge_list of merge_lists) {
+            const {list, tile_info, is_static} = merge_list;
+            for (let t of list) {
+                t.id = tile_info.id;
+                t.gameplay_flags |= GameplayFlags.MERGED;
+                if (is_static) {
+                    t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                    t.gameplay_flags |= GameplayFlags.STATIC;
+                }
+            }
+        }
     }
 
     update(command_buffer, dt, game_state, recorder) {
-       
-        // Create pieces
+        
+        
+        const is_moving = this.move_set.length;
+        
         const pieces = [];
         const pieces_grid = [];
         const static_pieces = [];
-        this.createPieces(pieces, static_pieces, pieces_grid);
+        // Create pieces
+        if(!is_moving) {
 
+            this.createPieces(pieces, static_pieces, pieces_grid);
+            this.debug_pieces = pieces;
+            
+            const extra_guard = true; // !this.merge_delay_trigger.running;
+            let merge_lists = [];
+            if (!is_moving && extra_guard) {
+                merge_lists = this.prefindMerges();
+            }
+
+
+            if (!is_moving) {
+                const cancel_merge = this.applyGravity(pieces);
+                if (!cancel_merge) {
+                    this.applyMerges(merge_lists);
+                }
+            }
+            
+            
+        }
+        
         this.handleCommands(command_buffer, recorder, pieces, pieces_grid);
-        
-        
         this.updateMoveset(dt);
-        const is_moving = this.move_set.length;
         
-        if (!is_moving) {
-            this.applyGravity(pieces);
-        }
-        
-       
-        
-        if (!is_moving && !this.merge_delay_trigger.running) {
-            this.applyMerge();
-        }
-        
-
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
         })
@@ -579,7 +611,8 @@ export class World {
 
             for (let tile of piece.tiles) {
                 const {row, col} = tile.world_pos;
-                drawBlockText(row, col, text, "blue");
+                drawTileText(row, col, text, "blue");
+                
             }
 
             index++;
@@ -621,16 +654,7 @@ export class World {
             let text = getText(tile.gameplay_flags, tile)
             drawBlockText( row, col, text);
             
-        })
-        
-        if (0) {
-            this.forEachCell((row, col) => {
-                const index = this.getIndex(row, col);
-                const flags = this.debug_grid[index];
-                let text = getText(flags);
-                debugTileText( row, col, text, "red");
-            })
-        }
+        });
     }
  
 
