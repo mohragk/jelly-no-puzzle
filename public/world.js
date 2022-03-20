@@ -565,22 +565,14 @@ export class World {
 
             this.createPieces(pieces, static_pieces, pieces_grid);
             this.debug_pieces = pieces;
-            
-            const extra_guard = true; // !this.merge_delay_trigger.running;
+
             let merge_lists = [];
-            if (!is_moving && extra_guard) {
-                merge_lists = this.prefindMerges();
-            }
+            merge_lists = this.prefindMerges();
 
-
-            if (!is_moving) {
-                const cancel_merge = this.applyGravity(pieces);
-                if (!cancel_merge) {
-                    this.applyMerges(merge_lists);
-                }
+            const cancel_merge = this.applyGravity(pieces);
+            if (!cancel_merge) {
+                this.applyMerges(merge_lists);
             }
-            
-            
         }
         
         this.handleCommands(command_buffer, recorder, pieces, pieces_grid);

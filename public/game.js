@@ -515,6 +515,9 @@ function loadLevel(index, levels, world) {
 
     // First time merge checking!
     //world.applyMerge();
+    let merge_lists = [];
+    merge_lists = world.prefindMerges();
+    world.applyMerges(merge_lists);
 }
 
 function timestamp() {
