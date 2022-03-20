@@ -98,27 +98,31 @@ export class World {
 
     
 
-    findMergeableTiles(row, col, list, original, visited) {
+    findMergeableTiles(row, col, list, original, visited, found_candidate) {
         const tile = this.getTile(row, col);
-        if (visited.includes(tile)) {
-            return;
-        }
 
         if (tile.color === "black") {
             return;
         }
+
+        if (visited.includes(tile)) {
+            return;
+        }
+
         
-        if ( 
-            (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE)  
-         ) {
+        if (  (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
+                
+            if ( !(tile.gameplay_flags & GameplayFlags.MERGED) ) {
+                found_candidate = true;
+            }
             visited.push(tile);
            
             list.push(tile);
             
-            this.findMergeableTiles(row+1, col+0, list, original, visited);
-            this.findMergeableTiles(row-1, col+0, list, original, visited);
-            this.findMergeableTiles(row+0, col+1, list, original, visited);
-            this.findMergeableTiles(row+0, col-1, list, original, visited);
+            this.findMergeableTiles(row+1, col+0, list, original, visited, found_candidate);
+            this.findMergeableTiles(row-1, col+0, list, original, visited, found_candidate);
+            this.findMergeableTiles(row+0, col+1, list, original, visited, found_candidate);
+            this.findMergeableTiles(row+0, col-1, list, original, visited, found_candidate);
         }
     }
 
@@ -387,11 +391,8 @@ export class World {
         
         if (movables.length) {
             has_gravity_tiles = true;
-            // Arm and reset canvas shake trigger
-          
+                      
             this.event_manager.pushEvent(Events.BEGIN_FALL);
-         
-
 
             for (let piece of movables) 
             {
@@ -460,12 +461,13 @@ export class World {
     prefindMerges() {
         const visited = [];
         let merge_lists = [];
+        let has_candidate = false;
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
             
             if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
                 const merge_list = [];
-                this.findMergeableTiles(row, col, merge_list, tile, visited);
+                this.findMergeableTiles(row, col, merge_list, tile, visited, has_candidate);
 
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
@@ -479,13 +481,18 @@ export class World {
             }
         })
 
-        return merge_lists;
+        return {merge_lists, has_candidate} ;
     }
 
-    applyMerges(merge_lists) {
-
+    applyMerges({merge_lists, has_candidate}) {
+        if (has_candidate) {
+            console.log("found and applied merge candidate")
+            this.event_manager.pushEvent(Events.BEGIN_MERGE);
+        }
+        
         for (let merge_list of merge_lists) {
             const {list, tile_info, is_static} = merge_list;
+            
             for (let t of list) {
                 t.id = tile_info.id;
                 t.gameplay_flags |= GameplayFlags.MERGED;

@@ -8,7 +8,9 @@ import { Recorder } from './recorder.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
 
+import {AudioPlayer} from './audio.js';
 
+let audio_player = new AudioPlayer();
 
 
 
@@ -50,16 +52,25 @@ class DelayedTrigger {
 }
 
 
-
-
-let impossible_trigger = new DelayedTrigger(0.1, () => {
+function shakeCanvas() {
     canvas.classList.add("add_shake")
     window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-});
+}
+
 let fallen_trigger = new DelayedTrigger(0.1, () => {
+    audio_player.trigger(thump01_clip);
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
+
+let merged_trigger = new DelayedTrigger(0.1, () => {
+    audio_player.trigger(glup01_sound);
+})
+
+let thump01_clip = document.getElementById('thump01_sound');
+let fail01_sound = document.getElementById('fail01_sound');
+let glup01_sound = document.getElementById('glup01_sound');
+let move01_sound = document.getElementById('move01_sound');
 
 
 let canvas, ctx;
@@ -68,8 +79,18 @@ let command_buffer;
 let recorder;
 let event_listener = {
     handleEvent: (e) => {
+
+        if (e === Events.MOVE) {
+            audio_player.trigger(move01_sound);
+        }
+
+        if (e === Events.BEGIN_MERGE) {
+            merged_trigger.armAndReset();
+        }
+        
         if (e === Events.IMPOSSIBLE) {
-            impossible_trigger.armAndReset();
+            shakeCanvas();
+            audio_player.trigger(fail01_sound);
         }
 
         if (e === Events.BEGIN_FALL) {
@@ -110,10 +131,6 @@ let ENABLE_UNIFIED_CLICK = false;
 let world = new World();
 
 
-function playImpossibleEffect() {
-   
-}
-
 function reset(level_index) {
 
     canvas.classList.remove("add_victory_animation");
@@ -137,7 +154,7 @@ function reset(level_index) {
         
         game_state.running = true;
     
-        world.addListener(event_listener);
+       
        
         mainLoop();
     }
@@ -203,6 +220,7 @@ function main() {
     canvas.addEventListener("mousemove", onMouseMove);
     
     document.addEventListener("keypress", e => {
+        e.preventDefault();
         if (e.key === 'z') {
             handleUndo();
         }
@@ -592,6 +610,9 @@ function loadLevel(index, levels, world) {
     }
 
     resizeCanvas(canvas);
+
+
+    world.addListener(event_listener);
 
     // First time merge checking!
     let merge_lists = [];
@@ -1232,19 +1253,18 @@ export function getTileCoordFromScreenCoord(x, y) {
 }
 
 
-
 function drawWinText() {
     const cell_size = canvas.width / world.dimensions.w;
     const text = "You won!";
     
-        const font_size = `${cell_size * 0.75}px`
-        ctx.font = font_size+" sans-serif";
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center"
-        let {fontBoundingBoxAscent} = ctx.measureText(text);
-        fontBoundingBoxAscent = fontBoundingBoxAscent ? fontBoundingBoxAscent : 48;
-    
-        ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
+    const font_size = `${cell_size * 0.75}px`
+    ctx.font = font_size+" sans-serif";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center"
+    let {fontBoundingBoxAscent} = ctx.measureText(text);
+    fontBoundingBoxAscent = fontBoundingBoxAscent ? fontBoundingBoxAscent : 48;
+
+    ctx.fillText(text, canvas.width/2, canvas.height/2 - (fontBoundingBoxAscent/2));
     
 
     const font_size_sm = `${cell_size * 0.4}px`;
@@ -1255,8 +1275,8 @@ function drawWinText() {
 
 function update(world, command_buffer, dt) {
     world.update(command_buffer, dt, game_state, recorder);
-    impossible_trigger.update(dt);
     fallen_trigger.update(dt);
+    merged_trigger.update(dt);
 }
 
 function render(world) {

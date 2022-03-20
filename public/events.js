@@ -2,6 +2,7 @@ export const Events = {
     MOVE: 0,
     IMPOSSIBLE: 1,
     BEGIN_FALL: 2,
+    BEGIN_MERGE: 4,
 }
 
 export class EventManager {
