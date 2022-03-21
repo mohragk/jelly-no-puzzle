@@ -2,8 +2,11 @@
 
 html, body{
     margin: 0;
+    padding: 0;
     font-family: Helvetica, Arial, sans-serif;
+    
 }
+
 
 button {
     font-size: 1.5em;
@@ -57,9 +60,9 @@ ul.no-bullets > li {
 }
 
 .add_victory_animation {
-    animation: canvas_victory 2s;
-    animation-iteration-count: infinite;
+    animation: canvas_victory 2s infinite, rotate-colorhue 3s infinite;
 }
+
 
 
 
@@ -127,4 +130,10 @@ ul.no-bullets > li {
     60%     { transform: translateY(+0.2vw) }
     70%     { transform: translateY( 0px) }
     100%    { transform: translateY( 0px) }
+}
+
+@keyframes rotate-colorhue {
+    0% {  filter: hue-rotate(0deg)  }
+    50% {  filter: hue-rotate(180deg)  }
+    100% {  filter: hue-rotate(0deg)  }
 }

@@ -115,6 +115,7 @@ let world = new World();
 function reset(level_index) {
 
     canvas.classList.remove("add_victory_animation");
+    document.body.classList.remove("animated-bgcolors");
 
     if (level_index < levels.length) {
         const button = document.getElementById("next_button");
@@ -143,6 +144,7 @@ function reset(level_index) {
 
 function resetWorld(levels) {
     canvas.classList.remove("add_victory_animation");
+    document.body.classList.remove("animated-bgcolors");
     world = new World();
     const level_index = game_state.level_index;
     loadLevel(level_index, levels, world);
@@ -236,6 +238,7 @@ function main() {
 
     function handleUndo() {
         canvas.classList.remove("add_victory_animation");
+        document.body.classList.remove("animated-bgcolors");
         const prev = recorder.getPrevious();
         world.setState(prev);
        // command_buffer.clear(); // maybe not necessary
@@ -1277,6 +1280,7 @@ function render(world) {
     if (game_state.has_won) {
         drawWinText();
         canvas.classList.add("add_victory_animation");
+        document.body.classList.add("animated-bgcolors");
         const button = document.getElementById("next_button");
         button.style.visibility = "visible";
         if (game_state.running) {
