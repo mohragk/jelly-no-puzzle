@@ -458,6 +458,32 @@ export class World {
     }
 
 
+    findAndApplyMerges() {
+        const visited = [];
+        this.forEachCell((row, col, index) => {
+            const tile = this.getTile(row, col);
+            if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
+                let merge_list =[];
+                this.findMergeableTiles(row, col, merge_list, tile, visited, true);
+
+                const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
+
+                if (merge_list.length > 1) {
+                    for (let t of merge_list) {
+                        t.id = tile.id;
+                        t.gameplay_flags |= GameplayFlags.MERGED;
+                        if (is_static) {
+                            t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                            t.gameplay_flags |= GameplayFlags.STATIC;
+                        }
+                    }
+                }
+            }
+        })
+
+    }
+
+
     prefindMerges() {
         const visited = [];
         let merge_lists = [];
@@ -486,7 +512,6 @@ export class World {
 
     applyMerges({merge_lists, has_candidate}) {
         if (has_candidate) {
-            console.log("found and applied merge candidate")
             this.event_manager.pushEvent(Events.BEGIN_MERGE);
         }
         
@@ -517,12 +542,10 @@ export class World {
 
             this.createPieces(pieces, static_pieces, pieces_grid);
 
-            let merge_lists = [];
-            merge_lists = this.prefindMerges();
-
+            
             const cancel_merge = this.applyGravity(pieces);
             if (!cancel_merge) {
-                this.applyMerges(merge_lists);
+                this.findAndApplyMerges();
             }
         }
         
