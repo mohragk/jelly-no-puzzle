@@ -38,10 +38,14 @@ let fallen_trigger = new DelayedTrigger(0.1, () => {
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
 
+
+// NOTE: sound clips are loaded via the DOM, maybe move that
+// to actual JS?
 let thump01_clip = document.getElementById('thump01_sound');
 let fail01_sound = document.getElementById('fail01_sound');
 let glup01_sound = document.getElementById('glup01_sound');
 let move01_sound = document.getElementById('move01_sound');
+let victory_flute_sound = document.getElementById('victory_flute_sound');
 
 
 let canvas, ctx;
@@ -51,13 +55,15 @@ let recorder;
 let event_listener = {
     handleEvent: (e) => {
 
+        if (e === Events.VICTORY) {
+            audio_player.trigger(victory_flute_sound);
+        }
+
         if (e === Events.MOVE) {
             audio_player.trigger(move01_sound);
         }
 
         if (e === Events.BEGIN_MERGE) {
-            console.log("Beginning merge!")
-            //merged_trigger.armAndReset();
             audio_player.trigger(glup01_sound)
         }
         
@@ -71,7 +77,6 @@ let event_listener = {
         }
     }
 }
-
 
 
 
@@ -94,6 +99,7 @@ const DEFAULT_GAMESTATE = {
     frame_count: 0,
     debug_time_enabled : false
 };
+
 
 
 let DEBUG_RENDER = false;
@@ -229,6 +235,7 @@ function main() {
         canvas.classList.remove("add_victory_animation");
         const prev = recorder.getPrevious();
             world.setState(prev);
+            command_buffer.clear();
             game_state.has_won = false;
     }
 
@@ -1252,9 +1259,13 @@ function render(world) {
     
     if (game_state.has_won) {
         drawWinText();
-        canvas.classList.add("add_victory_animation");
-        const button = document.getElementById("next_button");
-        button.style.visibility = "visible";
+        if (game_state.running) {
+            canvas.classList.add("add_victory_animation");
+            const button = document.getElementById("next_button");
+            button.style.visibility = "visible";
+            game_state.running = false;
+            audio_player.trigger(victory_flute_sound);
+        }
     }
     
     if (DEBUG_RENDER) {

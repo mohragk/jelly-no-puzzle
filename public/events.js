@@ -3,6 +3,7 @@ export const Events = {
     IMPOSSIBLE: 1,
     BEGIN_FALL: 2,
     BEGIN_MERGE: 4,
+    VICTORY: 5
 }
 
 export class EventManager {

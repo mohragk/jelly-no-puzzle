@@ -89,8 +89,9 @@ export class World {
     }
 
 
-    setState(new_grid) {
-        this.grid = [...new_grid];
+    setState(new_grid, command_buffer) {
+        this.grid = _.cloneDeep(new_grid);
+        command_buffer.clear();
         this.move_set.length = 0;
     }
 
@@ -237,6 +238,9 @@ export class World {
 
             if (can_move) {
                 this.event_manager.pushEvent(Events.MOVE)
+
+                // Store copy of current state
+                undo_recorder.add(this.grid);
                 
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
@@ -247,8 +251,6 @@ export class World {
                         }
                     }
                 }
-                // Store copy of current state
-                undo_recorder.add(this.grid);
             }
             else {
                 this.event_manager.pushEvent(Events.IMPOSSIBLE)
@@ -523,7 +525,6 @@ export class World {
         
         // HANDLE WIN CONDITION
         if (pieces.length + static_pieces.length === this.color_set.size) {
-            game_state.running = false;
             game_state.has_won = true;
         }
     }
