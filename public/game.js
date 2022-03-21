@@ -5,51 +5,26 @@ import { GameplayFlags, Tile } from './tile.js';
 
 import { World, Neighbours } from './world.js';
 import { Recorder } from './recorder.js';
+import { DelayedTrigger } from './delayedtrigger.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
 
 import {AudioPlayer} from './audio.js';
 
+
+
+
+
+
+
+const DEV_MODE = false;
+
+
+
+
 let audio_player = new AudioPlayer();
 
 
-
-class DelayedTrigger {
-    #duration = 1.0;
-    #elapsed  = 0.0;
-    armed = false;
-    running = false;
-    callback  = () => {};
-
-    constructor(duration, cb) {
-        this.#duration = duration;
-        this.callback = cb;
-    }
-
-    update(dt) {
-        if (!this.armed) return;
-        this.running = true;
-        this.#elapsed += dt;
-        if (this.#elapsed > this.#duration) {
-            this.callback();
-            this.armed = false;
-            this.running = false;
-        }
-    }
-
-    arm(value) {
-        this.armed = value;
-    }
-
-    reset() {
-        this.#elapsed = 0.0;
-    }
-
-    armAndReset() {
-        this.arm(true);
-        this.reset();
-    }
-}
 
 
 function shakeCanvas() {
@@ -62,10 +37,6 @@ let fallen_trigger = new DelayedTrigger(0.1, () => {
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
-
-let merged_trigger = new DelayedTrigger(0.1, () => {
-    audio_player.trigger(glup01_sound);
-})
 
 let thump01_clip = document.getElementById('thump01_sound');
 let fail01_sound = document.getElementById('fail01_sound');
@@ -85,7 +56,9 @@ let event_listener = {
         }
 
         if (e === Events.BEGIN_MERGE) {
-            merged_trigger.armAndReset();
+            console.log("Beginning merge!")
+            //merged_trigger.armAndReset();
+            audio_player.trigger(glup01_sound)
         }
         
         if (e === Events.IMPOSSIBLE) {
@@ -99,7 +72,6 @@ let event_listener = {
     }
 }
 
-const DEV_MODE = false;
 
 
 
@@ -1271,7 +1243,6 @@ function drawWinText() {
 function update(world, command_buffer, dt) {
     world.update(command_buffer, dt, game_state, recorder);
     fallen_trigger.update(dt);
-    merged_trigger.update(dt);
 }
 
 function render(world) {

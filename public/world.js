@@ -98,7 +98,7 @@ export class World {
 
     
 
-    findMergeableTiles(row, col, list, original, visited, found_candidate) {
+    findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
 
         if (tile.color === "black") {
@@ -112,17 +112,17 @@ export class World {
         
         if (  (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                 
-            if ( !(tile.gameplay_flags & GameplayFlags.MERGED) ) {
-                found_candidate = true;
+            if ( !(tile.gameplay_flags & GameplayFlags.MERGED) && (tile.id !== original.id) ) {
+                info.found_candidate = true;
             }
             visited.push(tile);
            
             list.push(tile);
             
-            this.findMergeableTiles(row+1, col+0, list, original, visited, found_candidate);
-            this.findMergeableTiles(row-1, col+0, list, original, visited, found_candidate);
-            this.findMergeableTiles(row+0, col+1, list, original, visited, found_candidate);
-            this.findMergeableTiles(row+0, col-1, list, original, visited, found_candidate);
+            this.findMergeableTiles(row+1, col+0, list, original, visited, info);
+            this.findMergeableTiles(row-1, col+0, list, original, visited, info);
+            this.findMergeableTiles(row+0, col+1, list, original, visited, info);
+            this.findMergeableTiles(row+0, col-1, list, original, visited, info);
         }
     }
 
@@ -463,8 +463,14 @@ export class World {
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
             if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
-                let merge_list =[];
-                this.findMergeableTiles(row, col, merge_list, tile, visited, true);
+                let merge_list = [];
+                let merge_info = {
+                    found_candidate: false
+                };
+                this.findMergeableTiles(row, col, merge_list, tile, visited, merge_info);
+                if (merge_info.found_candidate) {
+                    this.event_manager.pushEvent(Events.BEGIN_MERGE)
+                }
 
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
