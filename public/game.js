@@ -70,7 +70,7 @@ let event_listener = {
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
-            audio_player.trigger(fail01_sound);
+            audio_player.trigger(tap01_clip);
         }
 
         if (e === Events.BEGIN_FALL) {
@@ -204,7 +204,6 @@ function main() {
         e.preventDefault();
         if (e.key === 'z') {
             handleUndo();
-            audio_player.trigger(tap01_clip);
         }
 
         if (e.key === 'r') {
