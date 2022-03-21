@@ -235,14 +235,16 @@ function main() {
         canvas.classList.remove("add_victory_animation");
         const prev = recorder.getPrevious();
         world.setState(prev);
-        command_buffer.clear(); // maybe not necessary
+       // command_buffer.clear(); // maybe not necessary
         game_state.has_won = false;
+        game_state.running = true;
     }
 
     function handleReset() {
         recorder.add(world.grid);
         resetWorld(levels);
         game_state.has_won = false;
+        game_state.running = true;
     }
 
     function handleNext() {
@@ -1259,10 +1261,10 @@ function render(world) {
     
     if (game_state.has_won) {
         drawWinText();
+        canvas.classList.add("add_victory_animation");
+        const button = document.getElementById("next_button");
+        button.style.visibility = "visible";
         if (game_state.running) {
-            canvas.classList.add("add_victory_animation");
-            const button = document.getElementById("next_button");
-            button.style.visibility = "visible";
             game_state.running = false;
             audio_player.trigger(victory_flute_sound);
         }

@@ -18,7 +18,6 @@ export const Neighbours = {
     BOTTOM_RIGHT:   (1 << 7),
 };
 
-const canvas = document.getElementById("grid_canvas");
 
 class Piece {
     tiles = [];
@@ -89,9 +88,12 @@ export class World {
     }
 
 
-    setState(new_grid, command_buffer) {
-        this.grid = _.cloneDeep(new_grid);
-        command_buffer.clear();
+    setState(new_grid) {
+        // NOTE: deep cloning the grid might be screwing with the 
+        // handling of the win state. This shouldn't be.
+        // For now we leave it as is since shallow copying is more efficient 
+        // either way. -S. Vermeer 2022
+        this.grid = [...new_grid];
         this.move_set.length = 0;
     }
 
@@ -498,14 +500,12 @@ export class World {
         
         const is_moving = this.move_set.length;
         
+        // Create pieces
         const pieces = [];
         const pieces_grid = [];
         const static_pieces = [];
-        // Create pieces
         if(!is_moving) {
-
             this.createPieces(pieces, static_pieces, pieces_grid);
-
             
             const cancel_merge = this.applyGravity(pieces);
             if (!cancel_merge) {
@@ -520,10 +520,11 @@ export class World {
             this.updateTile(this.grid[index], dt);
         })
 
-
-        // Canvas shake
         
         // HANDLE WIN CONDITION
+        // @BUG: this won't work when you add a redo option to the undo-system. 
+        // pieces will be empty at that moment, so player has to make a valid move
+        // to re-trigger this condition. 
         if (pieces.length + static_pieces.length === this.color_set.size) {
             game_state.has_won = true;
         }
@@ -538,7 +539,6 @@ export class World {
             for (let tile of piece.tiles) {
                 const {row, col} = tile.world_pos;
                 drawTileText(row, col, text, "blue");
-                
             }
 
             index++;
