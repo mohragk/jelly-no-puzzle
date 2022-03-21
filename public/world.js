@@ -2,6 +2,7 @@ import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, draw
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes } from './command.js';
 import { lerpToInt } from './math.js';
+import { EventManager, Events } from './events.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -24,37 +25,6 @@ class Piece {
     color = "";
 }
 
-class DelayedTrigger {
-    #duration = 1.0;
-    #elapsed  = 0.0;
-    armed = false;
-    running = false;
-    callback  = () => {};
-
-    constructor(duration, cb) {
-        this.#duration = duration;
-        this.callback = cb;
-    }
-
-    update(dt) {
-        if (!this.armed) return;
-        this.running = true;
-        this.#elapsed += dt;
-        if (this.#elapsed > this.#duration) {
-            this.callback();
-            this.armed = false;
-            this.running = false;
-        }
-    }
-
-    arm(value) {
-        this.armed = value;
-    }
-
-    reset() {
-        this.#elapsed = 0.0;
-    }
-}
 
 export class World {
 
@@ -71,9 +41,8 @@ export class World {
 
     // DEBUGGING
     debug_pieces = [];
-    
-    canvas_shake_trigger = new DelayedTrigger(0.1, this.shakeCanvas);
-    impossible_trigger = new DelayedTrigger(0.1, this.playImpossibleEffect);
+
+    event_manager = new EventManager();
     
     debug_grid = [];
 
@@ -81,6 +50,10 @@ export class World {
         this.dimensions.w = w;
         this.dimensions.h = h;
         this.grid.length = w * h;
+    }
+
+    addListener(listener) {
+        this.event_manager.addListener(listener);
     }
 
 
@@ -121,50 +94,35 @@ export class World {
         this.move_set.length = 0;
     }
 
-    shakeCanvas() {
-        if (1) {
-            const name =  "add_gravity_shake_mild";
-            canvas.classList.add(name);
-            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-        }
-        else        
-        {
-            const name =  "add_gravity_shake_heavy";
-            canvas.classList.add(name);
-            window.setTimeout(() => {canvas.classList.remove(name);}, 350)
-        }
-        
-    }
+    
 
-    playImpossibleEffect() {
-        drawFullScreen("white")
-        const canvas = document.getElementById("grid_canvas");
-        
-        canvas.classList.add("add_shake")
-        window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-    }
+    
 
-    findMergeableTiles(row, col, list, original, visited) {
+    findMergeableTiles(row, col, list, original, visited, found_candidate) {
         const tile = this.getTile(row, col);
-        if (visited.includes(tile)) {
-            return;
-        }
 
         if (tile.color === "black") {
             return;
         }
+
+        if (visited.includes(tile)) {
+            return;
+        }
+
         
-        if ( 
-            (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE)  
-         ) {
+        if (  (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
+                
+            if ( !(tile.gameplay_flags & GameplayFlags.MERGED) ) {
+                found_candidate = true;
+            }
             visited.push(tile);
            
             list.push(tile);
             
-            this.findMergeableTiles(row+1, col+0, list, original, visited);
-            this.findMergeableTiles(row-1, col+0, list, original, visited);
-            this.findMergeableTiles(row+0, col+1, list, original, visited);
-            this.findMergeableTiles(row+0, col-1, list, original, visited);
+            this.findMergeableTiles(row+1, col+0, list, original, visited, found_candidate);
+            this.findMergeableTiles(row-1, col+0, list, original, visited, found_candidate);
+            this.findMergeableTiles(row+0, col+1, list, original, visited, found_candidate);
+            this.findMergeableTiles(row+0, col-1, list, original, visited, found_candidate);
         }
     }
 
@@ -280,6 +238,8 @@ export class World {
             if (can_move) {
                 recorder.add(this.grid);
 
+                this.event_manager.pushEvent(Events.MOVE)
+
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
@@ -291,10 +251,7 @@ export class World {
                 }
             }
             else {
-               
-
-                this.impossible_trigger.arm(true);
-                this.impossible_trigger.reset();
+                this.event_manager.pushEvent(Events.IMPOSSIBLE)
             }    
         }
        
@@ -434,12 +391,8 @@ export class World {
         
         if (movables.length) {
             has_gravity_tiles = true;
-            // Arm and reset canvas shake trigger
-            this.canvas_shake_trigger.arm(true);
-            this.canvas_shake_trigger.reset();
-
-         
-
+                      
+            this.event_manager.pushEvent(Events.BEGIN_FALL);
 
             for (let piece of movables) 
             {
@@ -505,15 +458,42 @@ export class World {
     }
 
 
+    findAndApplyMerges() {
+        const visited = [];
+        this.forEachCell((row, col, index) => {
+            const tile = this.getTile(row, col);
+            if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
+                let merge_list =[];
+                this.findMergeableTiles(row, col, merge_list, tile, visited, true);
+
+                const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
+
+                if (merge_list.length > 1) {
+                    for (let t of merge_list) {
+                        t.id = tile.id;
+                        t.gameplay_flags |= GameplayFlags.MERGED;
+                        if (is_static) {
+                            t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                            t.gameplay_flags |= GameplayFlags.STATIC;
+                        }
+                    }
+                }
+            }
+        })
+
+    }
+
+
     prefindMerges() {
         const visited = [];
         let merge_lists = [];
+        let has_candidate = false;
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
             
             if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
                 const merge_list = [];
-                this.findMergeableTiles(row, col, merge_list, tile, visited);
+                this.findMergeableTiles(row, col, merge_list, tile, visited, has_candidate);
 
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
@@ -527,13 +507,17 @@ export class World {
             }
         })
 
-        return merge_lists;
+        return {merge_lists, has_candidate} ;
     }
 
-    applyMerges(merge_lists) {
-
+    applyMerges({merge_lists, has_candidate}) {
+        if (has_candidate) {
+            this.event_manager.pushEvent(Events.BEGIN_MERGE);
+        }
+        
         for (let merge_list of merge_lists) {
             const {list, tile_info, is_static} = merge_list;
+            
             for (let t of list) {
                 t.id = tile_info.id;
                 t.gameplay_flags |= GameplayFlags.MERGED;
@@ -558,12 +542,10 @@ export class World {
 
             this.createPieces(pieces, static_pieces, pieces_grid);
 
-            let merge_lists = [];
-            merge_lists = this.prefindMerges();
-
+            
             const cancel_merge = this.applyGravity(pieces);
             if (!cancel_merge) {
-                this.applyMerges(merge_lists);
+                this.findAndApplyMerges();
             }
         }
         
@@ -576,8 +558,6 @@ export class World {
 
 
         // Canvas shake
-        this.canvas_shake_trigger.update(dt);
-        this.impossible_trigger.update(dt);
         
         // HANDLE WIN CONDITION
         if (pieces.length + static_pieces.length === this.color_set.size) {
