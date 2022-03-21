@@ -1,4 +1,5 @@
 
+
 export class Recorder {
     history = [];
     count = 0;
@@ -13,7 +14,7 @@ export class Recorder {
             this.max *= 2;
             this.history.length = this.max;
         }
-        this.history[this.count] =  JSON.parse(JSON.stringify(state)) ;
+        this.history[this.count] =  _.cloneDeep(state) ;
         this.count++;
     }
 
