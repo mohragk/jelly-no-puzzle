@@ -234,9 +234,9 @@ function main() {
     function handleUndo() {
         canvas.classList.remove("add_victory_animation");
         const prev = recorder.getPrevious();
-            world.setState(prev);
-            command_buffer.clear();
-            game_state.has_won = false;
+        world.setState(prev);
+        command_buffer.clear(); // maybe not necessary
+        game_state.has_won = false;
     }
 
     function handleReset() {

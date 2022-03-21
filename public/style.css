@@ -10,6 +10,22 @@ button {
     padding: 6px 14px;
 }
 
+
+ul.no-bullets {
+    list-style-type: none; /* Remove bullets */
+    padding: 0;
+   
+}
+
+ul.no-bullets > li {
+    margin-top: 20px;
+}
+
+#audio_toggle_button {
+    font-size: 1em;
+    padding: 3px 6px;
+}
+
 #canvas_wrapper {
     margin:0 auto;
     width: fit-content;
