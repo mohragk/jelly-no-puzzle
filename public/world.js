@@ -13,8 +13,8 @@ export const Neighbours = {
     RIGHT:          (1 << 3),
 
     TOP_LEFT:       (1 << 4),
-    TOP_RIGHT:      (1 << 5),
-    BOTTOM_LEFT:    (1 << 6),
+    BOTTOM_LEFT:    (1 << 5),
+    TOP_RIGHT:      (1 << 6),
     BOTTOM_RIGHT:   (1 << 7),
 };
 

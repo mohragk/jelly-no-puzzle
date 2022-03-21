@@ -675,11 +675,11 @@ export function drawFullScreen(color) {
 
 function drawArrowLeft(x, center_y, height, color = "black") {
 
-    let start_x = x - height;
+    let start_x = x;
     ctx.beginPath();
     ctx.moveTo(start_x, center_y);
-    ctx.lineTo(x, center_y - height/2);
-    ctx.lineTo(x, center_y + height/2);
+    ctx.lineTo(x+height, center_y - height);
+    ctx.lineTo(x+height, center_y + height);
     ctx.fillStyle = color;
     ctx.fill();
 
@@ -688,11 +688,11 @@ function drawArrowLeft(x, center_y, height, color = "black") {
 
 function drawArrowRight(x, center_y, height, color = "black") {
 
-    let start_x = x + height;
+    let start_x = x;
     ctx.beginPath();
     ctx.moveTo(start_x, center_y);
-    ctx.lineTo(x, center_y - height/2);
-    ctx.lineTo(x, center_y + height/2);
+    ctx.lineTo(x-height, center_y - height);
+    ctx.lineTo(x-height, center_y + height);
     ctx.fillStyle = color;
     ctx.fill();
 
@@ -717,11 +717,11 @@ export function drawMoveArrow(row, col, mouse_x) {
     
     let r_x = start_x
     let r_y = y;
-    let r_w = tile_size /2;
+    let r_w = tile_size / 2.2;
     let r_h = tile_size;
-    ctx.fillRect(r_x, r_y, r_w, r_h);
+   // ctx.fillRect(r_x, r_y, r_w, r_h);
 
-    let h = tile_size / 4;
+    let h = tile_size / 2;
     if (left) {
         drawArrowRight(center_x, center_y, h, color);
     }
