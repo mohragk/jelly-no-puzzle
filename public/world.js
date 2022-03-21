@@ -1,7 +1,7 @@
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, drawTileText } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes } from './command.js';
-import { lerpToInt } from './math.js';
+import { lerpToInt, lerp } from './math.js';
 import { EventManager, Events } from './events.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
@@ -24,6 +24,21 @@ class Piece {
     color = "";
 }
 
+
+class Rectangle {
+    top_left     = [0, 0];
+    bottom_right = [0, 0];
+
+    dimensions = [0, 0];
+
+    constructor(tl, br) {
+        this.top_left = tl;
+        this.bottom_right = br;
+
+        this.dimensions[0] = this.bottom_right[0] - this.top_left[0]  //x
+        this.dimensions[1] = this.bottom_right[1] - this.top_left[1]  //x
+    }
+}
 
 export class World {
 
@@ -462,7 +477,7 @@ export class World {
     }
 
 
-    findAndApplyMerges() {
+    findAndApplyMerges(skip_event = false) {
         const visited = [];
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
@@ -472,7 +487,7 @@ export class World {
                     found_candidate: false
                 };
                 this.findMergeableTiles(row, col, merge_list, tile, visited, merge_info);
-                if (merge_info.found_candidate) {
+                if (merge_info.found_candidate && !skip_event) {
                     this.event_manager.pushEvent(Events.BEGIN_MERGE)
                 }
 
@@ -491,6 +506,30 @@ export class World {
             }
         })
 
+    }
+
+    // NOTE: this is only in column axis, above and below are not checked
+    findClosestMovable(row, col, mouse_x) {
+        let min_distance_pixels_sq = 10000000;
+        let candidate;
+
+        let r = row;
+        for (let c = col-1; c < col+3; c++) {
+            const t = this.getTile(r, c);
+            if (t) {
+                if (t.gameplay_flags & GameplayFlags.MOVABLE) {
+                    const {x, tile_size} = getScreenCoordFromTileCoord(r, c);
+                    const center_x = lerp(x, x + tile_size, 0.5);
+                    const diff_x = Math.abs(center_x - mouse_x);
+                    if (diff_x < min_distance_pixels_sq) {
+                        min_distance_pixels_sq = diff_x;
+                        candidate = t;
+                    }
+                }
+            }
+        }
+
+        return candidate;
     }
 
 
@@ -619,17 +658,33 @@ export class World {
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
 
                 // For unified mouse click mode
-                if (tile.gameplay_flags & GameplayFlags.MOVABLE && this.move_set.length < 1) {
-                    let {x, y} = game_state.mouse.screen_coord;
-                    const top_left = getScreenCoordFromTileCoord(row, col);
-                    const bottom_right = {
-                        x: top_left.x + top_left.tile_size, 
-                        y: top_left.y + top_left.tile_size
-                    };
+                {
+                    const mouse_x = game_state.mouse.screen_coord.x;
+                    const mouse_y = game_state.mouse.screen_coord.y;
+                    const screen_coords = getScreenCoordFromTileCoord(row, col);
+                   
+                    const half_size = screen_coords.tile_size/2;
+
+                    const region = new Rectangle(
+                        [ screen_coords.x - half_size, screen_coords.y ],
+                        [ screen_coords.x + screen_coords.tile_size + half_size, screen_coords.y + screen_coords.tile_size ]
+                    );
+                   
+                    // check whether mouse is in region
+                    const mouse_in = (
+                        ( mouse_x > region.top_left[0] && mouse_x < region.bottom_right[0] ) &&
+                        ( mouse_y > region.top_left[1] && mouse_y < region.bottom_right[1] )
+                        
+                    );
+                        
                     
-                    // Check whether mouse is within cell
-                    if ( (x >= top_left.x && x < bottom_right.x) && (y >= top_left.y && y < bottom_right.y) ) {
-                        drawMoveArrow(row, col, x, y);
+                    const apply = mouse_in && !this.move_set.length; 
+                    if (apply) {
+                        let other_tile = this.findClosestMovable(row, col, mouse_x);
+                        if (other_tile) {
+                            drawMoveArrow(other_tile.world_pos.row, other_tile.world_pos.col, mouse_x);
+                        }
+                        
                     }
                 }
             }

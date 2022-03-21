@@ -42,6 +42,7 @@ let fallen_trigger = new DelayedTrigger(0.1, () => {
 // NOTE: sound clips are loaded via the DOM, maybe move that
 // to actual JS?
 let thump01_clip = document.getElementById('thump01_sound');
+let tap01_clip = document.getElementById('tap01_sound');
 let fail01_sound = document.getElementById('fail01_sound');
 let glup01_sound = document.getElementById('glup01_sound');
 let move01_sound = document.getElementById('move01_sound');
@@ -93,17 +94,19 @@ const DEFAULT_GAMESTATE = {
         dragging: false,
         start_drag: [0,0],
         end_drag:   [0,0],
-        start_tile: {row:0, col:0},
-        screen_coord: {x: 0, y: 0}
+        start_tile: {row: 0, col: 0},
+        over_tile:  {row: 0, col: 0},
+        screen_coord: {x: 0, y: 0},
     },
     frame_count: 0,
-    debug_time_enabled : false
+    debug_time_enabled : false,
+
 };
 
 
 
 let DEBUG_RENDER = false;
-let ENABLE_UNIFIED_CLICK = false;
+let ENABLE_UNIFIED_CLICK = true;
 
 
 let world = new World();
@@ -201,6 +204,7 @@ function main() {
         e.preventDefault();
         if (e.key === 'z') {
             handleUndo();
+            audio_player.trigger(tap01_clip);
         }
 
         if (e.key === 'r') {
@@ -226,7 +230,7 @@ function main() {
         }
         
 
-        if (e.key === 't') {
+        if (e.key === 'm') {
             ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
         }
     })
@@ -278,23 +282,33 @@ function main() {
         const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
        
-
         if (row < world.dimensions.h && col < world.dimensions.w) {
-            const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
-
+            const apply = !world.move_set.length && !game_state.has_won;
+            
             if (apply) {
+                let tile = world.getTile(row, col);
                 let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+
                 if (ENABLE_UNIFIED_CLICK) {
-                    let {x, tile_size} = getScreenCoordFromTileCoord(row, col);
+
+                    let other_tile = world.findClosestMovable(row, col, offsetX);
+                    if (other_tile) {
+                        tile = other_tile;
+                    }
+
+                   
+                    let {x, tile_size} = getScreenCoordFromTileCoord(tile.world_pos.row, tile.world_pos.col);
                    
                     let mouse_x = offsetX;
-                    let center_x = lerp(x, x + tile_size, 0.5);
+                    const half_size = tile_size/2;
+                    let center_x = lerp(x-half_size, x + tile_size + half_size, 0.5);
                     dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
                 }
 
-                const c = new MoveCommand({row, col}, dir);
-                command_buffer.add(c);
+                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                    const c = new MoveCommand({row: tile.world_pos.row, col: tile.world_pos.col}, dir);
+                    command_buffer.add(c);
+                }
             }
             
         }
@@ -304,6 +318,10 @@ function main() {
         const {offsetX, offsetY} = e;
         game_state.mouse.screen_coord.x = offsetX;
         game_state.mouse.screen_coord.y = offsetY;
+
+        const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
+        game_state.mouse.over_tile.row = row;
+        game_state.mouse.over_tile.col = col;
     }
 
     function getTouchCoord(canvas, e) {
@@ -591,7 +609,7 @@ function loadLevel(index, levels, world) {
     }
 
     world.addListener(event_listener);
-    world.findAndApplyMerges();
+    world.findAndApplyMerges(true);
 
     resizeCanvas(canvas);
 }
@@ -682,7 +700,7 @@ function drawArrowRight(x, center_y, height, color = "black") {
 }
 
 
-export function drawMoveArrow(row, col, mouse_x, mouse_y) {
+export function drawMoveArrow(row, col, mouse_x) {
     if (!ENABLE_UNIFIED_CLICK) return;
 
 
@@ -692,8 +710,6 @@ export function drawMoveArrow(row, col, mouse_x, mouse_y) {
     let center_x = lerp(x, x + tile_size, 0.5);
     let center_y = lerp(y, y + tile_size, 0.5);
 
-    let size = tile_size /2;
-    
     const left = mouse_x < center_x;
     let start_x = left ? x : center_x;
     
