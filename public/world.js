@@ -192,7 +192,7 @@ export class World {
         }
     };
 
-    handleCommands(command_buffer, recorder, pieces, pieces_grid) {
+    handleCommands(command_buffer, undo_recorder, pieces, pieces_grid) {
       
         if (!command_buffer.hasCommands()) {
             return;
@@ -236,10 +236,8 @@ export class World {
             
 
             if (can_move) {
-                recorder.add(this.grid);
-
                 this.event_manager.pushEvent(Events.MOVE)
-
+                
                 for (let piece of this.move_set) {
                     for (let tile of piece.tiles) {
                         if (!tile.should_move) {
@@ -249,6 +247,8 @@ export class World {
                         }
                     }
                 }
+                // Store copy of current state
+                undo_recorder.add(this.grid);
             }
             else {
                 this.event_manager.pushEvent(Events.IMPOSSIBLE)
@@ -484,52 +484,8 @@ export class World {
     }
 
 
-    prefindMerges() {
-        const visited = [];
-        let merge_lists = [];
-        let has_candidate = false;
-        this.forEachCell((row, col, index) => {
-            const tile = this.getTile(row, col);
-            
-            if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
-                const merge_list = [];
-                this.findMergeableTiles(row, col, merge_list, tile, visited, has_candidate);
 
-                const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
-
-                if (merge_list.length > 1) {
-                    merge_lists.push({
-                        list: merge_list,
-                        tile_info: tile,
-                        is_static : is_static
-                    });
-                }
-            }
-        })
-
-        return {merge_lists, has_candidate} ;
-    }
-
-    applyMerges({merge_lists, has_candidate}) {
-        if (has_candidate) {
-            this.event_manager.pushEvent(Events.BEGIN_MERGE);
-        }
-        
-        for (let merge_list of merge_lists) {
-            const {list, tile_info, is_static} = merge_list;
-            
-            for (let t of list) {
-                t.id = tile_info.id;
-                t.gameplay_flags |= GameplayFlags.MERGED;
-                if (is_static) {
-                    t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
-                    t.gameplay_flags |= GameplayFlags.STATIC;
-                }
-            }
-        }
-    }
-
-    update(command_buffer, dt, game_state, recorder) {
+    update(command_buffer, dt, game_state, undo_recorder) {
         
         
         const is_moving = this.move_set.length;
@@ -549,7 +505,7 @@ export class World {
             }
         }
         
-        this.handleCommands(command_buffer, recorder, pieces, pieces_grid);
+        this.handleCommands(command_buffer, undo_recorder, pieces, pieces_grid);
         this.updateMoveset(dt);
         
         this.forEachCell((row, col, index) => {

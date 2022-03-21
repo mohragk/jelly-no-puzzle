@@ -609,22 +609,17 @@ function loadLevel(index, levels, world) {
         row++;
     }
 
-    resizeCanvas(canvas);
-
-
     world.addListener(event_listener);
+    world.findAndApplyMerges();
 
-    // First time merge checking!
-    let merge_lists = [];
-    merge_lists = world.prefindMerges();
-    world.applyMerges(merge_lists);
+    resizeCanvas(canvas);
 }
 
 function timestamp() {
     return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
 }
 
-let time_step = 1/60;
+let time_step = 1/120;
 let time_step_f = 1.0;
 let delta_time = 0;
 let last_time = timestamp();

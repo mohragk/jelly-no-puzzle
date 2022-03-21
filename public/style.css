@@ -87,12 +87,12 @@ button {
 }
 
 @keyframes canvas_shake {
-    0%      { transform: translateX(-10px) }
-    10%      { transform: translateX(+10px) }
-    30%     { transform: translateX(-5px) }
-    50%     { transform: translateX(+5px) }
-    70%     { transform: translateX( 0px) }
-    100%    { transform: translateX( 0px) }
+    0%      { transform: translateX(-1vw) }
+    10%      { transform: translateX(+1vw) }
+    30%     { transform: translateX(-0.5vw) }
+    50%     { transform: translateX(+0.5vw) }
+    70%     { transform: translateX( 0) }
+    100%    { transform: translateX( 0) }
 }
 
 @keyframes canvas_shake_down_heavy {
@@ -105,10 +105,10 @@ button {
 }
 
 @keyframes canvas_shake_down_mild {
-    0%      { transform: translateY(-3px) }
-    15%      { transform: translateY(+3px) }
-    40%     { transform: translateY(-1px) }
-    60%     { transform: translateY(+1px) }
+    0%      { transform: translateY(-0.5vw) }
+    15%      { transform: translateY(+0.5vw) }
+    40%     { transform: translateY(-0.2vw) }
+    60%     { transform: translateY(+0.2vw) }
     70%     { transform: translateY( 0px) }
     100%    { transform: translateY( 0px) }
 }
