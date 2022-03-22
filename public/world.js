@@ -1,6 +1,16 @@
-import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, drawTileText } from './game.js';
+import { 
+    drawArrow,
+    drawArrowLeft, 
+    drawArrowRight, 
+    drawBlockNonUnitScale, 
+    drawTileText, 
+    drawBlockText, 
+    getTileCoordFromScreenCoord, 
+    getTileSize, 
+    getScreenCoordFromTileCoord, 
+} from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
-import { CommandTypes } from './command.js';
+import { CommandTypes, MoveDirections } from './command.js';
 import { lerp, Rectangle } from './math.js';
 import { EventManager, Events } from './events.js';
 
@@ -259,7 +269,6 @@ export class World {
                 this.event_manager.pushEvent(Events.IMPOSSIBLE)
             }    
         }
-       
     }
 
     createPieces(pieces, static_pieces, pieces_grid) {
@@ -302,10 +311,6 @@ export class World {
             }
         });
         
-        
-        
-        
-
         // Fill pieces grid
         pieces.forEach( (piece, index) => {
             for (let tile of piece.tiles) {
@@ -518,6 +523,26 @@ export class World {
         return candidate;
     }
 
+    findSameTilesInRow(row, col, id, list) {
+        const tile = this.getTile(row, col);
+        if (list.includes(tile)) return
+
+        if (tile.id === id) {
+            list.push(tile);
+            this.findSameTilesInRow(row, col+1, id, list);
+            this.findSameTilesInRow(row, col-1, id, list);
+        }
+    }
+
+    selectTiles(row, col, mouse_x) {
+        const closest = this.findClosestMovable(row, col, mouse_x);
+        let selected = [];
+        if (closest) {
+            this.findSameTilesInRow(closest.world_pos.row, closest.world_pos.col, closest.id, selected);
+        }
+
+        return {closest, selected};
+    }
 
 
     update(command_buffer, dt, game_state, undo_recorder) {
@@ -530,6 +555,39 @@ export class World {
         const pieces_grid = [];
         const static_pieces = [];
         if(!is_moving) {
+
+            //HANDLE MOUSE 
+            {
+                // Select tile
+                const mouse_x = game_state.mouse.screen_coord.x;
+                const mouse_y = game_state.mouse.screen_coord.y;
+                // NOTE: maybe store this in game state?
+                const {row, col} = getTileCoordFromScreenCoord(mouse_x, mouse_y);
+                const {selected} = this.selectTiles(row, col, mouse_x);
+
+                    if (selected.length) {
+                        selected.sort((a, b) => {
+                            if (a.world_pos.col < b.world_pos.col) return -1;
+                            if (a.world_pos.col > b.world_pos.col) return 1;
+                            return 0;
+                        })
+                        const count = selected.length;
+                        const first_pos = selected[0].world_pos;
+                        const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
+                        const right_x = left.x + ((count) * getTileSize());
+                        const center_x = lerp(left.x, right_x, 0.5); 
+
+                        // define which edge tile we select
+                        const dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
+                        game_state.selected_tiles = selected;
+                        game_state.selected_move_dir = dir;
+                    }
+                    else {
+                        game_state.selected_tiles.length = 0;
+                        game_state.selected_move_dir = null;
+                    }
+            }
+
             this.createPieces(pieces, static_pieces, pieces_grid);
             
             const cancel_merge = this.applyGravity(pieces);
@@ -644,7 +702,7 @@ export class World {
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
 
                 // For unified mouse click mode
-                {
+                if (0) {
                     const mouse_x = game_state.mouse.screen_coord.x;
                     const mouse_y = game_state.mouse.screen_coord.y;
                     const screen_coords = getScreenCoordFromTileCoord(row, col);
@@ -672,12 +730,26 @@ export class World {
                             const arrow_left =  true //(neighbours & Neighbours.RIGHT);
                             drawMoveArrow(other_tile.world_pos.row, other_tile.world_pos.col, mouse_x, {arrow_left, arrow_right});
                         }
-                        
                     }
                 }
             }
-
         });
+
+
+        // DRAW ARROWS FOR SELECTED TILES
+        const apply = game_state.selected_tiles.length && !game_state.has_won;
+        if (apply) {
+            const dir = game_state.selected_move_dir;
+            for (let tile of game_state.selected_tiles) {
+                const {row, col} = tile.world_pos;
+                const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+                const center_x = lerp(x, x + tile_size, 0.5);
+                const center_y = lerp(y, y + tile_size, 0.5);
+
+                const is_left = dir === MoveDirections.LEFT;
+                drawArrow(center_x, center_y, tile_size/2, "white", is_left, 0.4);
+            }
+        }
 
     }
 };

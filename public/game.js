@@ -87,9 +87,12 @@ let event_listener = {
 
 const DEFAULT_GAMESTATE = {
     running: false,
-    level_colors: new Set(),
     has_won: false,
+    halt_input: false,
     level_index : 0,
+    level_colors: new Set(),
+    selected_tiles: [],
+    selected_move_dir: null,
     mouse: {
         dragging: false,
         start_drag: [0,0],
@@ -305,18 +308,25 @@ function main() {
 
                 if (ENABLE_UNIFIED_CLICK) {
 
-                    let other_tile = world.findClosestMovable(row, col, offsetX);
-                    if (other_tile) {
-                        tile = other_tile;
-                    }
-
-                   
-                    let {x, tile_size} = getScreenCoordFromTileCoord(tile.world_pos.row, tile.world_pos.col);
-                   
                     let mouse_x = offsetX;
-                    const half_size = tile_size/2;
-                    let center_x = lerp(x-half_size, x + tile_size + half_size, 0.5);
-                    dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
+                    const {closest, selected} = world.selectTiles(row, col, mouse_x);
+
+                    if (selected.length) {
+                        selected.sort((a, b) => {
+                            if (a.world_pos.col < b.world_pos.col) return -1;
+                            if (a.world_pos.col > b.world_pos.col) return 1;
+                            return 0;
+                        })
+                        const count = selected.length;
+                        const first_pos = selected[0].world_pos;
+                        const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
+                        const right_x = left.x + ((count) * getTileSize());
+                        const center_x = lerp(left.x, right_x, 0.5); 
+
+                        dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
+
+                        tile = closest;
+                    }
                 }
 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
@@ -688,7 +698,14 @@ export function drawFullScreen(color) {
     ctx.fillRect(0,0, w, h);
 }
 
-function drawArrowLeft(x, center_y, height, color = "black") {
+/**
+ * 
+ * @param {*} x - start x of arrow, is left side of arrow
+ * @param {*} center_y - start of arrow, the middle of the arrow
+ * @param {*} height - is dimension
+ * @param {*} color 
+ */
+export function drawArrowLeft(x, center_y, height, color, opacity = 0.3) {
 
     let start_x = x;
     ctx.beginPath();
@@ -700,19 +717,40 @@ function drawArrowLeft(x, center_y, height, color = "black") {
 
 }
 
-
-function drawArrowRight(x, center_y, height, color = "black") {
+/**
+ * 
+ * @param {*} x - start x of arrow, is right side of arrow
+ * @param {*} center_y - start of arrow, the middle of the arrow
+ * @param {*} height - is dimension
+ * @param {*} color 
+ */
+export function drawArrowRight(x, center_y, height, color, opacity = 0.3) {
 
     let start_x = x;
+    ctx.globalAlpha = opacity;
     ctx.beginPath();
     ctx.moveTo(start_x, center_y);
     ctx.lineTo(x-height, center_y - height);
     ctx.lineTo(x-height, center_y + height);
     ctx.fillStyle = color;
     ctx.fill();
+    ctx.globalAlpha = 1.0;
 
 }
 
+
+export function drawArrow(tile_center_x, center_y, height, color, is_left, opacity = 0.3) {
+    let start_x = tile_center_x;
+    ctx.globalAlpha = opacity;
+    ctx.beginPath();
+    ctx.moveTo(start_x, center_y);
+    const x_to = is_left ? tile_center_x + height : tile_center_x - height;
+    ctx.lineTo(x_to, center_y - height);
+    ctx.lineTo(x_to, center_y + height);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+}
 
 export function drawMoveArrow(row, col, mouse_x, sides) {
     if (!ENABLE_UNIFIED_CLICK) return;
@@ -1260,8 +1298,13 @@ function drawRaster(world, opacity) {
     ctx.globalAlpha = 1.0;
 }
 
-export function getScreenCoordFromTileCoord(row, col) {
+export function getTileSize() {
     const tile_size = canvas.width / world.dimensions.w;
+    return tile_size;
+}
+
+export function getScreenCoordFromTileCoord(row, col) {
+    const tile_size = getTileSize()
     let y = Math.floor(row * tile_size);
     let x = Math.floor(col * tile_size);
     return {x, y, tile_size};
