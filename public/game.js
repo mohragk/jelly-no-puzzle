@@ -1277,7 +1277,7 @@ export function getScreenCoordFromTileCoord(row, col) {
 
 
 export function getTileCoordFromScreenCoord(x, y) {
-    const tile_size = canvas.width / world.dimensions.w;
+    const tile_size = getTileSize();
     let row = Math.floor(y / tile_size);
     let col = Math.floor(x / tile_size);
 

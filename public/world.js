@@ -505,7 +505,7 @@ export class World {
         let candidate;
 
         let r = row;
-        for (let c = col-1; c < col+3; c++) {
+        for (let c = col-1; c < col+2; c++) {
             const t = this.getTile(r, c);
             if (t) {
                 if (t.gameplay_flags & GameplayFlags.MOVABLE) {
