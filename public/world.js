@@ -595,6 +595,8 @@ export class World {
                 this.findAndApplyMerges();
             }
         }
+
+        this.debug_pieces = [...pieces, ...static_pieces];
         
         this.handleCommands(command_buffer, undo_recorder, pieces, pieces_grid);
         this.updateMoveset(game_state, dt);
@@ -608,7 +610,7 @@ export class World {
         // @BUG: this won't work when you add a redo option to the undo-system. 
         // pieces will be empty at that moment, so player has to make a valid move
         // to re-trigger this condition. 
-        if (pieces.length + static_pieces.length === this.color_set.size) {
+        if ((pieces.length + static_pieces.length) === this.color_set.size) {
             game_state.has_won = true;
         }
     }
@@ -621,7 +623,7 @@ export class World {
 
             for (let tile of piece.tiles) {
                 const {row, col} = tile.world_pos;
-                drawTileText(row, col, text, "blue");
+                drawTileText(row, col, text, "lightgray");
             }
 
             index++;

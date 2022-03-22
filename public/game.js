@@ -13,7 +13,7 @@ import { AudioPlayer } from './audio.js';
 
 
 
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 
 
@@ -221,7 +221,6 @@ function main() {
 
     canvas.addEventListener("touchstart", onTouchStart);
     canvas.addEventListener("touchend", onTouchEnd);
-    canvas.addEventListener("touchmove", onTouchMove);
     
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("mousemove", onMouseMove);
@@ -432,28 +431,7 @@ function main() {
     }
 
 
-    function onTouchMove(e) {
-        e.preventDefault();
-        const { offsetX } = getTouchCoord(canvas, e);
-
-        if (false && game_state.mouse.dragging) {
-            const {row, col} = game_state.mouse.start_tile;
-            const tile = world.getTile(row, col);
-
-            const direction = (offsetX - game_state.mouse.start_drag[0]) < 0 ? MoveDirections.LEFT : MoveDirections.RIGHT;
-            tile.target_pos = {row, col: col + direction};
-
-            const start = getScreenCoordFromTileCoord(row, col);
-
-            const center_x = lerp(start.x, start.x + start.tile_size, 0.5);
-            const drag_distance = Math.abs(offsetX - center_x);
-            
-            let delta =  start.tile_size;
-            let t = drag_distance / delta;
-            tile.move_t = Math.min(t, 0.5);
-        }
-    }
-
+    
 
 
     // Add button behaviours
@@ -644,7 +622,7 @@ function loadLevel(index, levels, world) {
             }
             
             const tile = getTileFromChar(c);
-            if (tile.id < 0 && (tile.gameplay_flags & GameplayFlags.MOVABLE) ) {
+            if (tile.id < 0 && (tile.color !== "gray") ) {
                 tile.id = tile_id++;
             }
             world.putInGrid(row, col, tile);
@@ -1343,8 +1321,9 @@ function render(world) {
     }
     
     if (DEBUG_RENDER) {
-        world.debugRender();
-        world.debugRenderPieces(world.debug_pieces);
+       // world.debugRender();
+        world.debugRenderTileIDs();
+       // world.debugRenderPieces(world.debug_pieces);
     }
 }
 
