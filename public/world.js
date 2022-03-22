@@ -1,7 +1,7 @@
 import { drawBlockNonUnitScale, drawBlockText, getScreenCoordFromTileCoord, drawFullScreen, drawMoveArrow, drawTileText } from './game.js';
 import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes } from './command.js';
-import { lerpToInt, lerp, Rectangle } from './math.js';
+import { lerp, Rectangle } from './math.js';
 import { EventManager, Events } from './events.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
@@ -161,8 +161,8 @@ export class World {
 
        
         
-        let x = lerpToInt(start.x, target.x, tile.move_t);
-        let y = lerpToInt(start.y, target.y, tile.move_t);
+        let x = lerp(start.x, target.x, tile.move_t);
+        let y = lerp(start.y, target.y, tile.move_t);
 
         tile.visual_pos[0] = x;
         tile.visual_pos[1] = y;
@@ -664,11 +664,13 @@ export class World {
                     );
                         
                     
-                    const apply = mouse_in && !this.move_set.length; 
+                    const apply = mouse_in && !this.move_set.length && !game_state.has_won; 
                     if (apply) {
                         let other_tile = this.findClosestMovable(row, col, mouse_x);
                         if (other_tile) {
-                            drawMoveArrow(other_tile.world_pos.row, other_tile.world_pos.col, mouse_x);
+                            const arrow_right = true;// (neighbours & Neighbours.LEFT);
+                            const arrow_left =  true //(neighbours & Neighbours.RIGHT);
+                            drawMoveArrow(other_tile.world_pos.row, other_tile.world_pos.col, mouse_x, {arrow_left, arrow_right});
                         }
                         
                     }

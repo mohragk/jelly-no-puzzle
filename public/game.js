@@ -1,6 +1,6 @@
 import { levels }  from './levels2.js';
 
-import {lerp} from './math.js';
+import {lerp, lerpToInt} from './math.js';
 import { GameplayFlags, Tile } from './tile.js';
 
 import { World, Neighbours } from './world.js';
@@ -162,6 +162,8 @@ export const MouseButtons = {
     FORWARD: 4
 };
 
+const isEven = (n) => n % 2 === 0
+
 function resizeCanvas(canvas) {
     const getCellSize = (prefer_width, world_dim) => {
         const div = document.getElementById("canvas-container");
@@ -176,7 +178,12 @@ function resizeCanvas(canvas) {
         cell_size = getCellSize(false, world.dimensions.h);
         new_h = cell_size * world.dimensions.h;
     }
+    // NOTE: Introdces small error for better tile rendering
+    if (!isEven(cell_size)) {
+        cell_size -= 1;
+    }
     let new_w = cell_size * world.dimensions.w;
+
 
     canvas.width  = new_w;
     canvas.height = new_h;
@@ -702,7 +709,7 @@ function drawArrowRight(x, center_y, height, color = "black") {
 }
 
 
-export function drawMoveArrow(row, col, mouse_x) {
+export function drawMoveArrow(row, col, mouse_x, sides) {
     if (!ENABLE_UNIFIED_CLICK) return;
 
 
@@ -726,10 +733,12 @@ export function drawMoveArrow(row, col, mouse_x) {
 
     let h = tile_size / 2;
     if (left) {
-        drawArrowRight(center_x, center_y, h, color);
+        if (sides.arrow_right)
+            drawArrowRight(center_x, center_y, h, color);
     }
     else {
-        drawArrowLeft(center_x, center_y, h, color);
+        if (sides.arrow_left)
+            drawArrowLeft(center_x, center_y, h, color);
     }
 
     ctx.globalAlpha = 1.0;
