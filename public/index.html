@@ -28,31 +28,43 @@
                 <hr />
 
                 <h3>How to play?</h3>
-                <p>Click on a piece to move it to the arrow pointing direction.
-                    <br />
-                    If you press <strong>M</strong>, you can toggle to <strong>old school movement mode</strong>. Left click moves a piece to the right, right click to the right.
-                </p>
-                <p>You can press <strong>Z</strong> to undo a move and <strong>R</strong> to reset the level (which is also undoable!).</p>
+                
+                <p>Click on a piece to move it to the direction of which the arrow is pointing. Jellies can't go through walls and will merge together when next to each other.</p>
+                <p>Black pieces can't merge.</p>
                 <p>Progress is saved on the device, so you can come back later if you're stuck.</p>
 
                 <hr />
-                <ul class="no-bullets">
-                    <li>
-                        <label for="">
-                            Select Level
-                            <select id="level-select">
-                            </select>
-                        </label>
-                    </li>
-                
 
-                    <li>
-                        <label>
-                            Audio: 
-                            <button id="audio_toggle_button">turn off</button>
-                        </label>
-                    </li>
-                </ul>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>Select Level</td>
+                            <td><select id="level-select"></select></td>
+                        </tr>
+                        <tr>
+                            <td>Audio</td>
+                            <td><button id="audio_toggle_button">turn off</button></td>
+                        </tr>
+                        <tr valign="top">
+                            <td>Cheatsheet</td>
+                            <td><ul>
+                                <li>
+                                    <strong>Z</strong>: undo move.
+                                </li>
+                                <li>
+                                    <strong>R</strong>: reset level.
+                                </li>
+                                <li>
+                                    <strong>G</strong>: toggles display of gridlines on/off.
+                                </li>
+                                <li>
+                                    <strong>I</strong>: toggle between direct input (default) or old school click mode (right click is move right).
+                                </li>
+                            </ul></td>
+                        </tr>
+                    </tbody>
+                </table>
+
 
             </div>
         </div>

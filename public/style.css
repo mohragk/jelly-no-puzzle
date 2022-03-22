@@ -13,18 +13,19 @@ button {
     padding: 6px 14px;
 }
 
+table {
+    border-spacing: 10px;
+    border-collapse: separate;
+}
 
-ul.no-bullets {
+ul {
+    margin:0;
     list-style-type: none; /* Remove bullets */
     padding: 0;
-   
 }
 
-ul.no-bullets > li {
-    margin-top: 20px;
-}
 
-#audio_toggle_button {
+#audio_toggle_button, select {
     font-size: 1em;
     padding: 3px 6px;
 }

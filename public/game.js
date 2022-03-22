@@ -9,7 +9,7 @@ import { DelayedTrigger } from './delayedtrigger.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
 
-import {AudioPlayer} from './audio.js';
+import { AudioPlayer } from './audio.js';
 
 
 
@@ -107,6 +107,7 @@ const DEFAULT_GAMESTATE = {
 
 let DEBUG_RENDER = false;
 let ENABLE_UNIFIED_CLICK = true;
+let DISPLAY_RASTER = false;
 
 
 let world = new World();
@@ -238,8 +239,12 @@ function main() {
         }
         
 
-        if (e.key === 'm') {
+        if (e.key === 'i') {
             ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
+        }
+
+        if (e.key === 'g') {
+            DISPLAY_RASTER = !DISPLAY_RASTER;
         }
     })
 
@@ -1238,6 +1243,23 @@ export function drawBlockNonUnitScale(x, y, color, neighbours) {
     }
 }
 
+
+function drawStrokedBlockNoFill(row, col, line_width, color = "white") {
+    const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+    ctx.lineWidth = line_width;
+    ctx.strokeStyle = color;
+    ctx.strokeRect(x, y, tile_size, tile_size);
+}
+
+
+function drawRaster(world, opacity) {
+    ctx.globalAlpha = opacity;
+    world.forEachCell( (row, col) => {
+        drawStrokedBlockNoFill(row, col, 1);
+    });
+    ctx.globalAlpha = 1.0;
+}
+
 export function getScreenCoordFromTileCoord(row, col) {
     const tile_size = canvas.width / world.dimensions.w;
     let y = Math.floor(row * tile_size);
@@ -1254,6 +1276,8 @@ export function getTileCoordFromScreenCoord(x, y) {
 
     return {row, col};
 }
+
+
 
 
 function drawWinText() {
@@ -1286,6 +1310,11 @@ function render(world) {
     
     world.render(game_state);
     
+    if (DISPLAY_RASTER) {
+        drawRaster(world, 0.4);
+    }
+    
+
     if (game_state.has_won) {
         drawWinText();
         canvas.classList.add("add_victory_animation");
