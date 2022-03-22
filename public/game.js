@@ -113,6 +113,8 @@ const DEFAULT_GAMESTATE = {
         over_tile:  {row: 0, col: 0},
         screen_coord: {x: 0, y: 0},
     },
+    move_speed: 7.0,
+    fall_speed: 16.0,
     frame_count: 0,
     debug_time_enabled : false,
 
@@ -383,20 +385,24 @@ function main() {
     
     function onTouchStart(e) {
         e.preventDefault();
-        const touches = e.changedTouches;
+        
+        // DETECTED TOUCH INPUT, CHANGE MOVE_SPEED
+        game_state.move_speed *= 1.5;
 
         const {offsetX, offsetY} = getTouchCoord(canvas, e);
         
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         
         {
-            const tile = world.getTile(row, col);
-            const apply = tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
-
+            const apply = !game_state.halt_input && !world.move_set.length && !game_state.has_won;
+            
             if (apply) {
-                game_state.mouse.start_drag = [offsetX, offsetY];
-                game_state.mouse.start_tile = {row, col};
-                game_state.mouse.dragging = true;
+                const tile = world.findClosestMovable(row, col, offsetX);
+                if (tile) {
+                    game_state.mouse.start_drag = [offsetX, offsetY];
+                    game_state.mouse.start_tile = {...tile.world_pos};
+                    game_state.mouse.dragging = true;
+                }
             }
 
         }
@@ -410,17 +416,12 @@ function main() {
         {
             game_state.mouse.end_drag = [offsetX, offsetY];
             
-            const {row, col} = game_state.mouse.start_tile;
-            const tile = world.getTile(row, col);
-            
-            
-            
-            const apply = game_state.mouse.dragging && tile.gameplay_flags & GameplayFlags.MOVABLE && !world.move_set.length && !game_state.has_won;
+            const apply = game_state.mouse.dragging && !game_state.halt_input && !game_state.has_won;
             game_state.mouse.dragging = false;
             
             if (apply) {
                 // Determine direction
-                
+                const {row, col} = game_state.mouse.start_tile;
                 const direction = (game_state.mouse.end_drag[0] - game_state.mouse.start_drag[0]) < 0 ? MoveDirections.LEFT : MoveDirections.RIGHT;
                 
                 const command = new MoveCommand({row, col}, direction);

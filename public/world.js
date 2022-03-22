@@ -45,8 +45,7 @@ export class World {
     grid = [];
     move_set = [];
     gravity_set = [];
-    move_speed = 7.0;
-    fall_speed = 16.0;
+   
     color_set = new Set();
 
     // DEBUGGING
@@ -178,14 +177,14 @@ export class World {
         tile.visual_pos[1] = y;
     }
     
-    moveTile(tile, dt) {    
+    moveTile(tile, game_state, dt) {    
         
         let delta_row = tile.target_pos.row - tile.world_pos.row;
         if (delta_row) {
-            tile.move_t += (this.fall_speed * dt);
+            tile.move_t += (game_state.fall_speed * dt);
         }
         else {
-            tile.move_t += this.move_speed * dt;
+            tile.move_t += game_state.move_speed * dt;
         }
         
       
@@ -321,11 +320,11 @@ export class World {
     }
 
 
-    updateMoveset(dt) {
+    updateMoveset(game_state, dt) {
         let done = true;
         ff: for (let piece of this.move_set) {
             for (let tile of piece.tiles) {
-                this.moveTile(tile, dt);
+                this.moveTile(tile, game_state, dt);
                 if (tile.should_move) {
                     done = false;
                 }
@@ -598,7 +597,7 @@ export class World {
         }
         
         this.handleCommands(command_buffer, undo_recorder, pieces, pieces_grid);
-        this.updateMoveset(dt);
+        this.updateMoveset(game_state, dt);
         
         this.forEachCell((row, col, index) => {
             this.updateTile(this.grid[index], dt);
