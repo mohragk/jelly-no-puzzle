@@ -1,7 +1,6 @@
 import { 
     drawArrow,
-    drawArrowLeft, 
-    drawArrowRight, 
+    drawStretchedArrow,
     drawBlockNonUnitScale, 
     drawTileText, 
     drawBlockText, 
@@ -13,6 +12,7 @@ import { GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
 import { lerp, Rectangle } from './math.js';
 import { EventManager, Events } from './events.js';
+import { InputModes } from './game.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -700,54 +700,41 @@ export class World {
                 }
 
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
-
-                // For unified mouse click mode
-                if (0) {
-                    const mouse_x = game_state.mouse.screen_coord.x;
-                    const mouse_y = game_state.mouse.screen_coord.y;
-                    const screen_coords = getScreenCoordFromTileCoord(row, col);
-                   
-                    const half_size = screen_coords.tile_size/2;
-
-                    const region = new Rectangle(
-                        [ screen_coords.x - half_size, screen_coords.y ],
-                        [ screen_coords.x + screen_coords.tile_size + half_size, screen_coords.y + screen_coords.tile_size ]
-                    );
-                   
-                    // check whether mouse is in region
-                    const mouse_in = (
-                        ( mouse_x > region.top_left[0] && mouse_x < region.bottom_right[0] ) &&
-                        ( mouse_y > region.top_left[1] && mouse_y < region.bottom_right[1] )
-                        
-                    );
-                        
-                    
-                    const apply = mouse_in && !this.move_set.length && !game_state.has_won; 
-                    if (apply) {
-                        let other_tile = this.findClosestMovable(row, col, mouse_x);
-                        if (other_tile) {
-                            const arrow_right = true;// (neighbours & Neighbours.LEFT);
-                            const arrow_left =  true //(neighbours & Neighbours.RIGHT);
-                            drawMoveArrow(other_tile.world_pos.row, other_tile.world_pos.col, mouse_x, {arrow_left, arrow_right});
-                        }
-                    }
-                }
             }
         });
 
 
         // DRAW ARROWS FOR SELECTED TILES
-        const apply = game_state.selected_tiles.length && !game_state.has_won;
+        const apply = game_state.input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
         if (apply) {
             const dir = game_state.selected_move_dir;
-            for (let tile of game_state.selected_tiles) {
+
+            const selected = game_state.selected_tiles;
+            const left  = getScreenCoordFromTileCoord(selected[0].world_pos.row, selected[0].world_pos.col);
+            const tile_size = left.tile_size;
+            const left_x = left.x;
+            const row_width = (selected.length * tile_size);
+            const center_x = lerp(left_x, left_x + row_width, 0.5)
+            const center_y = lerp(left.y, left.y + tile_size, 0.5);
+            const is_left = dir === MoveDirections.LEFT;
+           // drawStretchedArrow(center_x, center_y, tile_size/2, row_width , "white", is_left, 0.4);
+
+            for (let tile of selected ) {
                 const {row, col} = tile.world_pos;
                 const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
                 const center_x = lerp(x, x + tile_size, 0.5);
-                const center_y = lerp(y, y + tile_size, 0.5);
-
                 const is_left = dir === MoveDirections.LEFT;
-                drawArrow(center_x, center_y, tile_size/2, "white", is_left, 0.4);
+                const size = tile_size/3;
+                const opacity = 0.5;
+                const color = "white"
+                if (is_left) {
+                    drawArrow(center_x, center_y, size, color, is_left, opacity);
+                    drawArrow(center_x - size, center_y, size, color, is_left, opacity);
+                }
+                else {
+                    drawArrow(center_x, center_y, size, color, is_left, opacity);
+                    drawArrow(center_x + size, center_y, size, color, is_left, opacity);
+                }
             }
         }
 

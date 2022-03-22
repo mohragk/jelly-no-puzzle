@@ -32,11 +32,6 @@ function shakeCanvas() {
     window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
 }
 
-let fallen_trigger = new DelayedTrigger(0.1, () => {
-    audio_player.trigger(thump01_clip);
-    canvas.classList.add("add_gravity_shake_mild")
-    window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
-});
 
 
 // NOTE: sound clips are loaded via the DOM, maybe move that
@@ -48,6 +43,23 @@ let glup01_sound = document.getElementById('glup01_sound');
 let move01_sound = document.getElementById('move01_sound');
 let victory_flute_sound = document.getElementById('victory_flute_sound');
 
+
+const halt_input_trigger = new DelayedTrigger(
+    0.2, 
+    () => game_state.halt_input = false,          // Arm Callback
+    () => game_state.halt_input = true            // Finished Callback
+);          
+let fallen_trigger = new DelayedTrigger(0.1, () => {
+    audio_player.trigger(thump01_clip);
+    canvas.classList.add("add_gravity_shake_mild")
+    window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
+});
+
+
+const triggers = [
+    halt_input_trigger,
+    fallen_trigger
+];
 
 let canvas, ctx;
 let game_state; 
@@ -62,19 +74,22 @@ let event_listener = {
 
         if (e === Events.MOVE) {
             audio_player.trigger(move01_sound);
-        }
-
-        if (e === Events.BEGIN_MERGE) {
-            audio_player.trigger(glup01_sound)
+            halt_input_trigger.armAndReset();
         }
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
             audio_player.trigger(tap01_clip);
         }
-
+        
         if (e === Events.BEGIN_FALL) {
             fallen_trigger.armAndReset();
+            halt_input_trigger.armAndReset();
+        }
+
+        if (e === Events.BEGIN_MERGE) {
+            audio_player.trigger(glup01_sound);
+            
         }
     }
 }
@@ -82,13 +97,17 @@ let event_listener = {
 
 
 
-
+export const InputModes = {
+    DIRECT: 0,
+    CLASSIC: 1,
+};
 
 
 const DEFAULT_GAMESTATE = {
     running: false,
     has_won: false,
     halt_input: false,
+    input_mode: InputModes.DIRECT, 
     level_index : 0,
     level_colors: new Set(),
     selected_tiles: [],
@@ -109,7 +128,6 @@ const DEFAULT_GAMESTATE = {
 
 
 let DEBUG_RENDER = false;
-let ENABLE_UNIFIED_CLICK = true;
 let DISPLAY_RASTER = false;
 
 
@@ -243,7 +261,7 @@ function main() {
         
 
         if (e.key === 'i') {
-            ENABLE_UNIFIED_CLICK = !ENABLE_UNIFIED_CLICK;
+            game_state.input_mode = game_state.input_mode === InputModes.DIRECT ? InputModes.CLASSIC : InputModes.DIRECT;
         }
 
         if (e.key === 'g') {
@@ -306,7 +324,7 @@ function main() {
                 let tile = world.getTile(row, col);
                 let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
 
-                if (ENABLE_UNIFIED_CLICK) {
+                if (game_state.input_mode === InputModes.DIRECT) {
 
                     let mouse_x = offsetX;
                     const {closest, selected} = world.selectTiles(row, col, mouse_x);
@@ -698,45 +716,6 @@ export function drawFullScreen(color) {
     ctx.fillRect(0,0, w, h);
 }
 
-/**
- * 
- * @param {*} x - start x of arrow, is left side of arrow
- * @param {*} center_y - start of arrow, the middle of the arrow
- * @param {*} height - is dimension
- * @param {*} color 
- */
-export function drawArrowLeft(x, center_y, height, color, opacity = 0.3) {
-
-    let start_x = x;
-    ctx.beginPath();
-    ctx.moveTo(start_x, center_y);
-    ctx.lineTo(x+height, center_y - height);
-    ctx.lineTo(x+height, center_y + height);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-}
-
-/**
- * 
- * @param {*} x - start x of arrow, is right side of arrow
- * @param {*} center_y - start of arrow, the middle of the arrow
- * @param {*} height - is dimension
- * @param {*} color 
- */
-export function drawArrowRight(x, center_y, height, color, opacity = 0.3) {
-
-    let start_x = x;
-    ctx.globalAlpha = opacity;
-    ctx.beginPath();
-    ctx.moveTo(start_x, center_y);
-    ctx.lineTo(x-height, center_y - height);
-    ctx.lineTo(x-height, center_y + height);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
-
-}
 
 
 export function drawArrow(tile_center_x, center_y, height, color, is_left, opacity = 0.3) {
@@ -752,42 +731,27 @@ export function drawArrow(tile_center_x, center_y, height, color, is_left, opaci
     ctx.globalAlpha = 1.0;
 }
 
-export function drawMoveArrow(row, col, mouse_x, sides) {
-    if (!ENABLE_UNIFIED_CLICK) return;
-
-
-    ctx.globalAlpha = 0.6;
-    let {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
-
-    let center_x = lerp(x, x + tile_size, 0.5);
-    let center_y = lerp(y, y + tile_size, 0.5);
-
-    const left = mouse_x < center_x;
-    let start_x = left ? x : center_x;
-    
-    let color = "white";
-    ctx.fillStyle = color;
-    
-    let r_x = start_x
-    let r_y = y;
-    let r_w = tile_size / 2.2;
-    let r_h = tile_size;
-   // ctx.fillRect(r_x, r_y, r_w, r_h);
-
-    let h = tile_size / 2;
-    if (left) {
-        if (sides.arrow_right)
-            drawArrowRight(center_x, center_y, h, color);
+export function drawStretchedArrow(tile_center_x, center_y, height, width, color, is_left, opacity = 0.3) {
+    let start_x = tile_center_x;
+    let half_width = width/2;
+    ctx.globalAlpha = opacity;
+    ctx.beginPath();
+    if (is_left) {
+        ctx.moveTo(start_x - half_width, center_y);
+        const x_to = start_x + half_width;
+        ctx.lineTo(x_to, center_y - height);
+        ctx.lineTo(x_to, center_y + height);
     }
     else {
-        if (sides.arrow_left)
-            drawArrowLeft(center_x, center_y, h, color);
+        ctx.moveTo(start_x + half_width, center_y);
+        const x_to = start_x - half_width;
+        ctx.lineTo(x_to, center_y - height);
+        ctx.lineTo(x_to, center_y + height);
     }
-
+    ctx.fillStyle = color;
+    ctx.fill();
     ctx.globalAlpha = 1.0;
-
 }
-
 
 
 function drawSubOuterTopLeft(center_x, center_y, thickness, size, alpha = 0.3) {
@@ -1345,7 +1309,9 @@ function drawWinText() {
 
 function update(world, command_buffer, dt) {
     world.update(command_buffer, dt, game_state, recorder);
-    fallen_trigger.update(dt);
+    for (let trigger of triggers) {
+        trigger.update(dt);
+    }
 }
 
 function render(world) {

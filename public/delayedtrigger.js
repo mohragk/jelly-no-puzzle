@@ -4,10 +4,12 @@ export class DelayedTrigger {
     armed = false;
     running = false;
     callback  = () => {};
+    armCallback = () => {};
 
-    constructor(duration, cb) {
+    constructor(duration, cb, armcb = () => {}) {
         this.#duration = duration;
         this.callback = cb;
+        this.armCallback = armcb;
     }
 
     update(dt) {
@@ -23,6 +25,7 @@ export class DelayedTrigger {
 
     arm(value) {
         this.armed = value;
+        this.armCallback();
     }
 
     reset() {
