@@ -32,6 +32,11 @@ export class DelayedTrigger {
         this.#elapsed = 0.0;
     }
 
+    cancel() {
+        this.#elapsed = 0.0;
+        this.armed = false;
+    }
+
     armAndReset() {
         this.arm(true);
         this.reset();

@@ -274,9 +274,9 @@ function main() {
         document.body.classList.remove("animated-bgcolors");
         const prev = recorder.getPrevious();
         world.setState(prev);
-       // command_buffer.clear(); // maybe not necessary
         game_state.has_won = false;
         game_state.running = true;
+        fallen_trigger.cancel();
     }
 
     function handleReset() {
