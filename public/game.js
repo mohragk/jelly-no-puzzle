@@ -316,41 +316,50 @@ function main() {
         e.preventDefault();
         const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
+
+        const sendCommand = (tile, dir) => {
+            if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                const c = new MoveCommand({row: tile.world_pos.row, col: tile.world_pos.col}, dir);
+                command_buffer.add(c);
+            }
+        };
        
         if (row < world.dimensions.h && col < world.dimensions.w) {
             const apply = !world.move_set.length && !game_state.has_won;
             
             if (apply) {
-                let tile = world.getTile(row, col);
-                let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
-
                 if (game_state.input_mode === InputModes.DIRECT) {
-
-                    let mouse_x = offsetX;
-                    const {closest, selected} = world.selectTiles(row, col, mouse_x);
-
-                    if (selected.length) {
-                        selected.sort((a, b) => {
-                            if (a.world_pos.col < b.world_pos.col) return -1;
-                            if (a.world_pos.col > b.world_pos.col) return 1;
-                            return 0;
-                        })
-                        const count = selected.length;
-                        const first_pos = selected[0].world_pos;
-                        const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
-                        const right_x = left.x + ((count) * getTileSize());
-                        const center_x = lerp(left.x, right_x, 0.5); 
-
-                        dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
-
-                        tile = closest;
+                    if (button === MouseButtons.LEFT && !command_buffer.hasCommands()) {
+                        let mouse_x = offsetX;
+                        const {closest, selected} = world.selectTiles(row, col, mouse_x);
+    
+                        if (selected.length) {
+                            selected.sort((a, b) => {
+                                if (a.world_pos.col < b.world_pos.col) return -1;
+                                if (a.world_pos.col > b.world_pos.col) return 1;
+                                return 0;
+                            })
+                            const count = selected.length;
+                            const first_pos = selected[0].world_pos;
+                            const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
+                            const right_x = left.x + ((count) * getTileSize());
+                            const center_x = lerp(left.x, right_x, 0.5); 
+    
+                            const dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
+    
+                            sendCommand(closest, dir);
+                        }
+                    }
+                }
+                else if (game_state.input_mode === InputModes.CLASSIC) {
+                    if (!command_buffer.hasCommands()) {
+                        let tile = world.getTile(row, col);
+                        let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;
+                        sendCommand(tile, dir)
                     }
                 }
 
-                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                    const c = new MoveCommand({row: tile.world_pos.row, col: tile.world_pos.col}, dir);
-                    command_buffer.add(c);
-                }
+                
             }
             
         }
