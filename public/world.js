@@ -545,8 +545,40 @@ export class World {
     }
 
 
+    handleInput(game_state)  {
+        // Select tile
+        const mouse_x = game_state.mouse.screen_coord.x;
+        const mouse_y = game_state.mouse.screen_coord.y;
+        // NOTE: maybe store this in game state?
+        const {row, col} = getTileCoordFromScreenCoord(mouse_x, mouse_y);
+        const {selected} = this.selectTiles(row, col, mouse_x);
+
+            if (selected.length) {
+                selected.sort((a, b) => {
+                    if (a.world_pos.col < b.world_pos.col) return -1;
+                    if (a.world_pos.col > b.world_pos.col) return 1;
+                    return 0;
+                })
+                const count = selected.length;
+                const first_pos = selected[0].world_pos;
+                const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
+                const right_x = left.x + ((count) * getTileSize());
+                const center_x = lerp(left.x, right_x, 0.5); 
+
+                // define which edge tile we select
+                const dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
+                game_state.selected_tiles = selected;
+                game_state.selected_move_dir = dir;
+            }
+            else {
+                game_state.selected_tiles.length = 0;
+                game_state.selected_move_dir = null;
+            }
+    }
+
     update(command_buffer, dt, game_state, undo_recorder) {
         
+        this.handleInput(game_state);
         
         const is_moving = this.move_set.length;
         
@@ -556,37 +588,6 @@ export class World {
         const static_pieces = [];
         if(!is_moving) {
 
-            //HANDLE MOUSE 
-            {
-                // Select tile
-                const mouse_x = game_state.mouse.screen_coord.x;
-                const mouse_y = game_state.mouse.screen_coord.y;
-                // NOTE: maybe store this in game state?
-                const {row, col} = getTileCoordFromScreenCoord(mouse_x, mouse_y);
-                const {selected} = this.selectTiles(row, col, mouse_x);
-
-                    if (selected.length) {
-                        selected.sort((a, b) => {
-                            if (a.world_pos.col < b.world_pos.col) return -1;
-                            if (a.world_pos.col > b.world_pos.col) return 1;
-                            return 0;
-                        })
-                        const count = selected.length;
-                        const first_pos = selected[0].world_pos;
-                        const left = getScreenCoordFromTileCoord(first_pos.row, first_pos.col);
-                        const right_x = left.x + ((count) * getTileSize());
-                        const center_x = lerp(left.x, right_x, 0.5); 
-
-                        // define which edge tile we select
-                        const dir = mouse_x < center_x ?  MoveDirections.RIGHT : MoveDirections.LEFT;
-                        game_state.selected_tiles = selected;
-                        game_state.selected_move_dir = dir;
-                    }
-                    else {
-                        game_state.selected_tiles.length = 0;
-                        game_state.selected_move_dir = null;
-                    }
-            }
 
             this.createPieces(pieces, static_pieces, pieces_grid);
             
@@ -669,7 +670,7 @@ export class World {
 
     render(game_state) {
 
-        // Draw level
+        // DRAW LEVEL
         this.forEachCell((row_, col_, index) => {
             const tile = this.grid[index];
             if ((tile.gameplay_flags > 0)) {
@@ -709,33 +710,51 @@ export class World {
         if (apply) {
             const dir = game_state.selected_move_dir;
 
+            const mouse_x = game_state.mouse.screen_coord.x;
+
             const selected = game_state.selected_tiles;
             const left  = getScreenCoordFromTileCoord(selected[0].world_pos.row, selected[0].world_pos.col);
             const tile_size = left.tile_size;
-            const left_x = left.x;
-            const row_width = (selected.length * tile_size);
-            const center_x = lerp(left_x, left_x + row_width, 0.5)
             const center_y = lerp(left.y, left.y + tile_size, 0.5);
-            const is_left = dir === MoveDirections.LEFT;
-           // drawStretchedArrow(center_x, center_y, tile_size/2, row_width , "white", is_left, 0.4);
 
-            for (let tile of selected ) {
+            
+            const outer = [ selected[0] ];
+            if (selected.length > 1) {
+                outer.push(selected[selected.length-1]);
+            }
+
+            const getClosestOuter = (list, mouse_x) => {
+                let candidate = null;
+                let shortest_dist = 100000;
+                for (let tile of outer) {
+                    const [x] =  tile.visual_pos; 
+                    const cx = lerp(x, x+tile_size, 0.5);
+                    const dist = Math.abs(mouse_x - cx);
+                    if (dist < shortest_dist) {
+                        shortest_dist = dist;
+                        candidate = tile;
+                    }
+                }
+                return candidate;
+            };
+
+            const drawArrows = (tile) => {
                 const {row, col} = tile.world_pos;
-                const {x, y, tile_size} = getScreenCoordFromTileCoord(row, col);
+                const {x, tile_size} = getScreenCoordFromTileCoord(row, col);
                 const center_x = lerp(x, x + tile_size, 0.5);
-                const is_left = dir === MoveDirections.LEFT;
                 const size = tile_size/3;
                 const opacity = 0.5;
+                const is_left = dir === MoveDirections.LEFT;
                 const color = "white"
-                if (is_left) {
-                    drawArrow(center_x, center_y, size, color, is_left, opacity);
-                    drawArrow(center_x - size, center_y, size, color, is_left, opacity);
-                }
-                else {
-                    drawArrow(center_x, center_y, size, color, is_left, opacity);
-                    drawArrow(center_x + size, center_y, size, color, is_left, opacity);
-                }
-            }
+                let sx = center_x;
+                drawArrow(sx, center_y, size, color, is_left, opacity);
+                sx += is_left ? -size : size;
+                drawArrow(sx, center_y, size, color, is_left, opacity);
+            };
+
+
+            const tile_of_interest = getClosestOuter(outer, mouse_x);
+            drawArrows(tile_of_interest)
         }
 
     }
