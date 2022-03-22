@@ -13,18 +13,12 @@ import { AudioPlayer } from './audio.js';
 
 
 
-
-
-
-
 const DEV_MODE = false;
 
 
 
 
 let audio_player = new AudioPlayer();
-
-
 
 
 function shakeCanvas() {
@@ -36,9 +30,8 @@ function shakeCanvas() {
 
 // NOTE: sound clips are loaded via the DOM, maybe move that
 // to actual JS?
-let thump01_clip = document.getElementById('thump01_sound');
-let tap01_clip = document.getElementById('tap01_sound');
-let fail01_sound = document.getElementById('fail01_sound');
+let thump01_sound = document.getElementById('thump01_sound');
+let tap01_sound = document.getElementById('tap01_sound');
 let glup01_sound = document.getElementById('glup01_sound');
 let move01_sound = document.getElementById('move01_sound');
 let victory_flute_sound = document.getElementById('victory_flute_sound');
@@ -50,7 +43,7 @@ const halt_input_trigger = new DelayedTrigger(
     () => game_state.halt_input = true            // Finished Callback
 );          
 let fallen_trigger = new DelayedTrigger(0.1, () => {
-    audio_player.trigger(thump01_clip);
+    audio_player.trigger(thump01_sound);
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
@@ -79,7 +72,7 @@ let event_listener = {
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
-            audio_player.trigger(tap01_clip);
+            audio_player.trigger(tap01_sound);
         }
         
         if (e === Events.BEGIN_FALL) {
