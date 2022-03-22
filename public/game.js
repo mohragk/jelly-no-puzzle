@@ -280,10 +280,13 @@ function main() {
     }
 
     function handleReset() {
-        recorder.add(world.grid);
+        if (!game_state.halt_input) {
+            recorder.add(world.grid);
+        }
         resetWorld(levels);
         game_state.has_won = false;
         game_state.running = true;
+        fallen_trigger.cancel();
     }
 
     function handleNext() {
