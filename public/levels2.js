@@ -20,10 +20,18 @@ export const levels = [
     ["xxxxxxxxxxxxxx", "xrrrr   rggxxx", "xxxb    xxxxxx", "xxxx       xsbx", "xx           x", "xx           x", "xx     x     x", "xx x         x", "xx        x  x", "xxxxxxxxxxxxxx"], 
 
 
-    // TEST
-    //NOTE: Combinatory tiles are  defined as: c[color][id] where id= two digits long and starts at 10
-    ["xxxxxxxxxxxxxx", "x      cg10ck10ck10cg10 gx", "x       xxx xx", "x           gx", "x11         xx", "xxx          x", "x       g    x", "x   x xxx   gx", "x   xxxxxx xxx", "xxxxxxxxxxxxxx"], 
 ];
 const broken = [
-    ["xxxxxxxxxxxxxx", "xg0    g1gx  x", "x 3g    1 x  x", "x444    2 x  x", "xg g   ggg   x", "xxx     xxx  x", "xxx     xxx  x", "xxx     xxx  x", "xxx          x", "xxxxxxxxxxxxxx"], 
+    //NOTE: Combinatory tiles are  defined as: c[color][id] where id= two digits long and starts at 10
+    ["xxxxxxxxxxxxxx", "x      cg10ck10ck10cg10 gx", "x       xxx xx", "x           gx", "x11         xx", "xxx          x", "x       g    x", "x   x xxx   sgx", "x   xxxxxx xxx", "xxxxxxxxxxxxxx"], 
+    ["xxxxxxxxxxxxxx", 
+    "xcg10ck10    cg11ck11cg11x  x", 
+    "x ck12cg12    ck11 x  x", 
+    "xck13ck13ck13    ck14 x  x", 
+    "xcg13 cg13   cg14cg14cg14   x", 
+    "xxx     xxx  x", 
+    "xxx     xxx  x", 
+    "xxx     xxx  x", 
+    "xxx          x", 
+    "xxxxxxxxxxxxxx"], 
   ];

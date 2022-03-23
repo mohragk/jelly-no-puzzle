@@ -477,8 +477,17 @@ export class World {
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
                 if (merge_list.length > 1) {
+                    // GET LOWEST ID
+
+                    let lowest_id = 10000;
+                    for (let t of merge_list) { 
+                        if (t.id < lowest_id) {
+                            lowest_id = t.id;
+                        }
+                    }
+
                     for (let t of merge_list) {
-                        t.id = tile.id;
+                        t.id = lowest_id;
                         t.gameplay_flags |= GameplayFlags.MERGED;
                         if (is_static) {
                             t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
@@ -574,24 +583,23 @@ export class World {
         
         const is_moving = this.move_set.length;
         
-        // Create pieces
-        const pieces_grid = [];
-        const movable_pieces = [];
-        const static_pieces = [];
-        if(!is_moving) {
-
-
+        
+        if (!is_moving) {
+            const pieces_grid = [];
+            const movable_pieces = [];
+            const static_pieces = [];
             this.createPieces(movable_pieces, static_pieces, pieces_grid);
+            //this.debug_pieces = [...movable_pieces, ...static_pieces];
             
             const cancel_merge = this.applyGravity(movable_pieces);
             if (!cancel_merge) {
                 this.findAndApplyMerges();
             }
+      
+            this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
         }
 
-        this.debug_pieces = [...movable_pieces, ...static_pieces];
         
-        this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
         this.updateMoveset(game_state, dt);
         
         this.forEachCell((row, col, index) => {
@@ -600,9 +608,7 @@ export class World {
 
         // CHECK WIN CONDITION
         {
-
-            
-            // @CLEANUP: maybe there's a more efficient way to do this,
+            // @SPEED: maybe there's a more efficient way to do this,
             // but for now, just create pieces and see if it exceeds the color_set
             // size.
 
@@ -611,26 +617,22 @@ export class World {
             this.forEachCell((row, col, index) => {
                 const tile = this.getTile(row, col);
                 if (visited.includes(tile)) return
-
                 
                 if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                     const piece = new Piece();
                     piece.color = tile.color;
-                    let merge_list = [];
+                    let tile_list = [];
                     
                     // NOTE: Maybe remove this
                     let merge_info = {
                         found_candidate: false
                     };
-                    this.findMergeableTiles(row, col, merge_list, tile, visited, merge_info);
-                    piece.tiles.push(merge_list);
+                    this.findMergeableTiles(row, col, tile_list, tile, visited, merge_info);
+                    piece.tiles.push(tile_list);
                     
                     pieces.push(piece);
                 }
-                
             })
-            
-            
             
             let succes = pieces.length === this.color_set.size;
             if (succes) {

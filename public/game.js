@@ -575,26 +575,6 @@ function loadLevel(index, levels, world) {
             }
             break;
 
-            case 'sr': {
-                t.gameplay_flags |= GameplayFlags.STATIC;
-                t.gameplay_flags |= GameplayFlags.MERGEABLE;
-                t.color = "red";
-            }
-            break;
-
-            case 'sg': {
-                t.gameplay_flags |= GameplayFlags.STATIC;
-                t.gameplay_flags |= GameplayFlags.MERGEABLE;
-                t.color = "green";
-            }
-            break;
-
-            case 'sb': {
-                t.gameplay_flags |= GameplayFlags.STATIC;
-                t.gameplay_flags |= GameplayFlags.MERGEABLE;
-                t.color = "blue";
-            }
-            break;
 
         }
 
@@ -611,7 +591,6 @@ function loadLevel(index, levels, world) {
     let row = 0;
     let col = 0;
 
-    let combinatory_tile_id = 10;
     let colored_tile_id = 100;
 
     const getCombinatoryTile = (color_symbol, id) => {
@@ -633,27 +612,42 @@ function loadLevel(index, levels, world) {
         return t;
     };
 
+    const getStaticTile = (color_symbol, id) => {
+        const colors = {
+            'r': "red",
+            'g': "green",
+            'b': "blue",
+        }
+        const t = new Tile();
+        t.id = id;
+        t.gameplay_flags |= GameplayFlags.STATIC;
+        t.gameplay_flags |= GameplayFlags.MERGEABLE;
+        t.color = colors[color_symbol];
+
+        return t;
+    }
+
     for (let line of level) {
 
         for (let index = 0; index < line.length; index++) {
             let c = line[index];
-            if (c === 's') {
-                c += line[++index];
-            }
             let tile = getTileFromChar(c);
+
+            // NOTE: set new, incremented id for colored tiles           
+            if (tile.id < 0 && (tile.gameplay_flags) && tile.color !== "gray" ) {
+                tile.id = colored_tile_id++;
+            }
             
-            
-            if (c === 'c') {
+            if (c === 's') {
+                const color_symbol = line[++index];
+                tile = getStaticTile(color_symbol, colored_tile_id++);
+            }
+            else if (c === 'c') {
                 const color_symbol = line[++index];
                 let id = line[++index];
                 id += line[++index];
                 
                 tile = getCombinatoryTile(color_symbol, parseInt(id));
-            }
-
-            // NOTE: set new, incremented id for colored tiles           
-            if (tile.id < 0 && (tile.color !== "gray") ) {
-                tile.id = colored_tile_id++;
             }
             world.putInGrid(row, col, tile);
             col++;
