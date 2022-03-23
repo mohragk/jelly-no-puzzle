@@ -148,8 +148,7 @@ export class World {
         }
         
         if ( 
-            
-            (tile.id === original.id && tile.gameplay_flags & GameplayFlags.MERGED) 
+            (tile.id === original.id)// && tile.gameplay_flags & GameplayFlags.MERGED) 
          ) {
             visited.push(tile);
            
@@ -582,23 +581,23 @@ export class World {
         const is_moving = this.move_set.length;
         
         // Create pieces
-        const pieces = [];
         const pieces_grid = [];
+        const movable_pieces = [];
         const static_pieces = [];
         if(!is_moving) {
 
 
-            this.createPieces(pieces, static_pieces, pieces_grid);
+            this.createPieces(movable_pieces, static_pieces, pieces_grid);
             
-            const cancel_merge = this.applyGravity(pieces);
+            const cancel_merge = this.applyGravity(movable_pieces);
             if (!cancel_merge) {
                 this.findAndApplyMerges();
             }
         }
 
-        this.debug_pieces = [...pieces, ...static_pieces];
+        this.debug_pieces = [...movable_pieces, ...static_pieces];
         
-        this.handleCommands(command_buffer, undo_recorder, pieces, pieces_grid);
+        this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
         this.updateMoveset(game_state, dt);
         
         this.forEachCell((row, col, index) => {
@@ -610,7 +609,7 @@ export class World {
         // @BUG: this won't work when you add a redo option to the undo-system. 
         // pieces will be empty at that moment, so player has to make a valid move
         // to re-trigger this condition. 
-        if ((pieces.length + static_pieces.length) === this.color_set.size) {
+        if ((movable_pieces.length + static_pieces.length) === this.color_set.size) {
             game_state.has_won = true;
         }
     }
@@ -684,7 +683,7 @@ export class World {
                     const addNeigbour = (row, col, placement) => {
                         let t = this.getTile(row, col);
                         if (t) {
-                            if (t.color !== tile.color || t.id !== tile.id) {
+                            if (t.id !== tile.id) {
                                 neighbours |= placement;
                             }
                         }
