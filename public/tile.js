@@ -2,7 +2,6 @@
 export const GameplayFlags = {
     STATIC:         (1 << 0),
     MOVABLE:        (1 << 1),
-    MERGED:         (1 << 2),
     MERGEABLE:      (1 << 3),
 };
 

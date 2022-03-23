@@ -501,7 +501,6 @@ function loadLevel(index, levels, world) {
             
             case '0': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 0;
             }
@@ -509,7 +508,6 @@ function loadLevel(index, levels, world) {
 
             case '1': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 1;
             }
@@ -517,7 +515,6 @@ function loadLevel(index, levels, world) {
 
             case '2': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 2;
             }
@@ -525,7 +522,6 @@ function loadLevel(index, levels, world) {
 
             case '3': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 3;
             }
@@ -533,7 +529,6 @@ function loadLevel(index, levels, world) {
             
             case '4': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 4;
             }
@@ -541,7 +536,6 @@ function loadLevel(index, levels, world) {
 
             case '5': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 4;
             }
@@ -549,7 +543,6 @@ function loadLevel(index, levels, world) {
 
             case '6': {
                 t.gameplay_flags |= GameplayFlags.MOVABLE;
-                t.gameplay_flags |= GameplayFlags.MERGED;
                 t.color = 'black';
                 t.id = 6;
             }

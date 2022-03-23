@@ -116,10 +116,9 @@ export class World {
             return;
         }
         
-        if (  (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
+        if (  tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE ) {
                 
-            // @CLEANUP: first check stil necessary?
-            if ( !(tile.gameplay_flags & GameplayFlags.MERGED) && (tile.id !== original.id) ) {
+            if ( tile.id !== original.id ) {
                 info.found_candidate = true;
             }
             visited.push(tile);
@@ -141,9 +140,7 @@ export class World {
             return;
         }
         
-        if ( 
-            (tile.id === original.id)// && tile.gameplay_flags & GameplayFlags.MERGED) 
-         ) {
+        if ( tile.id === original.id) {
             visited.push(tile);
            
             list.push(tile);
@@ -509,7 +506,6 @@ export class World {
 
                     for (let t of merge_list) {
                         t.id = lowest_id;
-                        t.gameplay_flags |= GameplayFlags.MERGED;
                         if (is_static) {
                             t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
                             t.gameplay_flags |= GameplayFlags.STATIC;
