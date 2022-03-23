@@ -14,8 +14,11 @@ import { AudioPlayer, SoundBank } from './audio.js';
 
 
 
-const DEV_MODE = false;
+// DEVELOPER SUTFF
+const dev_log =  (typeof DEV_MODE !== 'undefined')  ? (args) => console.log(...args) : () => {};
 
+
+dev_log("SDFKJHDFKDJHFKDJHFKDSJHFKDJSHF")
 
 
 let audio_player = new AudioPlayer();
@@ -29,27 +32,18 @@ function shakeCanvas() {
 
 
 
-// NOTE: sound clips are loaded via the DOM, maybe move that
-// to actual JS?
-sound_bank.add("thump01_sound");
-sound_bank.add("tap01_sound");
-sound_bank.add("victory_flute_sound");
-sound_bank.add("glup01_sound");
-sound_bank.add("move01_sound");
-
 
 const halt_input_trigger = new DelayedTrigger(
     0.2, 
     () => game_state.halt_input = false,          // Arm Callback
     () => game_state.halt_input = true            // Finished Callback
 );          
-let fallen_trigger = new DelayedTrigger(0.1, () => {
+const fallen_trigger = new DelayedTrigger(0.1, () => {
     audio_player.trigger(sound_bank.get("thump01_sound"));
 
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
-
 
 const triggers = [
     halt_input_trigger,
@@ -127,10 +121,15 @@ let DISPLAY_RASTER = false;
 let world = new World();
 
 
-function reset(level_index) {
-
+function removeClassesFromHTML() {
     canvas.classList.remove("add_victory_animation");
     document.body.classList.remove("animated-bgcolors");
+}
+
+
+function reset(level_index) {
+
+    removeClassesFromHTML();
 
     if (level_index < levels.length) {
         const button = document.getElementById("next_button");
@@ -158,13 +157,14 @@ function reset(level_index) {
 }
 
 function resetWorld(levels) {
-    canvas.classList.remove("add_victory_animation");
-    document.body.classList.remove("animated-bgcolors");
+    
     world = new World();
     const level_index = game_state.level_index;
     loadLevel(level_index, levels, world);
     
     game_state.running = true;
+
+    removeClassesFromHTML();
 }
 
 
@@ -473,6 +473,14 @@ function main() {
         reset(t - 1)
         localStorage.setItem('last_level', JSON.stringify(t-1));
     }
+
+
+    
+    sound_bank.add("thump01_sound");
+    sound_bank.add("tap01_sound");
+    sound_bank.add("victory_flute_sound");
+    sound_bank.add("glup01_sound");
+    sound_bank.add("move01_sound");
     
     // Reset to last_saved level
     let level_index = parseInt(localStorage.getItem('last_level')) || 0;
@@ -661,7 +669,6 @@ function loadLevel(index, levels, world) {
                 
                 const color_symbol = line[++index];
                 tile = getAnchoredTile(anchor_positions, color_symbol, colored_tile_id++);
-                console.log(tile)
             }
             else if (c === 's') {
                 const color_symbol = line[++index];
@@ -683,7 +690,6 @@ function loadLevel(index, levels, world) {
         row++;
     }
 
-    console.log(world.color_set)
 
     world.addListener(event_listener);
     world.findAndApplyMerges(true);

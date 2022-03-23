@@ -159,7 +159,6 @@ export class World {
 
             if (tile.anchor_points) {
                 if (tile.anchor_points & AnchorPoints.S) {
-                    console.log("found S anchor")
                     const next = this.getTile(row+1, col);
                     included_ids.push(next.id);
                 }
@@ -551,11 +550,11 @@ export class World {
       
             this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
         }
-
         
         this.updateMoveset(game_state, dt);
-    
         this.updateAllTiles();
+
+
         // CHECK WIN CONDITION
         {
             // @SPEED: maybe there's a more efficient way to do this,

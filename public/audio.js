@@ -7,6 +7,8 @@ export class SoundBank {
     sounds = new Map();
     available_sounds = [];
 
+    // NOTE: sound clips are loaded via the DOM, maybe move that
+    // to actual JS?
     add(name) {
         const element = document.getElementById(name);
         if (!element) {
@@ -22,6 +24,10 @@ export class SoundBank {
     get(name) {
         const el = this.sounds.get(name);
         return el;
+    }
+
+    getAllAvailable() {
+        return this.available_sounds;
     }
 };
 
