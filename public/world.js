@@ -1,6 +1,5 @@
 import { 
     drawArrow,
-    drawStretchedArrow,
     drawBlockNonUnitScale, 
     drawTileText, 
     drawBlockText, 
@@ -10,7 +9,7 @@ import {
 } from './game.js';
 import { AnchorPoints, GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
-import { lerp, Rectangle } from './math.js';
+import { lerp } from './math.js';
 import { EventManager, Events } from './events.js';
 import { InputModes } from './game.js';
 
@@ -85,10 +84,10 @@ export class World {
         tile.world_pos.col = col;
         tile.target_pos.row = row;
         tile.target_pos.col = col;
+
         if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
             if (tile.color !== 'black') {
                 this.color_set.add(tile.color);
-             //   this.color_set.add(`${tile.color}_${tile.id}`);
             }
         }
         const grid_index = this.getIndex(row, col);
@@ -97,17 +96,10 @@ export class World {
 
 
     setState(new_grid) {
-        // NOTE: deep cloning the grid might be screwing with the 
-        // handling of the win state. This shouldn't be.
-        // For now we leave it as is since shallow copying is more efficient 
-        // either way. -S. Vermeer 2022
         this.grid = [...new_grid];
         this.move_set.length = 0;
     }
 
-    
-
-    
 
     findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
@@ -196,22 +188,25 @@ export class World {
     }
 
 
-    updateTile(tile, dt) {
-
+    updateTile(tile) {
         let start  = getScreenCoordFromTileCoord(tile.world_pos.row,  tile.world_pos.col);
         let target = getScreenCoordFromTileCoord(tile.target_pos.row, tile.target_pos.col);
-
-       
-        
         let x = lerp(start.x, target.x, tile.move_t);
         let y = lerp(start.y, target.y, tile.move_t);
 
         tile.visual_pos[0] = x;
         tile.visual_pos[1] = y;
     }
+
+    updateAllTiles() {
+        this.forEachCell((row, col, index) => {
+            this.updateTile(this.grid[index]);
+        });
+    }
     
     moveTile(tile, game_state, dt) {    
-        
+        if (!tile.should_move)  return;
+
         let delta_row = tile.target_pos.row - tile.world_pos.row;
         if (delta_row) {
             tile.move_t += (game_state.fall_speed * dt);
@@ -219,8 +214,6 @@ export class World {
         else {
             tile.move_t += game_state.move_speed * dt;
         }
-        
-      
           
         if (tile.move_t > 1) {
             tile.move_t = 0;
@@ -284,7 +277,6 @@ export class World {
             if (can_move) {
                 this.event_manager.pushEvent(Events.MOVE)
 
-                // Store copy of current state
                 undo_recorder.add(this.grid);
                 
                 for (let piece of this.move_set) {
@@ -331,9 +323,14 @@ export class World {
     }
 
 
+    // NOTE: We clear and update the grid AFTER we're done with moving
+    // all the tiles in the move_set. Otherwise, a tile could clear
+    // a tile but, that tile is actually part of the move_set. 
+    // Doing it in 2 passes solves this issue, although there might be a better
+    // solution for this.
     updateMoveset(game_state, dt) {
         let done = true;
-        ff: for (let piece of this.move_set) {
+        for (let piece of this.move_set) {
             for (let tile of piece.tiles) {
                 this.moveTile(tile, game_state, dt);
                 if (tile.should_move) {
@@ -368,13 +365,12 @@ export class World {
     }
 
 
+    // To check whether pieces should move, recursively fill out a 
+    // temporary grid by checking a piece for mobility and paint in all 
+    // pieces that are static. All the leftover pieces _are_ movable and 
+    // should have gravity applied to them.
     applyGravity(pieces) {
-            
-        // To check whether pieces should move, recursively fill out a 
-        // temporary grid by checking a piece for mobility and paint in all 
-        // pieces that are static. All the leftover pieces are movable and 
-        // should have gravity applied to them.
-        const staticised_grid = this.grid.map(t => t.gameplay_flags); 
+        const flags_grid = this.grid.map(t => t.gameplay_flags); 
         const movables = [...pieces];
         let changed = true;
         let has_gravity_tiles = false;
@@ -385,7 +381,7 @@ export class World {
                 for (let tile of piece.tiles) {
                     const {row, col} = tile.world_pos;
                     const other_index = this.getIndex(row+1, col);
-                    const flags = staticised_grid[other_index];
+                    const flags = flags_grid[other_index];
                     
                     if (flags & GameplayFlags.STATIC) {
                         can_move = false;
@@ -393,16 +389,15 @@ export class World {
                     }
                 }
                 if (!can_move) {
-                    // Update staticised grid
+                    // Update flags_grid grid
                     for (let tile of piece.tiles) {
                         const {row, col} = tile.world_pos;
                         const index = this.getIndex(row, col);
-                        staticised_grid[index] = GameplayFlags.STATIC;
+                        flags_grid[index] = GameplayFlags.STATIC;
                     }
                     movables.splice(i, 1);
                     piece_changed = true;
                 }
-                
             })
             
             changed = piece_changed;
@@ -416,57 +411,8 @@ export class World {
 
             for (let piece of movables) 
             {
-           
-                let max_travel = this.dimensions.h;
-                
-                if (1) {
-                    for (let tile of piece.tiles) {
-                        
-                        let r = tile.world_pos.row;
-                        let c = tile.world_pos.col;
-                        let distance = 0;
-
-                        while(1) {
-                            const other_index = this.getIndex(++r, c)
-                            const flags = staticised_grid[other_index];
-
-                            if (flags & GameplayFlags.STATIC) {
-                                break
-                            }
-
-                            const other = this.getTile(r,c);
-                            if (other.gameplay_flags & GameplayFlags.STATIC) {
-                                break;
-                            }
-                            
-                            if (other.color === tile.color) {
-                                if (other.id === tile.id) {
-                                    distance = 0;
-                                    continue;
-                                }
-                            }
-                            
-                            if (other.gameplay_flags & GameplayFlags.MOVABLE) {
-                                distance = 0;
-                            }
-                            else {
-                                distance += 1
-                            }
-                            
-                        }
-                        
-                        distance = Math.max(0, distance);
-                        max_travel = 1; // Math.min(distance, max_travel);
-                    }
-                }
-                else {
-                    max_travel = 1;
-                }
-
-                
-                // Apply travel distance
-                for (let tile of piece.tiles) {
-                    tile.target_pos.row += max_travel;
+               for (let tile of piece.tiles) {
+                    tile.target_pos.row += 1;
                     tile.should_move = true;
                     tile.move_t = 0;
                 }
@@ -564,9 +510,9 @@ export class World {
 
 
     handleInput(game_state)  {
-        // Select tile
         const mouse_x = game_state.mouse.screen_coord.x;
         const mouse_y = game_state.mouse.screen_coord.y;
+
         // NOTE: maybe store this in game state?
         const {row, col} = getTileCoordFromScreenCoord(mouse_x, mouse_y);
         const {selected} = this.selectTiles(row, col, mouse_x);
@@ -599,8 +545,6 @@ export class World {
         this.handleInput(game_state);
         
         const is_moving = this.move_set.length;
-        
-        
         if (!is_moving) {
             const pieces_grid = [];
             const movable_pieces = [];
@@ -617,11 +561,8 @@ export class World {
 
         
         this.updateMoveset(game_state, dt);
-        
-        this.forEachCell((row, col, index) => {
-            this.updateTile(this.grid[index], dt);
-        })
-
+    
+        this.updateAllTiles();
         // CHECK WIN CONDITION
         {
             // @SPEED: maybe there's a more efficient way to do this,
@@ -638,12 +579,7 @@ export class World {
                     const piece = new Piece();
                     piece.color = tile.color;
                     let tile_list = [];
-                    
-                    // NOTE: Maybe remove this
-                    let merge_info = {
-                        found_candidate: false
-                    };
-                    this.findMergeableTiles(row, col, tile_list, tile, visited, merge_info);
+                    this.findMergeableTiles(row, col, tile_list, tile, visited, {});
                     piece.tiles.push(tile_list);
                     
                     pieces.push(piece);
@@ -694,10 +630,6 @@ export class World {
             if (flags & GameplayFlags.STATIC) {
                 text ="#";
             }
-            if (flags & GameplayFlags.MERGED) {
-                text ="+";
-            }
-            
            
             return text
         }
@@ -745,15 +677,6 @@ export class World {
                 }
 
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
-
-
-                // DEBUG!!
-                // DEBUG!!
-                // DEBUG!!
-                if (tile.anchor_points) {
-                    const text = tile.anchor_points.toString(2);
-                    drawTileText(row, col, text, "gray");
-                }
             }
         });
 

@@ -15,16 +15,14 @@ export const AnchorPoints = {
 
 export class Tile {
     id = -1;
+    color = "";
     visual_pos = [0, 0];
     world_pos  = {row: 0, col: 0};
     target_pos = {row: 0, col: 0};
-    
     move_t = 0.0;
     should_move = false;
 
     gameplay_flags = 0;
 
     anchor_points = AnchorPoints.NONE;
-
-    color = "";
 }
