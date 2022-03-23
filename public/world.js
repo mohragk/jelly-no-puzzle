@@ -85,6 +85,7 @@ export class World {
         tile.target_pos.row = row;
         tile.target_pos.col = col;
 
+        // NOTE: this assumes STATIC tiles have one or more corresponding MOVABLE tiles.
         if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
             if (tile.color !== 'black') {
                 this.color_set.add(tile.color);
@@ -438,20 +439,12 @@ export class World {
                     this.event_manager.pushEvent(Events.BEGIN_MERGE)
                 }
 
+                // If one of the tiles is STATIC, they all become STATIC
                 const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
                 if (merge_list.length > 1) {
-                    // GET LOWEST ID
-
-                    let lowest_id = 10000;
-                    for (let t of merge_list) { 
-                        if (t.id < lowest_id) {
-                            lowest_id = t.id;
-                        }
-                    }
-
                     for (let t of merge_list) {
-                        t.id = lowest_id;
+                        t.id = tile.id;
                         if (is_static) {
                             t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
                             t.gameplay_flags |= GameplayFlags.STATIC;
@@ -571,7 +564,7 @@ export class World {
 
             const pieces = [];
             const visited = [];
-            this.forEachCell((row, col, index) => {
+            this.forEachCell((row, col) => {
                 const tile = this.getTile(row, col);
                 if (visited.includes(tile)) return
                 

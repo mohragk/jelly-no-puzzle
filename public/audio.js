@@ -3,6 +3,29 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 
 
+export class SoundBank {
+    sounds = new Map();
+    available_sounds = [];
+
+    add(name) {
+        const element = document.getElementById(name);
+        if (!element) {
+            console.error(`No DOM sound element found for name: ${name}!`)
+            return false;
+        }
+        
+        this.sounds.set(name, element);
+        this.available_sounds.push(name);
+        return true;
+    }
+
+    get(name) {
+        const el = this.sounds.get(name);
+        return el;
+    }
+};
+
+
 export class AudioPlayer {
     audio_context = new AudioContext();
     #is_on = true;
@@ -20,7 +43,16 @@ export class AudioPlayer {
 
     }
 
+    notFound() {
+        console.error(`AudioPlayer -- Audio clip not found!`)
+    }
+
     trigger(clip) {
+        if (!clip) {
+            this.notFound();
+            return;
+        } 
+
         if (this.#is_on) {
             this.reset(clip);
             clip.play();
@@ -28,6 +60,11 @@ export class AudioPlayer {
     }
 
     reset (clip) {
+        if (!clip)  {
+            this.notFound();
+            return;
+        }
+
         clip.pause();
         clip.currentTime = 0;
     }
@@ -36,3 +73,5 @@ export class AudioPlayer {
         this.#is_on = !this.#is_on;
     }
 }
+
+

@@ -10,7 +10,7 @@ import { DelayedTrigger } from './delayedtrigger.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
 
-import { AudioPlayer } from './audio.js';
+import { AudioPlayer, SoundBank } from './audio.js';
 
 
 
@@ -19,6 +19,7 @@ const DEV_MODE = false;
 
 
 let audio_player = new AudioPlayer();
+let sound_bank = new SoundBank();
 
 
 function shakeCanvas() {
@@ -30,11 +31,11 @@ function shakeCanvas() {
 
 // NOTE: sound clips are loaded via the DOM, maybe move that
 // to actual JS?
-let thump01_sound = document.getElementById('thump01_sound');
-let tap01_sound = document.getElementById('tap01_sound');
-let glup01_sound = document.getElementById('glup01_sound');
-let move01_sound = document.getElementById('move01_sound');
-let victory_flute_sound = document.getElementById('victory_flute_sound');
+sound_bank.add("thump01_sound");
+sound_bank.add("tap01_sound");
+sound_bank.add("victory_flute_sound");
+sound_bank.add("glup01_sound");
+sound_bank.add("move01_sound");
 
 
 const halt_input_trigger = new DelayedTrigger(
@@ -43,7 +44,8 @@ const halt_input_trigger = new DelayedTrigger(
     () => game_state.halt_input = true            // Finished Callback
 );          
 let fallen_trigger = new DelayedTrigger(0.1, () => {
-    audio_player.trigger(thump01_sound);
+    audio_player.trigger(sound_bank.get("thump01_sound"));
+
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
 });
@@ -61,18 +63,14 @@ let recorder;
 let event_listener = {
     handleEvent: (e) => {
 
-        if (e === Events.VICTORY) {
-            audio_player.trigger(victory_flute_sound);
-        }
-
         if (e === Events.MOVE) {
-            audio_player.trigger(move01_sound);
+            audio_player.trigger(sound_bank.get("move01_sound"));
             halt_input_trigger.armAndReset();
         }
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
-            audio_player.trigger(tap01_sound);
+            audio_player.trigger(sound_bank.get("tap01_sound"));
         }
         
         if (e === Events.BEGIN_FALL) {
@@ -81,7 +79,7 @@ let event_listener = {
         }
 
         if (e === Events.BEGIN_MERGE) {
-            audio_player.trigger(glup01_sound);
+            audio_player.trigger(sound_bank.get("glup01_sound"));
             
         }
     }
@@ -1369,7 +1367,7 @@ function render(world) {
         button.style.visibility = "visible";
         if (game_state.running) {
             game_state.running = false;
-            audio_player.trigger(victory_flute_sound);
+            audio_player.trigger(sound_bank.get("victory_flute_sound"));
         }
     }
     
