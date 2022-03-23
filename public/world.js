@@ -97,8 +97,10 @@ export class World {
 
 
     setState(new_grid) {
-        this.grid = [...new_grid];
-        this.move_set.length = 0;
+        if (new_grid) {
+            this.grid = [...new_grid];
+            this.move_set.length = 0;
+        }
     }
 
 

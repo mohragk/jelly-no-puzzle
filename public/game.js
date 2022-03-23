@@ -13,14 +13,6 @@ import { Events } from './events.js';
 import { AudioPlayer, SoundBank } from './audio.js';
 
 
-
-// DEVELOPER SUTFF
-const dev_log =  (typeof DEV_MODE !== 'undefined')  ? (args) => console.log(...args) : () => {};
-
-
-dev_log("SDFKJHDFKDJHFKDJHFKDSJHFKDJSHF")
-
-
 let audio_player = new AudioPlayer();
 let sound_bank = new SoundBank();
 
