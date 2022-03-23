@@ -97,6 +97,7 @@ const DEFAULT_GAMESTATE = {
         over_tile:  {row: 0, col: 0},
         screen_coord: {x: 0, y: 0},
     },
+    default_move_speed: 7.0,
     move_speed: 7.0,
     fall_speed: 16.0,
     frame_count: 0,
@@ -376,7 +377,7 @@ function main() {
         e.preventDefault();
         
         // DETECTED TOUCH INPUT, CHANGE MOVE_SPEED
-        game_state.move_speed *= 1.5;
+        game_state.move_speed = game_state.default_move_speed * 1.5;
 
         const {offsetX, offsetY} = getTouchCoord(canvas, e);
         
