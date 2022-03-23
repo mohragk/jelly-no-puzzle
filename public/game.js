@@ -13,7 +13,7 @@ import { AudioPlayer } from './audio.js';
 
 
 
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 
 
@@ -595,6 +595,7 @@ function loadLevel(index, levels, world) {
                 t.color = "blue";
             }
             break;
+
         }
 
         return t;
@@ -610,7 +611,27 @@ function loadLevel(index, levels, world) {
     let row = 0;
     let col = 0;
 
-    let tile_id = 100;
+    let combinatory_tile_id = 10;
+    let colored_tile_id = 100;
+
+    const getCombinatoryTile = (color_symbol, id) => {
+        const colors = {
+            'k' : "black",
+            'r': "red",
+            'g': "green",
+            'b': "blue",
+        }
+        const t = new Tile();
+        t.id = id;
+        t.gameplay_flags |= GameplayFlags.MOVABLE;
+        t.gameplay_flags |= GameplayFlags.MERGED;
+        if (color_symbol !== 'k') {
+            t.gameplay_flags |= GameplayFlags.MERGEABLE;
+        }
+        t.color = colors[color_symbol];
+
+        return t;
+    };
 
     for (let line of level) {
 
@@ -619,10 +640,20 @@ function loadLevel(index, levels, world) {
             if (c === 's') {
                 c += line[++index];
             }
+            let tile = getTileFromChar(c);
             
-            const tile = getTileFromChar(c);
+            
+            if (c === 'c') {
+                const color_symbol = line[++index];
+                let id = line[++index];
+                id += line[++index];
+                
+                tile = getCombinatoryTile(color_symbol, parseInt(id));
+            }
+
+            // NOTE: set new, incremented id for colored tiles           
             if (tile.id < 0 && (tile.color !== "gray") ) {
-                tile.id = tile_id++;
+                tile.id = colored_tile_id++;
             }
             world.putInGrid(row, col, tile);
             col++;
@@ -632,6 +663,8 @@ function loadLevel(index, levels, world) {
         col = 0;
         row++;
     }
+
+    console.log(world.color_set)
 
     world.addListener(event_listener);
     world.findAndApplyMerges(true);

@@ -86,11 +86,9 @@ export class World {
         tile.target_pos.row = row;
         tile.target_pos.col = col;
         if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-            if (tile.color === 'black') {
-                this.color_set.add(`${tile.color}_${tile.id}`);
-            }
-            else {
+            if (tile.color !== 'black') {
                 this.color_set.add(tile.color);
+             //   this.color_set.add(`${tile.color}_${tile.id}`);
             }
         }
         const grid_index = this.getIndex(row, col);
@@ -114,17 +112,13 @@ export class World {
     findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
 
-        if (tile.color === "black") {
-            return;
-        }
-
         if (visited.includes(tile)) {
             return;
         }
-
         
         if (  (tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                 
+            // @CLEANUP: first check stil necessary?
             if ( !(tile.gameplay_flags & GameplayFlags.MERGED) && (tile.id !== original.id) ) {
                 info.found_candidate = true;
             }
@@ -604,14 +598,46 @@ export class World {
             this.updateTile(this.grid[index], dt);
         })
 
-        
-        // HANDLE WIN CONDITION
-        // @BUG: this won't work when you add a redo option to the undo-system. 
-        // pieces will be empty at that moment, so player has to make a valid move
-        // to re-trigger this condition. 
-        if ((movable_pieces.length + static_pieces.length) === this.color_set.size) {
-            game_state.has_won = true;
+        // CHECK WIN CONDITION
+        {
+
+            
+            // @CLEANUP: maybe there's a more efficient way to do this,
+            // but for now, just create pieces and see if it exceeds the color_set
+            // size.
+
+            const pieces = [];
+            const visited = [];
+            this.forEachCell((row, col, index) => {
+                const tile = this.getTile(row, col);
+                if (visited.includes(tile)) return
+
+                
+                if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
+                    const piece = new Piece();
+                    piece.color = tile.color;
+                    let merge_list = [];
+                    
+                    // NOTE: Maybe remove this
+                    let merge_info = {
+                        found_candidate: false
+                    };
+                    this.findMergeableTiles(row, col, merge_list, tile, visited, merge_info);
+                    piece.tiles.push(merge_list);
+                    
+                    pieces.push(piece);
+                }
+                
+            })
+            
+            
+            
+            let succes = pieces.length === this.color_set.size;
+            if (succes) {
+                game_state.has_won = true;
+            }
         }
+
     }
 
 
