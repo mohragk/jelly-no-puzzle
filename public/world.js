@@ -8,7 +8,7 @@ import {
     getTileSize, 
     getScreenCoordFromTileCoord, 
 } from './game.js';
-import { GameplayFlags, Tile } from './tile.js';
+import { AnchorPoints, GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
 import { lerp, Rectangle } from './math.js';
 import { EventManager, Events } from './events.js';
@@ -155,6 +155,49 @@ export class World {
         }
     }
 
+    findMergedAndAnchoredTiles(row, col, list, original, visited, included_ids) {
+        const tile = this.getTile(row, col);
+        if (visited.includes(tile)) {
+            return;
+        }
+
+      
+        
+        if (included_ids.includes(tile.id)) {
+            visited.push(tile);
+            list.push(tile);
+
+            if (tile.anchor_points) {
+                if (tile.anchor_points & AnchorPoints.S) {
+                    console.log("found S anchor")
+                    const next = this.getTile(row+1, col);
+                    included_ids.push(next.id);
+                }
+
+                if (tile.anchor_points & AnchorPoints.N) {
+                    const next = this.getTile(row-1, col);
+                    included_ids.push(next.id);
+                }
+
+                if (tile.anchor_points & AnchorPoints.E) {
+                    const next = this.getTile(row, col+1);
+                    included_ids.push(next.id);
+                }
+                
+                if (tile.anchor_points & AnchorPoints.W) {
+                    const next = this.getTile(row, col-1);
+                    included_ids.push(next.id);
+                }
+            }
+
+            
+            this.findMergedTiles(row+1, col+0, list, original, visited, included_ids);
+            this.findMergedTiles(row-1, col+0, list, original, visited, included_ids);
+            this.findMergedTiles(row+0, col+1, list, original, visited, included_ids);
+            this.findMergedTiles(row+0, col-1, list, original, visited, included_ids);
+        }
+    }
+
 
     updateTile(tile, dt) {
 
@@ -263,7 +306,7 @@ export class World {
         }
     }
 
-    createPieces(pieces, static_pieces, pieces_grid) {
+    createPieces(pieces, pieces_grid) {
         const visited = [];
         this.forEachCell( (row, col, index) => {
             const tile = this.getTile(row, col);
@@ -273,33 +316,11 @@ export class World {
                 const piece = new Piece();
                 piece.color = tile.color;
 
-                if (tile.gameplay_flags & GameplayFlags.MERGED) {
-                    const merged_tiles = [];
-                    this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
-                    piece.tiles = [...merged_tiles];
-                }
-                else {
-                    piece.tiles.push(tile);
-                    visited.push(tile);
-                }
+                const merged_tiles = [];
+                this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
+                piece.tiles = [...merged_tiles];
+                
                 pieces.push(piece);
-
-            }
-            else if (tile.gameplay_flags & GameplayFlags.STATIC && tile.gameplay_flags & GameplayFlags.MERGEABLE) {
-                const piece = new Piece();
-                piece.color = tile.color;
-
-                if (tile.gameplay_flags & GameplayFlags.MERGED) {
-                    const merged_tiles = [];
-                    this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
-                    piece.tiles = [...merged_tiles];
-                }
-                else {
-                    piece.tiles.push(tile);
-                    visited.push(tile);
-                }
-
-                static_pieces.push(piece);
             }
         });
         
@@ -587,9 +608,8 @@ export class World {
         if (!is_moving) {
             const pieces_grid = [];
             const movable_pieces = [];
-            const static_pieces = [];
-            this.createPieces(movable_pieces, static_pieces, pieces_grid);
-            //this.debug_pieces = [...movable_pieces, ...static_pieces];
+            this.createPieces(movable_pieces, pieces_grid);
+            this.debug_pieces = movable_pieces;
             
             const cancel_merge = this.applyGravity(movable_pieces);
             if (!cancel_merge) {
@@ -729,6 +749,15 @@ export class World {
                 }
 
                 drawBlockNonUnitScale(x, y, tile.color, neighbours);
+
+
+                // DEBUG!!
+                // DEBUG!!
+                // DEBUG!!
+                if (tile.anchor_points) {
+                    const text = tile.anchor_points.toString(2);
+                    drawTileText(row, col, text, "gray");
+                }
             }
         });
 

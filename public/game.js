@@ -1,7 +1,8 @@
 import { levels }  from './levels2.js';
 
-import {lerp, lerpToInt} from './math.js';
-import { GameplayFlags, Tile } from './tile.js';
+
+import { lerp } from './math.js';
+import { GameplayFlags, Tile, AnchorPoints } from './tile.js';
 
 import { World, Neighbours } from './world.js';
 import { Recorder } from './recorder.js';
@@ -627,6 +628,21 @@ function loadLevel(index, levels, world) {
         return t;
     }
 
+    const getAnchoredTile = (anchor_positions, color_symbol, id) => {
+        const colors = {
+            'r': "red",
+            'g': "green",
+            'b': "blue",
+        }
+        const t = new Tile();
+        t.id = id;
+        t.gameplay_flags |= GameplayFlags.MERGEABLE | GameplayFlags.MOVABLE;
+        t.anchor_points = anchor_positions;
+        t.color = colors[color_symbol];
+
+        return t;
+    };
+
     for (let line of level) {
 
         for (let index = 0; index < line.length; index++) {
@@ -637,11 +653,29 @@ function loadLevel(index, levels, world) {
             if (tile.id < 0 && (tile.gameplay_flags) && tile.color !== "gray" ) {
                 tile.id = colored_tile_id++;
             }
-            
-            if (c === 's') {
+
+
+            if (c === 'a') {
+                let anchor_positions = 0;
+
+                // @ROBUSTNESS: you better have at least one position defined!
+                while (1) {
+                    let next = line[++index];
+                    if (next != 'E' && next != 'S' && next != 'W' & next != 'N' ) {
+                        --index;
+                        break;
+                    }
+                    anchor_positions |= AnchorPoints[next];
+                }
+                
                 const color_symbol = line[++index];
-                tile = getStaticTile(color_symbol, colored_tile_id++);
+                tile = getAnchoredTile(anchor_positions, color_symbol, colored_tile_id++);
+                console.log(tile)
             }
+            else if (c === 's') {
+                const color_symbol = line[++index];
+                tile = getStaticTile(color_symbol, colored_tile_id++); //@CLEANUP: does this need to be incremented?
+             }
             else if (c === 'c') {
                 const color_symbol = line[++index];
                 let id = line[++index];
@@ -1348,8 +1382,8 @@ function render(world) {
     
     if (DEBUG_RENDER) {
        // world.debugRender();
-        world.debugRenderTileIDs();
-       // world.debugRenderPieces(world.debug_pieces);
+       // world.debugRenderTileIDs();
+        world.debugRenderPieces(world.debug_pieces);
     }
 }
 
