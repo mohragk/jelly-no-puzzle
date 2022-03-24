@@ -105,13 +105,37 @@ export class World {
     }
 
 
+    findMergeableWithAnchoredTiles(row, col, list, original, visited, info, ids_to_include) {
+        const tile = this.getTile(row, col);
+
+        if (visited.includes(tile)) {
+            return;
+        }
+
+        if (  tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE ) {
+                
+            if ( tile.id !== original.id ) {
+                info.found_candidate = true;
+            }
+            visited.push(tile);
+           
+            list.push(tile);
+            
+            this.findMergeableWithAnchoredTiles(row+1, col+0, list, original, visited, info);
+            this.findMergeableWithAnchoredTiles(row-1, col+0, list, original, visited, info);
+            this.findMergeableWithAnchoredTiles(row+0, col+1, list, original, visited, info);
+            this.findMergeableWithAnchoredTiles(row+0, col-1, list, original, visited, info);
+        }
+    }
+
+
     findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
 
         if (visited.includes(tile)) {
             return;
         }
-        
+
         if (  tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE ) {
                 
             if ( tile.id !== original.id ) {
@@ -132,6 +156,8 @@ export class World {
 
     findMergedTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
+        if (!tile) return;
+
         if (visited.includes(tile)) {
             return;
         }
@@ -148,50 +174,7 @@ export class World {
         }
     }
 
-    findMergedAndAnchoredTiles(row, col, list, original, visited, included_ids, merge_info) {
-        const tile = this.getTile(row, col);
-
-        if (!tile) return ;
-        
-        if (visited.includes(tile)) {
-            return;
-        }
-
-        if (included_ids.includes(tile.id)) {
-            visited.push(tile);
-            list.push(tile);
-
-            if (tile.anchor_points) {
-                const addToPiece = (row, col, merge_info) => {
-                    const next = this.getTile(row, col);
-                    merge_info.found_anchored_static = next.gameplay_flags & GameplayFlags.STATIC;
-                    included_ids.push(next.id);
-
-                };
-                if (tile.anchor_points & AnchorPoints.S) {
-                    addToPiece(row+1, col, merge_info);                    
-                }
-
-                if (tile.anchor_points & AnchorPoints.N) {
-                    addToPiece(row-1, col, merge_info);
-                }
-
-                if (tile.anchor_points & AnchorPoints.E) {
-                    addToPiece(row, col+1, merge_info);
-                }
-                
-                if (tile.anchor_points & AnchorPoints.W) {
-                    addToPiece(row, col-1, merge_info);
-                }
-            }
-
-            
-            this.findMergedAndAnchoredTiles(row+1, col+0, list, original, visited, included_ids, merge_info);
-            this.findMergedAndAnchoredTiles(row-1, col+0, list, original, visited, included_ids, merge_info);
-            this.findMergedAndAnchoredTiles(row+0, col+1, list, original, visited, included_ids, merge_info);
-            this.findMergedAndAnchoredTiles(row+0, col-1, list, original, visited, included_ids, merge_info);
-        }
-    }
+    
 
 
     updateTile(tile) {
@@ -302,35 +285,31 @@ export class World {
     }
 
     createPieces(pieces, pieces_grid) {
+
+        // Find all movable pieces
         const visited = [];
         this.forEachCell( (row, col, index) => {
             const tile = this.getTile(row, col);
             if (visited.includes(tile)) return 
-
+            
             if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                 const piece = new Piece();
                 piece.color = tile.color;
-
-                const merged_tiles = [];
-                const merge_info = {
-                    found_anchored_static: false,
-                }
-                this.findMergedAndAnchoredTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited, [tile.id], merge_info);
                 
-                if (merge_info.found_anchored_static) {
-                    for (let t of merged_tiles) {
-                        t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
-                        t.gameplay_flags |= GameplayFlags.STATIC;
-                    }
-                }
-                else {
-                    piece.tiles = [...merged_tiles];
-                    pieces.push(piece);
-                }
+                const merged_tiles = [];
+                
+                this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
+                
+                piece.tiles = [...merged_tiles];
+
+                
+
+                pieces.push(piece);
             }
         });
 
-        
+
+
         // Fill pieces grid
         pieces.forEach( (piece, index) => {
             for (let tile of piece.tiles) {
@@ -456,21 +435,98 @@ export class World {
                     this.event_manager.pushEvent(Events.BEGIN_MERGE)
                 }
 
-                // If one of the tiles is STATIC, they all become STATIC
-                const is_static = false// merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
-
+                const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
+                
                 if (merge_list.length > 1) {
                     for (let t of merge_list) {
                         t.id = tile.id;
                         if (is_static) {
-                            t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
                             t.gameplay_flags |= GameplayFlags.STATIC;
+                            t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
                         }
                     }
                 }
             }
         })
 
+
+
+
+        // FIND AND APPLY ANCHORED MERGES 
+        {
+            const getTileForAnchorPoint = (row, col, anchor) => {
+                if (anchor & AnchorPoints.N) {
+                    return this.getTile(row-1, col);
+                }
+                if (anchor & AnchorPoints.S) {
+                    return this.getTile(row+1, col);
+                }
+                if (anchor & AnchorPoints.E) {
+                    return this.getTile(row, col+1);
+                }
+                if (anchor & AnchorPoints.W) {
+                    return this.getTile(row, col-1);
+                }
+            };
+            const getPieceForAnchorPoint = (row, col, anchor) => {
+                let result;
+                const tile = getTileForAnchorPoint(row, col, anchor);
+
+                if (!tile) return;
+                
+                if (tile.gameplay_flags) 
+                {
+                    const piece = new Piece();
+                    piece.color = tile.color;
+                    
+                    const merged_tiles = [];
+                    this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, []);
+
+                    
+                    piece.tiles = [...merged_tiles];
+
+                  
+
+                    result = piece;
+                }
+
+                return result;
+            }
+
+            this.forEachCell( (r, c, index) => {
+                const tile = this.getTile(r,c);
+                if (!tile.gameplay_flags) return;
+                
+                const dominant_id = tile.id;
+
+                if (tile.anchor_points) {
+                    const other_piece = getPieceForAnchorPoint(r,c, tile.anchor_points);
+                    if (other_piece && other_piece.tiles.length) {
+
+                        if (other_piece.tiles[0].id === tile.id) {
+                            return 
+                        }
+
+                        // Force dominant_id unto other piece
+                        for (let t of other_piece.tiles) {
+                            t.id = dominant_id;
+                        }
+
+                        const is_static = other_piece.tiles.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0 || tile.gameplay_flags & GameplayFlags.STATIC;
+                        if (is_static) {
+                            tile.gameplay_flags |= GameplayFlags.STATIC;
+                            tile.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+
+                            for (let t of other_piece.tiles) {
+                               
+                                t.gameplay_flags |= GameplayFlags.STATIC;
+                                t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                            }
+                        }   
+                    }
+                }
+            });
+        }
     }
 
     // NOTE: this is only in column axis, above and below are not checked
@@ -564,6 +620,8 @@ export class World {
             const cancel_merge = this.applyGravity(movable_pieces);
             if (!cancel_merge) {
                 this.findAndApplyMerges();
+
+                
             }
       
             this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
@@ -624,7 +682,7 @@ export class World {
         this.forEachCell( (row, col) => {
             const t = this.getTile(row, col);
             const id = t.id;
-            drawBlockText(row, col, id)
+            drawBlockText(row, col, id, t.color)
         })
     }
 
@@ -648,7 +706,7 @@ export class World {
         this.forEachCell((row, col) => {
             const tile = this.getTile(row, col)
             let text = getText(tile.gameplay_flags, tile)
-            drawBlockText( row, col, text);
+            drawBlockText( row, col, text , tile.color);
             
         });
     }
