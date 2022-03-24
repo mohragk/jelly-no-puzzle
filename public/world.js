@@ -711,7 +711,7 @@ export class World {
 
     drawAnchors(tile) {
         const [vx, vy] = tile.visual_pos;
-        const color = "gray";
+        const color = tile.color;
 
         const tile_size = getTileSize();
         const half_dim = tile_size / 2;
@@ -719,7 +719,7 @@ export class World {
         const center_x = lerp(vx, vx + tile_size, 0.5);
         const center_y = lerp(vy, vy + tile_size, 0.5);
 
-        const anchor_size = tile_size / 6;
+        const anchor_size = tile_size / 4;
         const positions = tile.anchor_points;
         let x = center_x - anchor_size/2;
         let y = center_y - anchor_size/2;
@@ -754,10 +754,7 @@ export class World {
                     if ( !(tile.gameplay_flags & GameplayFlags.MOVABLE)) {
                        
                         drawBlockNonUnitScale(x, y, tile.color, neighbours);
-                        // DRAW ANCHORS
-                        if (tile.anchor_points) {
-                            this.drawAnchors(tile);
-                        }
+                       
                     }
                 }
             });
@@ -796,14 +793,23 @@ export class World {
                         addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
                    
                         drawBlockNonUnitScale(x, y, tile.color, neighbours);
-                        // DRAW ANCHORS
-                        if (tile.anchor_points) {
-                            this.drawAnchors(tile);
-                        }
+                        
                     }
                 }
             });
         }    
+
+
+        // DRAW ANCHORS
+
+        {
+            this.forEachCell( (row, col, index) => {
+                const tile = this.getTile(row, col);
+                if (tile.anchor_points) {
+                    this.drawAnchors(tile);
+                }
+            });
+        }
 
         // DRAW ARROWS FOR SELECTED TILES
         {
