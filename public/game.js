@@ -28,7 +28,6 @@ function shakeCanvas() {
 
 
 
-
 const halt_input_trigger = new DelayedTrigger(
     0.2, 
     () => game_state.halt_input = false,          // Arm Callback
@@ -105,13 +104,20 @@ const DEFAULT_GAMESTATE = {
     move_speed: 7.0,
     fall_speed: 16.0,
     frame_count: 0,
-    debug_time_enabled : false,
 
+    debug_time_enabled: false,
+    
 };
 
+let debug_render_index = 0;
+const DEBUG_RENDERS = [
+    () => {},
+    () => world.debugRender(),
+    () => world.debugRenderTileIDs(),
+    () => world.debugRenderPieces(world.debug_pieces),
+]
 
 
-let DEBUG_RENDER = false;
 let DISPLAY_RASTER = false;
 
 
@@ -245,7 +251,8 @@ function main() {
 
         if (DEV_MODE) {
             if (e.key === 'd') {
-                DEBUG_RENDER = !DEBUG_RENDER;
+                debug_render_index = (debug_render_index + 1) % DEBUG_RENDERS.length;
+                //DEBUG_RENDER = !DEBUG_RENDER;
             }
             // Time dilation
             if (e.key === '-') {
@@ -589,24 +596,7 @@ function loadLevel(index, levels, world) {
 
     let colored_tile_id = 100;
 
-    const getCombinatoryTile = (color_symbol, id) => {
-        const colors = {
-            'k' : "black",
-            'r': "red",
-            'g': "green",
-            'b': "blue",
-        }
-        const t = new Tile();
-        t.id = id;
-        t.gameplay_flags |= GameplayFlags.MOVABLE;
-        t.gameplay_flags |= GameplayFlags.MERGED;
-        if (color_symbol !== 'k') {
-            t.gameplay_flags |= GameplayFlags.MERGEABLE;
-        }
-        t.color = colors[color_symbol];
-
-        return t;
-    };
+    
 
     const getStaticTile = (color_symbol, id) => {
         const colors = {
@@ -645,7 +635,7 @@ function loadLevel(index, levels, world) {
             let tile = getTileFromChar(c);
 
             // NOTE: set new, incremented id for colored tiles           
-            if (tile.id < 0 && (tile.gameplay_flags) && tile.color !== "gray" ) {
+            if (tile.id < 0 && (tile.gameplay_flags) ) {
                 tile.id = colored_tile_id++;
             }
 
@@ -668,15 +658,9 @@ function loadLevel(index, levels, world) {
             }
             else if (c === 's') {
                 const color_symbol = line[++index];
-                tile = getStaticTile(color_symbol, colored_tile_id++); //@CLEANUP: does this need to be incremented?
-             }
-            else if (c === 'c') {
-                const color_symbol = line[++index];
-                let id = line[++index];
-                id += line[++index];
-                
-                tile = getCombinatoryTile(color_symbol, parseInt(id));
+                tile = getStaticTile(color_symbol, colored_tile_id++); 
             }
+           
             world.putInGrid(row, col, tile);
             col++;
         }
@@ -1377,10 +1361,14 @@ function render(world) {
         }
     }
     
-    if (DEBUG_RENDER) {
+    if (DEV_MODE) {
+        const render = DEBUG_RENDERS[debug_render_index];
+        if (render) {
+            render();
+        }
        // world.debugRender();
        // world.debugRenderTileIDs();
-        world.debugRenderPieces(world.debug_pieces);
+       // world.debugRenderPieces(world.debug_pieces);
     }
 }
 

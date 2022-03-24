@@ -148,45 +148,48 @@ export class World {
         }
     }
 
-    findMergedAndAnchoredTiles(row, col, list, original, visited, included_ids) {
+    findMergedAndAnchoredTiles(row, col, list, original, visited, included_ids, merge_info) {
         const tile = this.getTile(row, col);
+
+        if (!tile) return ;
+        
         if (visited.includes(tile)) {
             return;
         }
 
-      
-        
         if (included_ids.includes(tile.id)) {
             visited.push(tile);
             list.push(tile);
 
             if (tile.anchor_points) {
-                if (tile.anchor_points & AnchorPoints.S) {
-                    const next = this.getTile(row+1, col);
+                const addToPiece = (row, col, merge_info) => {
+                    const next = this.getTile(row, col);
+                    merge_info.found_anchored_static = next.gameplay_flags & GameplayFlags.STATIC;
                     included_ids.push(next.id);
+
+                };
+                if (tile.anchor_points & AnchorPoints.S) {
+                    addToPiece(row+1, col, merge_info);                    
                 }
 
                 if (tile.anchor_points & AnchorPoints.N) {
-                    const next = this.getTile(row-1, col);
-                    included_ids.push(next.id);
+                    addToPiece(row-1, col, merge_info);
                 }
 
                 if (tile.anchor_points & AnchorPoints.E) {
-                    const next = this.getTile(row, col+1);
-                    included_ids.push(next.id);
+                    addToPiece(row, col+1, merge_info);
                 }
                 
                 if (tile.anchor_points & AnchorPoints.W) {
-                    const next = this.getTile(row, col-1);
-                    included_ids.push(next.id);
+                    addToPiece(row, col-1, merge_info);
                 }
             }
 
             
-            this.findMergedTiles(row+1, col+0, list, original, visited, included_ids);
-            this.findMergedTiles(row-1, col+0, list, original, visited, included_ids);
-            this.findMergedTiles(row+0, col+1, list, original, visited, included_ids);
-            this.findMergedTiles(row+0, col-1, list, original, visited, included_ids);
+            this.findMergedAndAnchoredTiles(row+1, col+0, list, original, visited, included_ids, merge_info);
+            this.findMergedAndAnchoredTiles(row-1, col+0, list, original, visited, included_ids, merge_info);
+            this.findMergedAndAnchoredTiles(row+0, col+1, list, original, visited, included_ids, merge_info);
+            this.findMergedAndAnchoredTiles(row+0, col-1, list, original, visited, included_ids, merge_info);
         }
     }
 
@@ -309,12 +312,24 @@ export class World {
                 piece.color = tile.color;
 
                 const merged_tiles = [];
-                this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
-                piece.tiles = [...merged_tiles];
+                const merge_info = {
+                    found_anchored_static: false,
+                }
+                this.findMergedAndAnchoredTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited, [tile.id], merge_info);
                 
-                pieces.push(piece);
+                if (merge_info.found_anchored_static) {
+                    for (let t of merged_tiles) {
+                        t.gameplay_flags &= ~(GameplayFlags.MOVABLE);
+                        t.gameplay_flags |= GameplayFlags.STATIC;
+                    }
+                }
+                else {
+                    piece.tiles = [...merged_tiles];
+                    pieces.push(piece);
+                }
             }
         });
+
         
         // Fill pieces grid
         pieces.forEach( (piece, index) => {
@@ -442,7 +457,7 @@ export class World {
                 }
 
                 // If one of the tiles is STATIC, they all become STATIC
-                const is_static = merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
+                const is_static = false// merge_list.filter(t => t.gameplay_flags & GameplayFlags.STATIC).length > 0;
 
                 if (merge_list.length > 1) {
                     for (let t of merge_list) {
@@ -642,7 +657,7 @@ export class World {
 
     drawAnchors(tile) {
         const [vx, vy] = tile.visual_pos;
-        const color = tile.color;
+        const color = "gray";
 
         const tile_size = getTileSize();
         const half_dim = tile_size / 2;
@@ -685,6 +700,10 @@ export class World {
                     if ( !(tile.gameplay_flags & GameplayFlags.MOVABLE)) {
                        
                         drawBlockNonUnitScale(x, y, tile.color, neighbours);
+                        // DRAW ANCHORS
+                        if (tile.anchor_points) {
+                            this.drawAnchors(tile);
+                        }
                     }
                 }
             });
@@ -692,101 +711,101 @@ export class World {
 
         }
 
-        // DRAW LEVEL
-        this.forEachCell((row_, col_, index) => {
-            const tile = this.grid[index];
-            if ((tile.gameplay_flags > 0)) {
-                const [x, y] = tile.visual_pos;
-                const {row, col} = tile.world_pos;
-
-                let neighbours = 0;
-
-                if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                    const addNeigbour = (row, col, placement) => {
-                        let t = this.getTile(row, col);
-                        if (t) {
-                            if (t.id !== tile.id) {
-                                neighbours |= placement;
+        // DRAW MOVABLES
+        {
+            this.forEachCell((row_, col_, index) => {
+                const tile = this.grid[index];
+                if ((tile.gameplay_flags > 0)) {
+                    const [x, y] = tile.visual_pos;
+                    const {row, col} = tile.world_pos;
+    
+                    let neighbours = 0;
+    
+                    if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
+                        const addNeigbour = (row, col, placement) => {
+                            let t = this.getTile(row, col);
+                            if (t) {
+                                if (t.id !== tile.id) {
+                                    neighbours |= placement;
+                                }
                             }
                         }
-                    }
-
-                    addNeigbour(row-1, col, Neighbours.TOP);
-                    addNeigbour(row+1, col, Neighbours.BOTTOM);
-                    addNeigbour(row, col-1, Neighbours.LEFT);
-                    addNeigbour(row, col+1, Neighbours.RIGHT);
-
-                    addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
-                    addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
-                    addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
-                    addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
-               
-                    drawBlockNonUnitScale(x, y, tile.color, neighbours);
-                    // DRAW ANCHORS
-                    if (tile.anchor_points) {
-                        this.drawAnchors(tile);
+    
+                        addNeigbour(row-1, col, Neighbours.TOP);
+                        addNeigbour(row+1, col, Neighbours.BOTTOM);
+                        addNeigbour(row, col-1, Neighbours.LEFT);
+                        addNeigbour(row, col+1, Neighbours.RIGHT);
+    
+                        addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
+                        addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
+                        addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
+                        addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                   
+                        drawBlockNonUnitScale(x, y, tile.color, neighbours);
+                        // DRAW ANCHORS
+                        if (tile.anchor_points) {
+                            this.drawAnchors(tile);
+                        }
                     }
                 }
-
-
-
-            }
-        });
-
+            });
+        }    
 
         // DRAW ARROWS FOR SELECTED TILES
-        const apply = game_state.input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
-        if (apply) {
-            const dir = game_state.selected_move_dir;
+        {
 
-            const mouse_x = game_state.mouse.screen_coord.x;
-
-            const selected = game_state.selected_tiles;
-            const left  = getScreenCoordFromTileCoord(selected[0].world_pos.row, selected[0].world_pos.col);
-            const tile_size = left.tile_size;
-            const center_y = lerp(left.y, left.y + tile_size, 0.5);
-
-            
-            const outer = [ selected[0] ];
-            if (selected.length > 1) {
-                outer.push(selected[selected.length-1]);
-            }
-
-            const getClosestOuter = (list, mouse_x) => {
-                let candidate = null;
-                let shortest_dist = 100000;
-                for (let tile of outer) {
-                    const [x] =  tile.visual_pos; 
-                    const cx = lerp(x, x+tile_size, 0.5);
-                    const dist = Math.abs(mouse_x - cx);
-                    if (dist < shortest_dist) {
-                        shortest_dist = dist;
-                        candidate = tile;
-                    }
+            const apply = game_state.input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
+            if (apply) {
+                const dir = game_state.selected_move_dir;
+    
+                const mouse_x = game_state.mouse.screen_coord.x;
+    
+                const selected = game_state.selected_tiles;
+                const left  = getScreenCoordFromTileCoord(selected[0].world_pos.row, selected[0].world_pos.col);
+                const tile_size = left.tile_size;
+                const center_y = lerp(left.y, left.y + tile_size, 0.5);
+    
+                
+                const outer = [ selected[0] ];
+                if (selected.length > 1) {
+                    outer.push(selected[selected.length-1]);
                 }
-                return candidate;
-            };
-
-            const drawArrows = (tile) => {
-                const {row, col} = tile.world_pos;
-                const {x, tile_size} = getScreenCoordFromTileCoord(row, col);
-                const center_x = lerp(x, x + tile_size, 0.5);
-                const size = tile_size/3;
-                const opacity = 0.5;
-                const is_left = dir === MoveDirections.LEFT;
-                const color = "white"
-       
-                let sx = center_x;
-                drawArrow(sx, center_y, size, color, is_left, opacity);
-                sx += is_left ? -size : size;
-                drawArrow(sx, center_y, size, color, is_left, opacity);
-            };
-
-
-            const tile_of_interest = getClosestOuter(outer, mouse_x);
-            drawArrows(tile_of_interest)
-        }
-
+    
+                const getClosestOuter = (list, mouse_x) => {
+                    let candidate = null;
+                    let shortest_dist = 100000;
+                    for (let tile of outer) {
+                        const [x] =  tile.visual_pos; 
+                        const cx = lerp(x, x+tile_size, 0.5);
+                        const dist = Math.abs(mouse_x - cx);
+                        if (dist < shortest_dist) {
+                            shortest_dist = dist;
+                            candidate = tile;
+                        }
+                    }
+                    return candidate;
+                };
+    
+                const drawArrows = (tile) => {
+                    const {row, col} = tile.world_pos;
+                    const {x, tile_size} = getScreenCoordFromTileCoord(row, col);
+                    const center_x = lerp(x, x + tile_size, 0.5);
+                    const size = tile_size/3;
+                    const opacity = 0.5;
+                    const is_left = dir === MoveDirections.LEFT;
+                    const color = "white"
+           
+                    let sx = center_x;
+                    drawArrow(sx, center_y, size, color, is_left, opacity);
+                    sx += is_left ? -size : size;
+                    drawArrow(sx, center_y, size, color, is_left, opacity);
+                };
+    
+    
+                const tile_of_interest = getClosestOuter(outer, mouse_x);
+                drawArrows(tile_of_interest)
+            }
+        }    
 
 
 
