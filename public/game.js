@@ -77,17 +77,13 @@ let event_listener = {
 
 
 
-export const InputModes = {
-    DIRECT: 0,
-    CLASSIC: 1,
-};
 
 
 const DEFAULT_GAMESTATE = {
     running: false,
     has_won: false,
     halt_input: false,
-    input_mode: InputModes.DIRECT, 
+    
     level_index : 0,
     level_colors: new Set(),
     selected_tiles: [],
@@ -241,7 +237,7 @@ function main() {
         }
         
         if (e.key === 'i') {
-            game_state.input_mode = game_state.input_mode === InputModes.DIRECT ? InputModes.CLASSIC : InputModes.DIRECT;
+            input_mode = input_mode === InputModes.DIRECT ? InputModes.CLASSIC : InputModes.DIRECT;
         }
         
         if (e.key === 'g') {
@@ -326,7 +322,7 @@ function main() {
             const apply = !world.move_set.length && !game_state.has_won;
             
             if (apply) {
-                if (game_state.input_mode === InputModes.DIRECT) {
+                if (input_mode === InputModes.DIRECT) {
                     if (button === MouseButtons.LEFT && !command_buffer.hasCommands()) {
                         let mouse_x = offsetX;
                         const {closest, selected} = world.selectTiles(row, col, mouse_x);
@@ -349,7 +345,7 @@ function main() {
                         }
                     }
                 }
-                else if (game_state.input_mode === InputModes.CLASSIC) {
+                else if (input_mode === InputModes.CLASSIC) {
                     if (!command_buffer.hasCommands()) {
                         let tile = world.getTile(row, col);
                         let dir = button === MouseButtons.LEFT ? MoveDirections.LEFT : MoveDirections.RIGHT;

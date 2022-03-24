@@ -12,7 +12,6 @@ import { AnchorPoints, GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
 import { lerp } from './math.js';
 import { EventManager, Events } from './events.js';
-import { InputModes } from './game.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -814,7 +813,7 @@ export class World {
         // DRAW ARROWS FOR SELECTED TILES
         {
 
-            const apply = game_state.input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
+            const apply = input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
             if (apply) {
                 const dir = game_state.selected_move_dir;
     
