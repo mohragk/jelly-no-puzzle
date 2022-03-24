@@ -450,7 +450,6 @@ export class World {
 
 
 
-
         // FIND AND APPLY ANCHORED MERGES 
         {
             const getTileForAnchorPoint = (row, col, anchor) => {
