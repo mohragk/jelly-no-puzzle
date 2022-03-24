@@ -422,15 +422,15 @@ export class World {
 
 
     findAndApplyMerges(skip_event = false) {
-        const visited = [];
+        //const visited = [];
         this.forEachCell((row, col, index) => {
             const tile = this.getTile(row, col);
-            if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE)) {
+            if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                 let merge_list = [];
                 let merge_info = {
                     found_candidate: false
                 };
-                this.findMergeableTiles(row, col, merge_list, tile, visited, merge_info);
+                this.findMergeableTiles(row, col, merge_list, tile, [], merge_info);
                 if (merge_info.found_candidate && !skip_event) {
                     this.event_manager.pushEvent(Events.BEGIN_MERGE)
                 }
@@ -481,11 +481,7 @@ export class World {
                     
                     const merged_tiles = [];
                     this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, []);
-
-                    
                     piece.tiles = [...merged_tiles];
-
-                  
 
                     result = piece;
                 }

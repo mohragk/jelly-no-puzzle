@@ -9,6 +9,7 @@ export const levels = [
     ["xxxxxxxxxxxxxx", "xxxx x  x xxxx", "xxx  g  b  xxx", "xx   x  x   xx", "xx   aNb  aNg   xx", "xxg        bxx", "xxxg      bxxx", "xxxx      xxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "x          rbx", "x    x     xxx", "xb        00xx", "xx  rx  x xxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x   gr       x", "x   00 1     x", "x    x x xxxxx", "x            x", "x  x  x      x", "x        x  aErx", "xx   x     aEgxx", "x          xxx", "xxxxxxxxxxxxxx"], 
+    ["xxxxxxxxxxxxxx", "x      aEg00aWg gx", "x       xxx xx", "x           gx", "x11         xx", "xxx          x", "x       g    x", "x   x xxx   aSgx", "x   xxxxxx xxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxr rr  rr rxx", "xxx  x  x  xxx", "x            x", "xb          aSbx", "xx          xx", "x            x", "x            x", "x   xxxxxx   x", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx", "xxxxx gr xxxxx", "xxxxx rb xxxxx", "xxxxx gr xxxxx", "xxxxx bg xxxxx", "xxxxxxxxxxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "xxxxxxxxx   rx", "xxxxxxxxx   gx", "xxxxxxxxx   gx", "x1122       gx", "x1122       gx", "x0033      xxx", "x0033      xxx", "xxaSr x aSgxxx xxx", "xxxxxxxxxxxxxx"], 
@@ -17,9 +18,7 @@ export const levels = [
     ["xxxxxxxxxxxxxx", "xxxx000xxxgb x", "xxxx0     bg x", "xxxx0    11xxx", "xxxx000xxxxxxx", "x 222  xxxxxxx", "xxxx     xxaNgxx", "xxxx   g    aNbx", "xxxx   x     x", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "xb01         x", "xb0gg     g  x", "xb023     g4sbx", "xxxxx g   xxxx", "xxxxx gg  xxxx", "xxxxx ggg xxxx", "xxxxx ggggxxxx", "xxxxxxxxxxxxxx"], 
     
-    ["xxxxxxxxxxxxxx", "xrrrr   rggxxx", "xxxb    xxxxxx", "xxxx       xaNbx", "xx           x", "xx           x", "xx     x     x", "xx x         x", "xx        x  x", "xxxxxxxxxxxxxx"], 
-
-    ["xxxxxxxxxxxxxx", "x      aEg00aWg gx", "x       xxx xx", "x           gx", "x11         xx", "xxx          x", "x       g    x", "x   x xxx   aSgx", "x   xxxxxx xxx", "xxxxxxxxxxxxxx"], 
+    
     ["xxxxxxxxxxxxxx", 
     "xaEg0    aEg1aWgx  x", 
     "x 2aWg    1 x  x", 
@@ -30,6 +29,8 @@ export const levels = [
     "xxx     xxx  x", 
     "xxx          x", 
     "xxxxxxxxxxxxxx"], 
+    
+    ["xxxxxxxxxxxxxx", "xrrrr   rggxxx", "xxxb    xxxxxx", "xxxx       xaNbx", "xx           x", "xx           x", "xx     x     x", "xx x         x", "xx        x  x", "xxxxxxxxxxxxxx"], 
 ];
 const broken = [
     //NOTE: Combinatory tiles are  defined as: c[color][id] where id= two digits long and starts at 10
