@@ -689,7 +689,7 @@ export class World {
             let text = " ";
             
             if (flags & GameplayFlags.MOVABLE) {
-                text = ".";
+                text = "o";
             }
             if (flags & GameplayFlags.STATIC) {
                 text ="#";
@@ -866,8 +866,5 @@ export class World {
                 drawArrows(tile_of_interest)
             }
         }    
-
-
-
     }
 };

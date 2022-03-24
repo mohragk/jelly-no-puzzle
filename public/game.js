@@ -14,7 +14,7 @@ import { AudioPlayer, SoundBank } from './audio.js';
 
 
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 
 let audio_player = new AudioPlayer();
