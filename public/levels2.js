@@ -1,6 +1,70 @@
+
+
+ /*****************************
+  *********  LEGEND: **********
+    regular tiles:      { r, g, b }         -> color
+    black tiles:        { 0, 1, 2, ...}     -> hard coded ID
+    anchored tiles:     [
+        { a }           -> prefix
+        { N, S, E, W }  -> anchor position (North, South, etc.).
+        { r, g, b }     -> color, including black
+    ]
+ ******************************
+ ******************************/
+
 export const levels = [
+
+    
+
+    [
+        "xxxxxxxxxxxxx",
+        "xxxx     xxxx",
+        "xxxx     xxxx",
+        "xxxx  b  xxxx",
+        "xxxxr r bxxxx",
+        "xxxxx xxxxxxx",
+        "xxxxxxxxxxxxx",
+    ],
+    [
+        "xxxxxxxxxxxxx",
+        "xxxx     xxxx",
+        "xxxx  b  xxxx",
+        "xxxxg r  xxxx",
+        "xxxxr b  xxxx",
+        "xxxxx x xxxxx",
+        "xxxxx xgxxxxx",
+        "xxxxxxxxxxxxx",
+    ],
+
+
+    
+    
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "x      r     x", "x      xx    x", "x  g     r b x", "xxbxxxg xxxxxx", "xxxxxxxxxxxxxx"], 
+    
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "x            x", "x     g   g  x", "x   r r   r  x", "xxxxx x x xxxx", "xxxxxxxxxxxxxx"], 
+    [
+        "xxxxxxxxxxxxx",
+        "xxx    xxxxxx",
+        "xxx g   rxxxx",
+        "xxx b   xxxxx",
+        "xxx r    aEgxxx",
+        "xxx x    xxxx",
+        "xxx x     bxx",
+        "xxxxxxxxxxxxx",
+    ],
+
+    [
+        "xxxxxxxxxxxxx",
+        "xx  r    x  x",
+        "x   g    aNr  x",
+        "x   b      bx",
+        "x   g     gxx",
+        "x   x     xxx",
+        "xxx x      xx",
+        "xxxxxxxxxxxxx",
+    ],
+   
+
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "x   bg  x g  x", "xxx xxxrxxx  x", "x      b     x", "xxx xxxrxxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "x       r    x", "x       b    x", "x       x    x", "x b r        x", "x b r      b x", "xxx x      xxx", "xxxxx xxxxxxxx", "xxxxxxxxxxxxxx"], 
     ["xxxxxxxxxxxxxx", "x            x", "x            x", "xrg  gg      x", "xxx xxxx xx  x", "xrg          x", "xxxxx  xx   xx", "xxxxxx xx  xxx", "xxxxxxxxxxxxxx"], 
@@ -32,7 +96,5 @@ export const levels = [
     
     ["xxxxxxxxxxxxxx", "xrrrr   rggxxx", "xxxb    xxxxxx", "xxxx       xaNbx", "xx           x", "xx           x", "xx     x     x", "xx x         x", "xx        x  x", "xxxxxxxxxxxxxx"], 
 ];
-const broken = [
-    //NOTE: Combinatory tiles are  defined as: c[color][id] where id= two digits long and starts at 10
-    
-  ];
+
+

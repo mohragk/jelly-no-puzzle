@@ -628,7 +628,7 @@ export class World {
 
 
         // CHECK WIN CONDITION
-        {
+        if (!game_state.halt_input) {
             // @SPEED: maybe there's a more efficient way to do this,
             // but for now, just create pieces and see if it exceeds the color_set
             // size.
