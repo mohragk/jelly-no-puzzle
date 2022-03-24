@@ -13,6 +13,10 @@ import { Events } from './events.js';
 import { AudioPlayer, SoundBank } from './audio.js';
 
 
+
+const DEV_MODE = true;
+
+
 let audio_player = new AudioPlayer();
 let sound_bank = new SoundBank();
 
@@ -229,8 +233,16 @@ function main() {
         if (e.key === 'n') {
             handleNext();
         }
-
         
+        if (e.key === 'i') {
+            game_state.input_mode = game_state.input_mode === InputModes.DIRECT ? InputModes.CLASSIC : InputModes.DIRECT;
+        }
+        
+        if (e.key === 'g') {
+            DISPLAY_RASTER = !DISPLAY_RASTER;
+        }
+
+
         if (DEV_MODE) {
             if (e.key === 'd') {
                 DEBUG_RENDER = !DEBUG_RENDER;
@@ -242,15 +254,6 @@ function main() {
             if (e.key === '=') {
                 time_step_f /= 2;
             }
-        }
-        
-
-        if (e.key === 'i') {
-            game_state.input_mode = game_state.input_mode === InputModes.DIRECT ? InputModes.CLASSIC : InputModes.DIRECT;
-        }
-
-        if (e.key === 'g') {
-            DISPLAY_RASTER = !DISPLAY_RASTER;
         }
     })
 
@@ -1193,6 +1196,10 @@ function drawSubEdgeBottom(center_x, center_y, thickness, size, alpha) {
     ctx.globalAlpha = 1.0;
 }
 
+export function drawBlockNonUnitScaleSized(x, y, color, size) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, size, size);
+}
 
 export function drawBlockNonUnitScale(x, y, color, neighbours) {
     const size = canvas.width / world.dimensions.w;

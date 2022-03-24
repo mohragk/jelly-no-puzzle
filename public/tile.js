@@ -6,11 +6,12 @@ export const GameplayFlags = {
 };
 
 export const AnchorPoints = {
-    NONE:   0,
     W:   (1 << 0) ,
     E:   (1 << 1) ,
     N:   (1 << 2) ,
     S:   (1 << 3) ,
+    
+    num_anchor_positions: 4
 }
 
 export class Tile {
@@ -24,5 +25,5 @@ export class Tile {
 
     gameplay_flags = 0;
 
-    anchor_points = AnchorPoints.NONE;
+    anchor_points = 0;
 }

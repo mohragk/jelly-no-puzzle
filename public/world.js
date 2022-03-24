@@ -1,6 +1,7 @@
 import { 
     drawArrow,
     drawBlockNonUnitScale, 
+    drawBlockNonUnitScaleSized,
     drawTileText, 
     drawBlockText, 
     getTileCoordFromScreenCoord, 
@@ -636,9 +637,60 @@ export class World {
             
         });
     }
+
+   
+
+    drawAnchors(tile) {
+        const [vx, vy] = tile.visual_pos;
+        const color = tile.color;
+
+        const tile_size = getTileSize();
+        const half_dim = tile_size / 2;
+
+        const center_x = lerp(vx, vx + tile_size, 0.5);
+        const center_y = lerp(vy, vy + tile_size, 0.5);
+
+        const anchor_size = tile_size / 6;
+        const positions = tile.anchor_points;
+        let x = center_x - anchor_size/2;
+        let y = center_y - anchor_size/2;
+        
+        if (positions & AnchorPoints.N) {
+            drawBlockNonUnitScaleSized(x, y - half_dim, color, anchor_size);
+        }
+        if (positions & AnchorPoints.S) {
+            drawBlockNonUnitScaleSized(x, y + half_dim, color, anchor_size);
+        }
+        if (positions & AnchorPoints.E) {
+            drawBlockNonUnitScaleSized(x + half_dim, y, color, anchor_size);
+        }
+        if (positions & AnchorPoints.W) {
+            drawBlockNonUnitScaleSized(x - half_dim, y, color, anchor_size);
+        }
+    }
  
 
     render(game_state) {
+
+        // DRAW BACKGROUND AND WALLS 
+        {
+            this.forEachCell((row_, col_, index) => {
+                const tile = this.grid[index];
+                if ((tile.gameplay_flags > 0)) {
+                    const [x, y] = tile.visual_pos;
+                    const {row, col} = tile.world_pos;
+    
+                    let neighbours = 0;
+    
+                    if ( !(tile.gameplay_flags & GameplayFlags.MOVABLE)) {
+                       
+                        drawBlockNonUnitScale(x, y, tile.color, neighbours);
+                    }
+                }
+            });
+    
+
+        }
 
         // DRAW LEVEL
         this.forEachCell((row_, col_, index) => {
@@ -668,9 +720,16 @@ export class World {
                     addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
                     addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
                     addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+               
+                    drawBlockNonUnitScale(x, y, tile.color, neighbours);
+                    // DRAW ANCHORS
+                    if (tile.anchor_points) {
+                        this.drawAnchors(tile);
+                    }
                 }
 
-                drawBlockNonUnitScale(x, y, tile.color, neighbours);
+
+
             }
         });
 
@@ -716,6 +775,7 @@ export class World {
                 const opacity = 0.5;
                 const is_left = dir === MoveDirections.LEFT;
                 const color = "white"
+       
                 let sx = center_x;
                 drawArrow(sx, center_y, size, color, is_left, opacity);
                 sx += is_left ? -size : size;
@@ -726,6 +786,9 @@ export class World {
             const tile_of_interest = getClosestOuter(outer, mouse_x);
             drawArrows(tile_of_interest)
         }
+
+
+
 
     }
 };
