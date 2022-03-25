@@ -53,13 +53,23 @@ let event_listener = {
     handleEvent: (e) => {
 
         if (e === Events.MOVE) {
-            audio_player.trigger(sound_bank.get("move01_sound"));
+            if (bart_mode) {
+                audio_player.trigger(sound_bank.get("pop_sound"));                
+            }
+            else {
+                audio_player.trigger(sound_bank.get("move01_sound"));
+            }
             halt_input_trigger.armAndReset();
         }
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
-            audio_player.trigger(sound_bank.get("tap01_sound"));
+            if (bart_mode) {
+                audio_player.trigger(sound_bank.get("klung_sound"));
+            }
+            else {
+                audio_player.trigger(sound_bank.get("tap01_sound"));
+            }
         }
         
         if (e === Events.BEGIN_FALL) {
@@ -68,7 +78,14 @@ let event_listener = {
         }
 
         if (e === Events.BEGIN_MERGE) {
-            audio_player.trigger(sound_bank.get("glup01_sound"));
+            
+            if (bart_mode) {
+                audio_player.trigger(sound_bank.get("whippa_sound"));
+            }
+            else {
+                audio_player.trigger(sound_bank.get("glup01_sound"));
+            }
+
             
         }
     }
@@ -242,6 +259,11 @@ function main() {
         
         if (e.key === 'g') {
             DISPLAY_RASTER = !DISPLAY_RASTER;
+        }
+
+
+        if (e.key === 'b') {
+            bart_mode = !bart_mode;
         }
 
 
@@ -481,6 +503,10 @@ function main() {
     sound_bank.add("glup01_sound");
     sound_bank.add("move01_sound");
     
+    sound_bank.add("whippa_sound");
+    sound_bank.add("pop_sound");
+    sound_bank.add("klung_sound");
+
     // Reset to last_saved level
     let level_index = parseInt(localStorage.getItem('last_level')) || 0;
     select.value = `${level_index + 1}`;
