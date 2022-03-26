@@ -135,6 +135,9 @@ export class Renderer {
 
     quad;
     default_white_shader;
+    single_color_shader;
+
+    render_list = [];
 
     constructor() {
         this.canvas = document.querySelector('#opengl_canvas');
@@ -150,7 +153,76 @@ export class Renderer {
         }
 
         this.quad = createGlQuad(this.#context);
-        this.default_white_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
+        this.default_white_shader = createGLShader(this.#context, VS_SOURCE, FS_SOURCE);
+        this.single_color_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
+    }
+
+    pushQuad(color, world_pos) {
+        const modelview_matrix = mat4.create();
+        mat4.translate(modelview_matrix, modelview_matrix, [world_pos.row, world_pos.col, 0]);
+        const renderable = {
+            color,
+            mesh: this.quad,
+            shader: this.single_color_shader,
+            modelview_matrix
+        }
+
+        this.render_list.push(renderable);
+    }
+
+    drawQuad(shader, proj_matrix, MVM, color) {
+        const gl = this.#context;
+
+        const num_components = 3;
+        const type = gl.FLOAT;
+        const normalize = false;
+        const stride = 0;
+        const offset = 0;
+        
+        const info = shader;
+        gl.useProgram(info.program);
+
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+        gl.vertexAttribPointer(
+            info.attribLocations.vertex_position,
+            num_components,
+            type,
+            normalize,
+            stride,
+            offset
+        );
+        gl.enableVertexAttribArray(
+            info.attribLocations.vertex_position
+        );
+
+
+
+        gl.uniformMatrix4fv(
+            info.uniformLocations.projection_matrix,
+            false,
+            proj_matrix
+        );
+        gl.uniformMatrix4fv(
+            info.uniformLocations.modelview_matrix,
+            false,
+            MVM
+        );
+
+        
+        gl.uniform4fv(
+            info.uniformLocations.color,
+            color
+        );
+
+      
+
+        // Draw call
+        {
+            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+        }
+    
     }
 
 
@@ -176,66 +248,9 @@ export class Renderer {
             z_far
         );
 
-        const MVM = mat4.create();
-        mat4.translate(
-            MVM,
-            MVM,
-            [0.0, 0.0, -4.0]
-        );
-
-
-        // DRAW QUAD 
-        {
-            const num_components = 3;
-            const type = gl.FLOAT;
-            const normalize = false;
-            const stride = 0;
-            const offset = 0;
-            
-            const info = this.default_white_shader;
-            gl.useProgram(info.program);
-
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
-            gl.vertexAttribPointer(
-                info.attribLocations.vertex_position,
-                num_components,
-                type,
-                normalize,
-                stride,
-                offset
-            );
-            gl.enableVertexAttribArray(
-                info.attribLocations.vertex_position
-            );
-
-
-
-            gl.uniformMatrix4fv(
-                info.uniformLocations.projection_matrix,
-                false,
-                proj_matrix
-            );
-            gl.uniformMatrix4fv(
-                info.uniformLocations.modelview_matrix,
-                false,
-                MVM
-            );
-
-            
-            gl.uniform4fv(
-                info.uniformLocations.color,
-                [0.3, RED, 0.1, 1.0]
-            );
-
-            RED += dt;
-            if (RED > 1.0) RED = 0;
-
-            // Draw call
-            {
-                gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
-            }
+        while (this.render_list.length) {
+            const renderable = this.render_list.pop();
+            this.drawQuad(renderable.shader, proj_matrix, renderable.modelview_matrix, renderable.color);
         }
     }
 }

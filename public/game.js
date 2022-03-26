@@ -726,6 +726,7 @@ function mainLoop() {
             update(world, command_buffer, time_step);
         }
         render(world);
+        renderer.pushQuad([0.1, 0.3, 0.3, 1.0], {row: 1.0, col: 0.0})
         renderer.drawAll(slow_time_step);
         requestAnimationFrame(mainLoop);
     }
