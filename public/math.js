@@ -21,3 +21,6 @@ export class Rectangle {
         this.dimensions[1] = this.bottom_right[1] - this.top_left[1]  //x
     }
 }
+
+
+export const degreeToRadians = (degrees)  => (degrees * Math.PI) / 180.0;

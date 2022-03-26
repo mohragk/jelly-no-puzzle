@@ -1,3 +1,6 @@
+import { Renderer } from './renderer.js';
+
+
 import { levels }  from './levels2.js';
 
 
@@ -46,6 +49,7 @@ const triggers = [
 ];
 
 let canvas, ctx;
+let renderer;
 let game_state; 
 let command_buffer;
 let recorder;
@@ -227,6 +231,9 @@ window.addEventListener("resize", () => { resizeCanvas(canvas) });
 function main() {
     canvas = document.getElementById("grid_canvas");
     ctx = canvas.getContext("2d");
+
+    renderer = new Renderer();
+
     
     canvas.oncontextmenu = function (e) {
         e.preventDefault();
@@ -719,6 +726,7 @@ function mainLoop() {
             update(world, command_buffer, time_step);
         }
         render(world);
+        renderer.drawAll(slow_time_step);
         requestAnimationFrame(mainLoop);
     }
 }
