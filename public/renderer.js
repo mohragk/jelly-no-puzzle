@@ -148,7 +148,9 @@ export class Renderer {
         this.single_color_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
     }
 
-   
+    getContext() {
+        return this.#context;
+    }
 
     reset() {
         this.canvas = document.querySelector('#opengl_canvas');
@@ -252,7 +254,7 @@ export class Renderer {
         const gl = this.#context;
         const FOV = degreeToRadians(30);
 
-        const aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const aspect_ratio = gl.canvas.width / gl.canvas.height;
         const z_near = 0.1;
         const z_far = 100.0;
         const proj_matrix = mat4.create();
@@ -260,7 +262,7 @@ export class Renderer {
        // mat4.perspective(proj_matrix, FOV, aspect_ratio, z_near, z_far);
         mat4.ortho(
             proj_matrix,
-            0,
+            -0.5,
             world_dim_w-0.5,
             -(world_dim_h-0.5),
             0.5,

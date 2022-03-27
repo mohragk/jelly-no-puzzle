@@ -147,6 +147,15 @@ function removeClassesFromHTML() {
 }
 
 
+function getCanvas(renderer) { 
+    if (renderer) {
+        return renderer.canvas
+    } 
+
+
+    return document.getElementById("grid_canvas");
+}
+
 function reset(level_index) {
 
     removeClassesFromHTML();
@@ -220,20 +229,18 @@ function resizeCanvas(canvas) {
     let new_w = cell_size * world.dimensions.w;
 
 
-    canvas.width  = new_w;
-    canvas.height = new_h;
-
 
     // OPENGL
     if (1) {
         const cv = document.getElementById("opengl_canvas");
-        cv.style.width  = `${new_w}px`;
-        cv.style.height = `${new_h}px`;;
-        renderer.reset();
-        
+        canvas.style.width  = `${new_w}px`;
+        canvas.style.height = `${new_h}px`;;
+        renderer.canvas.width = new_w;
+        renderer.canvas.height = new_h;
+        renderer.getContext().viewport(0,0, new_w, new_h)
     }
 
-    
+    console.log(getTileSize(), cell_size, renderer.canvas.width, new_w)
 }
 
 window.addEventListener("load", main);
@@ -241,10 +248,10 @@ window.addEventListener("orientationchange", () => { resizeCanvas(canvas) });
 window.addEventListener("resize", () => { resizeCanvas(canvas) });
 
 function main() {
-    canvas = document.getElementById("grid_canvas");
-    ctx = canvas.getContext("2d");
-
+    
     renderer = new Renderer();
+    canvas = getCanvas(renderer);
+    //ctx = 
 
     const input_canvas = document.getElementById("opengl_canvas")
 
@@ -352,6 +359,7 @@ function main() {
         e.preventDefault();
         const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
+        console.log(col, row)
 
         const sendCommand = (tile, dir) => {
             if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
@@ -1332,6 +1340,7 @@ function drawRaster(world, opacity) {
 
 export function getTileSize() {
     const tile_size = canvas.width / world.dimensions.w;
+    
     return tile_size;
 }
 
@@ -1393,10 +1402,11 @@ function getRGBForNamedColor (name) {
 }
 
 function render(world) {
-    clearBG("darkgray");
+    //clearBG("darkgray");
     
-    world.render(game_state);
+    //world.render(game_state);
 
+    // OPENGL
     world.forEachCell( (row, col, index) => {
         const tile = world.getTile(row, col);
         if (tile.gameplay_flags) {
@@ -1404,17 +1414,16 @@ function render(world) {
             renderer.pushQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
         }
         
-    })
-
+    });
     renderer.drawAll(world);
     
     if (DISPLAY_RASTER) {
-        drawRaster(world, 0.4);
+        //drawRaster(world, 0.4);
     }
     
 
     if (game_state.has_won) {
-        drawWinText();
+        //drawWinText();
         canvas.classList.add("add_victory_animation");
         document.body.classList.add("animated-bgcolors");
         const button = document.getElementById("next_button");
@@ -1430,9 +1439,7 @@ function render(world) {
         if (render) {
             render();
         }
-       // world.debugRender();
-       // world.debugRenderTileIDs();
-       // world.debugRenderPieces(world.debug_pieces);
+       
     }
 }
 
