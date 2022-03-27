@@ -142,6 +142,15 @@ export class Renderer {
     render_list = [];
 
     constructor() {
+        this.reset();
+        this.quad = createGlQuad(this.#context);
+        this.default_white_shader = createGLShader(this.#context, VS_SOURCE, FS_SOURCE);
+        this.single_color_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
+    }
+
+   
+
+    reset() {
         this.canvas = document.querySelector('#opengl_canvas');
         if (!this.canvas) {
             console.error("No canvas found! Create a dom element with id: 'opengl_canvas' ");
@@ -154,9 +163,7 @@ export class Renderer {
             return;
         }
 
-        this.quad = createGlQuad(this.#context);
-        this.default_white_shader = createGLShader(this.#context, VS_SOURCE, FS_SOURCE);
-        this.single_color_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
+        
     }
 
     pushQuad(color, position) {
@@ -168,7 +175,7 @@ export class Renderer {
         target_pos[2] -= 1;
         
         const view_matrix = mat4.create();
-        mat4.lookAt(view_matrix, camera_pos, target_pos, [0,1,0] );
+        //mat4.lookAt(view_matrix, camera_pos, target_pos, [0,1,0] );
 
         const renderable = {
             color,
@@ -245,28 +252,26 @@ export class Renderer {
         const gl = this.#context;
         const FOV = degreeToRadians(30);
 
-        const aspect_ratio = gl.canvas.width / gl.canvas.height;
+        const aspect_ratio = gl.canvas.clientWidth / gl.canvas.clientHeight;
         const z_near = 0.1;
         const z_far = 100.0;
         const proj_matrix = mat4.create();
 
-        mat4.perspective(proj_matrix, FOV, aspect_ratio, z_near, z_far)
-
-        /*
+       // mat4.perspective(proj_matrix, FOV, aspect_ratio, z_near, z_far);
         mat4.ortho(
             proj_matrix,
-            -dim_h,
-            dim_h,
-            dim_h / aspect_ratio,
-            -dim_h /aspect_ratio ,
+            0,
+            world_dim_w-0.5,
+            -(world_dim_h-0.5),
+            0.5,
             z_near,
             z_far
         );
-        */
+        
         return proj_matrix;
     }
 
-    drawAll(dt = 1.0) {
+    drawAll(world) {
         const gl = this.#context;
         gl.clearColor(0.7, 0.7, 0.7, 1.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
@@ -275,7 +280,8 @@ export class Renderer {
         
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        const proj_matrix = this.getCameraProjection(13, 8);
+
+        const proj_matrix = this.getCameraProjection(world.dimensions.w, world.dimensions.h);
         
         
         

@@ -225,11 +225,14 @@ function resizeCanvas(canvas) {
 
 
     // OPENGL
-    /*
-    const opengl_canvas = document.getElementById("opengl_canvas");
-    opengl_canvas.width  = new_w;
-    opengl_canvas.height = new_h;
-    */
+    if (1) {
+        const cv = document.getElementById("opengl_canvas");
+        cv.style.width  = `${new_w}px`;
+        cv.style.height = `${new_h}px`;;
+        renderer.reset();
+        
+    }
+
     
 }
 
@@ -243,17 +246,18 @@ function main() {
 
     renderer = new Renderer();
 
-    
-    canvas.oncontextmenu = function (e) {
+    const input_canvas = document.getElementById("opengl_canvas")
+
+    input_canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
 
 
-    canvas.addEventListener("touchstart", onTouchStart);
-    canvas.addEventListener("touchend", onTouchEnd);
+    input_canvas.addEventListener("touchstart", onTouchStart);
+    input_canvas.addEventListener("touchend", onTouchEnd);
     
-    canvas.addEventListener("mousedown", onMouseDown);
-    canvas.addEventListener("mousemove", onMouseMove);
+    input_canvas.addEventListener("mousedown", onMouseDown);
+    input_canvas.addEventListener("mousemove", onMouseMove);
     
     document.addEventListener("keypress", e => {
         e.preventDefault();
@@ -1397,12 +1401,12 @@ function render(world) {
         const tile = world.getTile(row, col);
         if (tile.gameplay_flags) {
             const rgb = getRGBForNamedColor(tile.color);
-            renderer.pushQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], 0])
+            renderer.pushQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
         }
         
     })
 
-    renderer.drawAll();
+    renderer.drawAll(world);
     
     if (DISPLAY_RASTER) {
         drawRaster(world, 0.4);

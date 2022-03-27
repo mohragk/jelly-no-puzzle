@@ -40,6 +40,12 @@ ul {
     display: block;
 }
 
+#opengl_canvas {
+    display: block;
+    width: 100vh;
+    height: 100vw;
+}
+
 #button-container {
     padding: 10px;
     position: absolute;
