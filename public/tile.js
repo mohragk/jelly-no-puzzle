@@ -18,6 +18,7 @@ export class Tile {
     id = -1;
     color = "";
     visual_pos = [0, 0];
+    opengl_visual_pos = [0, 0];
     world_pos  = {row: 0, col: 0};
     target_pos = {row: 0, col: 0};
     move_t = 0.0;

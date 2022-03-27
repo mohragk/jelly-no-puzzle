@@ -222,6 +222,15 @@ function resizeCanvas(canvas) {
 
     canvas.width  = new_w;
     canvas.height = new_h;
+
+
+    // OPENGL
+    /*
+    const opengl_canvas = document.getElementById("opengl_canvas");
+    opengl_canvas.width  = new_w;
+    opengl_canvas.height = new_h;
+    */
+    
 }
 
 window.addEventListener("load", main);
@@ -726,8 +735,7 @@ function mainLoop() {
             update(world, command_buffer, time_step);
         }
         render(world);
-        renderer.pushQuad([0.1, 0.3, 0.3, 1.0], {row: 1.0, col: 0.0})
-        renderer.drawAll(slow_time_step);
+        
         requestAnimationFrame(mainLoop);
     }
 }
@@ -1370,10 +1378,31 @@ function update(world, command_buffer, dt) {
     }
 }
 
+function getRGBForNamedColor (name) {
+    switch(name) {
+        case "gray":    return [0.5,0.5,0.5];
+        case "red":     return [1.0, 0.0, 0.0];
+        case "green":   return [0.0, 0.5, 0.0];
+        case "blue":    return [0.0, 0.0, 1.0];
+    }
+    return [0,0,0];
+}
+
 function render(world) {
     clearBG("darkgray");
     
     world.render(game_state);
+
+    world.forEachCell( (row, col, index) => {
+        const tile = world.getTile(row, col);
+        if (tile.gameplay_flags) {
+            const rgb = getRGBForNamedColor(tile.color);
+            renderer.pushQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], 0])
+        }
+        
+    })
+
+    renderer.drawAll();
     
     if (DISPLAY_RASTER) {
         drawRaster(world, 0.4);

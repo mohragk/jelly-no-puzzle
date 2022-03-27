@@ -182,6 +182,11 @@ export class World {
         let x = lerp(start.x, target.x, tile.move_t);
         let y = lerp(start.y, target.y, tile.move_t);
 
+        let opengl_x = lerp(tile.world_pos.col, tile.target_pos.col, tile.move_t);
+        let opengl_y = lerp(tile.world_pos.row, tile.target_pos.row, tile.move_t);
+        tile.opengl_visual_pos[0] = opengl_x;
+        tile.opengl_visual_pos[1] = -opengl_y; // NOTE: negate for opengl
+
         tile.visual_pos[0] = x;
         tile.visual_pos[1] = y;
     }
