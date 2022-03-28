@@ -41,8 +41,8 @@ export const FS_ROUNDED_SOURCE = `
         vec2 uv = texCoord * 2.0 - 1.0;
         float max_radius = 0.45;
         vec4 radii = uCornerWeights * max_radius;
-        float box = partriallyRoundedBoxSDF(uv, vec2(0.99), radii);
-        box = 1.0 - smoothstep(0.0, 0.02, box) ;
+        float box = partriallyRoundedBoxSDF(uv, vec2(0.98), radii);
+        box = 1.0 - smoothstep(0.0, 0.03, box) ;
         gl_FragColor = vec4(uColor.rgb, box);
     }
 `;
