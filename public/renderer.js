@@ -1,46 +1,12 @@
-import { degreeToRadians } from "./math.js";
+
 import * as mat4 from './vendor/glmatrix/esm/mat4.js';
 
-const VS_SOURCE = `
-    attribute vec4 aVertexPosition;
+import { VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
+import { FS_WHITE_SOURCE, FS_COLOR_SOURCE } from './rendering/fragment_shaders.js';
 
-    uniform mat4 uViewMatrix;
-    uniform mat4 uModelMatrix;
-    uniform mat4 uProjectionMatrix;
-
-    void main() {
-        gl_Position = uProjectionMatrix * uModelMatrix * uViewMatrix * aVertexPosition;
-    }
-`;
-
-const FS_SOURCE = `
-void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
-
-const FS_COLOR_SOURCE = `
-    precision mediump float;
-    uniform vec4 uColor;
-
-    void main() {
-        gl_FragColor = uColor;
-    }
-`;
 
 
 function createGlQuad(gl) {
-    // Strore z for depth later
-    const verticesss = [
-        1.0,  1.0, 0.0,
-       -1.0,  1,0, 0.0,
-       -1.0, -1,0, 0.0,
-       
-        1.0,  1.0, 0.0,
-       -1.0, -1.0, 0.0,
-        1.0, -1.0, 0.0
-    ];
-
     const vertices = [
         -0.5,  0.5, 0.0,
         -0.5, -0.5, 0.0,
@@ -104,6 +70,9 @@ function createGLShader(gl, vs, fs) {
         return null;
     }
 
+    const result = new ShaderProgram(shader_program);
+    return result; //.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+
     const program_info = {
         program: shader_program,
         attribLocations: {
@@ -120,16 +89,23 @@ function createGLShader(gl, vs, fs) {
     return program_info;
 }
 
-export class RenderShape {
-    quads;
-    
-    // Shader stuff    
-    color;
-    transform;
-}
+class ShaderProgram {
+    program;
+    uniforms = {};
+    attributes = {};
 
+    constructor(program) {
+        this.program = program;
+    }
 
-let RED = 0.1;
+    addUniform(gl, key, name) {
+        this.uniforms[key] = { location: gl.getUniformLocation(this.program, name), value: 0 };
+    }
+
+    addAttribute(gl, key, name) {
+        this.attributes[key] = {location: gl.getAttribLocation(this.program, name), value: 0 };
+    }
+};
 
 export class Renderer {
     canvas;
@@ -141,11 +117,25 @@ export class Renderer {
 
     render_list = [];
 
+    camera_projection;
+
     constructor() {
         this.reset();
         this.quad = createGlQuad(this.#context);
-        this.default_white_shader = createGLShader(this.#context, VS_SOURCE, FS_SOURCE);
-        this.single_color_shader = createGLShader(this.#context, VS_SOURCE, FS_COLOR_SOURCE);
+
+        const gl = this.#context;
+        this.default_white_shader = createGLShader(this.#context, VS_MVP_SOURCE, FS_WHITE_SOURCE);
+        this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.default_white_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
+        this.default_white_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+
+        this.single_color_shader  = createGLShader(this.#context, VS_MVP_SOURCE, FS_COLOR_SOURCE);
+        this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.single_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
+        this.single_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.single_color_shader.addUniform(gl, 'color', 'uColor');
     }
 
     getContext() {
@@ -164,33 +154,22 @@ export class Renderer {
             console.error("WebGL not initialized! Your browser may not support it :(")
             return;
         }
-
-        
     }
 
-    pushQuad(color, position) {
-        const model_matrix = mat4.create();
-        mat4.translate(model_matrix, model_matrix, position);
+   
 
-        const camera_pos = [6, -3.8, 14];
-        let target_pos = [...camera_pos];
-        target_pos[2] -= 1;
-        
-        const view_matrix = mat4.create();
-        //mat4.lookAt(view_matrix, camera_pos, target_pos, [0,1,0] );
-
+    pushColorQuad(color, position) {
         const renderable = {
+            position,
             color,
-            mesh: this.quad,
+            mesh:   this.quad,
             shader: this.single_color_shader,
-            model_matrix,
-            view_matrix
         }
 
         this.render_list.push(renderable);
     }
 
-    drawQuad(shader, proj_matrix, model_matrix, view_matrix, color) {
+    drawColorQuad(position, color) {
         const gl = this.#context;
 
         const num_components = 3;
@@ -199,14 +178,14 @@ export class Renderer {
         const stride = 0;
         const offset = 0;
         
-        const info = shader;
+        const info = this.single_color_shader;
         gl.useProgram(info.program);
 
-
+        // VERTEX
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
         gl.vertexAttribPointer(
-            info.attribLocations.vertex_position,
+            info.attributes.vertex_position,
             num_components,
             type,
             normalize,
@@ -214,52 +193,54 @@ export class Renderer {
             offset
         );
         gl.enableVertexAttribArray(
-            info.attribLocations.vertex_position
+            info.attributes.vertex_position.location
         );
 
 
+        // FRAGMENT
+        const projection_matrix = this.getCameraProjection();
+        info.uniforms.projection_matrix.value = projection_matrix;
+        const model_matrix = mat4.create();
+        mat4.translate(model_matrix, model_matrix, position);
+        const view_matrix = mat4.create();
 
         gl.uniformMatrix4fv(
-            info.uniformLocations.projection_matrix,
+            info.uniforms.projection_matrix.location,
             false,
-            proj_matrix
+            info.uniforms.projection_matrix.value
         );
         gl.uniformMatrix4fv(
-            info.uniformLocations.model_matrix,
+            info.uniforms.model_matrix.location,
             false,
             model_matrix
         );
         gl.uniformMatrix4fv(
-            info.uniformLocations.view_matrix,
+            info.uniforms.view_matrix.location,
             false,
             view_matrix
         );
 
         
         gl.uniform4fv(
-            info.uniformLocations.color,
+            info.uniforms.color.location,
             color
         );
-
-      
 
         // Draw call
         {
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
         }
-    
     }
 
-    getCameraProjection(world_dim_w, world_dim_h) {
-        const gl = this.#context;
-        const FOV = degreeToRadians(30);
+    getCameraProjection() {
+        return this.camera_projection;
+    }
 
-        const aspect_ratio = gl.canvas.width / gl.canvas.height;
+    updateCameraProjection(world_dim_w, world_dim_h) {
         const z_near = 0.1;
         const z_far = 100.0;
         const proj_matrix = mat4.create();
 
-       // mat4.perspective(proj_matrix, FOV, aspect_ratio, z_near, z_far);
         mat4.ortho(
             proj_matrix,
             -0.5,
@@ -270,28 +251,21 @@ export class Renderer {
             z_far
         );
         
-        return proj_matrix;
+        this.camera_projection = proj_matrix;
     }
 
     drawAll(world) {
         const gl = this.#context;
-        gl.clearColor(0.7, 0.7, 0.7, 1.0);  // Clear to black, fully opaque
-        gl.clearDepth(1.0);                 // Clear everything
-        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+        gl.clearColor(0.7, 0.7, 0.7, 1.0);  // Clear to color fully opaque
+        // gl.clearDepth(1.0);                 // Clear everything
+        // gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+        // gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
         
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-        const proj_matrix = this.getCameraProjection(world.dimensions.w, world.dimensions.h);
-        
-        
-        
-
         while (this.render_list.length) {
             const renderable = this.render_list.pop();
-            
-            this.drawQuad(renderable.shader, proj_matrix, renderable.model_matrix,renderable.view_matrix, renderable.color);
+            this.drawColorQuad(renderable.position, renderable.color);
         }
     }
 }

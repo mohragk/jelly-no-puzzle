@@ -238,9 +238,9 @@ function resizeCanvas(canvas) {
         renderer.canvas.width = new_w;
         renderer.canvas.height = new_h;
         renderer.getContext().viewport(0,0, new_w, new_h)
+        renderer.updateCameraProjection(world.dimensions.w, world.dimensions.h);
     }
 
-    console.log(getTileSize(), cell_size, renderer.canvas.width, new_w)
 }
 
 window.addEventListener("load", main);
@@ -1411,7 +1411,7 @@ function render(world) {
         const tile = world.getTile(row, col);
         if (tile.gameplay_flags) {
             const rgb = getRGBForNamedColor(tile.color);
-            renderer.pushQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
+            renderer.pushColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
         }
         
     });
