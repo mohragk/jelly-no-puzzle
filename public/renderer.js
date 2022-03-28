@@ -7,38 +7,58 @@ import { FS_WHITE_SOURCE, FS_COLOR_SOURCE } from './rendering/fragment_shaders.j
 
 
 function createGlQuad(gl) {
-    const vertices = [
-        -0.5,  0.5, 0.0,
-        -0.5, -0.5, 0.0,
-         0.5, -0.5, 0.0,
-         0.5,  0.5, 0.0 
-    ];
-     
-    const indices = [3,2,1,3,1,0]; 
     
-    const vertex_buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array(vertices),
-        gl.STATIC_DRAW
-    );
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-    const index_buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-    gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(indices),
-        gl.STATIC_DRAW
-    );
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
-    return {
-       position: vertex_buffer,
-       position_indices: index_buffer,
-       position_indices_count : indices.length
+    const getBuffer = (data, gl_buffer_type) => {
+        const BO = gl.createBuffer();
+        gl.bindBuffer(gl_buffer_type, BO);
+        gl.bufferData( gl_buffer_type, data, gl.STATIC_DRAW );
+        gl.bindBuffer(gl_buffer_type, null);
+        
+        return BO;
     };
+        
+        let result = {};
+    // VERTEX
+    {
+        const vertices = [
+            -0.5,  0.5, 0.0,
+            -0.5, -0.5, 0.0,
+             0.5, -0.5, 0.0,
+             0.5,  0.5, 0.0 
+        ];
+        const vertex_buffer = getBuffer(new Float32Array(vertices), gl.ARRAY_BUFFER)
+        result.position = vertex_buffer;
+            
+        const indices = [3,2,1,3,1,0]; 
+        const index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
+        result.position_indices = index_buffer;
+        result.position_indices_count = indices.length;
+    }
+
+    
+    // TEXCOORDS
+    {
+        const coords = [
+            0.0, 1.0, 
+            0.0, 0.0, 
+            1.0, 0.0, 
+            1.0, 1.0, 
+        ];
+         
+        
+        const texcoord_buffer = getBuffer(new Float32Array(coords), gl.ARRAY_BUFFER);
+        result.texcoord = texcoord_buffer;
+            
+        
+        const indices = [3,2,1,3,1,0]; 
+        const texcoord_index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
+        result.texcoord_indices = texcoord_index_buffer;
+        result.texcoord_indices_count = indices.length;
+    }
+
+
+
+    return result;
 }
 
 
@@ -71,22 +91,7 @@ function createGLShader(gl, vs, fs) {
     }
 
     const result = new ShaderProgram(shader_program);
-    return result; //.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-
-    const program_info = {
-        program: shader_program,
-        attribLocations: {
-            vertex_position: gl.getAttribLocation(shader_program, 'aVertexPosition'),
-
-        },
-        uniformLocations: {
-            projection_matrix: gl.getUniformLocation(shader_program, 'uProjectionMatrix'),
-            model_matrix: gl.getUniformLocation(shader_program, 'uModelMatrix'),
-            view_matrix: gl.getUniformLocation(shader_program, 'uViewMatrix'),
-            color: gl.getUniformLocation(shader_program, "uColor")
-        }
-    }
-    return program_info;
+    return result; 
 }
 
 class ShaderProgram {
