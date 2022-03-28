@@ -359,7 +359,6 @@ function main() {
         e.preventDefault();
         const {offsetX, offsetY, button} = e;
         let {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
-        console.log(col, row)
 
         const sendCommand = (tile, dir) => {
             if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
@@ -1411,7 +1410,66 @@ function render(world) {
         const tile = world.getTile(row, col);
         if (tile.gameplay_flags) {
             const rgb = getRGBForNamedColor(tile.color);
-            renderer.pushColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
+            let checkNeighbourIsSelf = (row, col) => {
+                let t = world.getTile(row, col);
+                if (t) {
+                    return t.id === tile.id;
+                }
+                return false;
+            }
+            if (tile.color === "gray") {
+                checkNeighbourIsSelf = (row, col) => {
+                    let t = world.getTile(row, col);
+                    if (t) {
+                        return t.color === "gray";
+                    }
+                    return false;
+                }
+               // renderer.pushColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
+            }
+           
+            {
+
+               
+               
+
+                let weights = [1,1,1,1];
+                // TOP
+                {
+                    let success = checkNeighbourIsSelf(row-1, col);
+                    if (success) {
+                        weights[0] = 0;
+                        weights[3] = 0;
+                    }
+                }
+                // BOTTOM
+                {
+                    let success = checkNeighbourIsSelf(row+1, col);
+                    if (success) {
+                        weights[1] = 0;
+                        weights[2] = 0;
+                    }
+                }
+                //LEFT
+                {
+                    let success = checkNeighbourIsSelf(row, col-1);
+                    if (success) {
+                        weights[2] = 0;
+                        weights[3] = 0;
+                    }
+                }
+               
+                // RIGHT
+                {
+                    let success = checkNeighbourIsSelf(row, col+1);
+                    if (success) {
+                        weights[0] = 0;
+                        weights[1] = 0;
+                    }
+                }
+
+                renderer.pushRoundedColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1], weights)
+            }
         }
         
     });

@@ -14,30 +14,35 @@ export const FS_COLOR_SOURCE = `
 `;
 
 
-export const FS_CIRCLE_SOURCE = `
+export const FS_ROUNDED_SOURCE = `
     precision mediump float;
 
     uniform vec4 uColor;
+    uniform vec4 uCornerWeights;
 
     varying highp vec2 texCoord;
 
-    float circle(in vec2 st, in float radius){
-        vec2 dist = st-vec2(0.5);
-        return 1.-smoothstep(
-            radius-(radius*0.01),
-            radius+(radius*0.01),
-            dot(dist,dist)*4.0);
+
+    float partriallyRoundedBoxSDF(vec2 p, vec2 b, vec4 r) {
+        r.xy = p.x > 0.0 ? r.xy : r.wz;
+        r.x  = p.y > 0.0 ? r.y : r.x;
+
+        vec2 q = abs(p)-b+r.x;
+        return min(max(q.x, q.y), 0.0) + length( max(q, 0.0)) - r.x;
+
+        return 1.0;
     }
 
-    float roundedBoxSDF(vec3 p, vec3 b, float r) {
+    float roundedBoxSDF(vec2 p, vec2 b, float r) {
         return length( max( abs(p)-b+r, 0.0 ) ) - r;
     }
     
     void main() {
         vec2 uv = texCoord * 2.0 - 1.0;
-        vec3 st = vec3(uv, 0.0);
-        float box = roundedBoxSDF(st, vec3(0.97), .25);
-        box = 1.0 - smoothstep(0.0, 0.03, box) ;
+        float max_radius = 0.45;
+        vec4 radii = uCornerWeights * max_radius;
+        float box = partriallyRoundedBoxSDF(uv, vec2(0.99), radii);
+        box = 1.0 - smoothstep(0.0, 0.02, box) ;
         gl_FragColor = vec4(uColor.rgb, box);
     }
 `;

@@ -2,7 +2,12 @@
 import * as mat4 from './vendor/glmatrix/esm/mat4.js';
 
 import { VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
-import { FS_WHITE_SOURCE, FS_COLOR_SOURCE, FS_CIRCLE_SOURCE, FS_TEXTURED_SOURCE } from './rendering/fragment_shaders.js';
+import { 
+    FS_WHITE_SOURCE, 
+    FS_COLOR_SOURCE, 
+    FS_ROUNDED_SOURCE,
+    FS_TEXTURED_SOURCE 
+} from './rendering/fragment_shaders.js';
 
 
 function loadTexture(gl, url) { 
@@ -169,7 +174,7 @@ export class Renderer {
     quad;
     default_white_shader;
     single_color_shader;
-    circle_shader;
+    rounded_color_shader;
     texture_shader;
 
     test_texture;
@@ -180,39 +185,30 @@ export class Renderer {
 
     constructor() {
         this.reset();
-        this.quad = createGlQuad(this.#context);
-
         const gl = this.#context;
-        this.default_white_shader = createGLShader(this.#context, VS_MVP_SOURCE, FS_WHITE_SOURCE);
+        this.quad = createGlQuad(gl);
+
+        this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
         this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
         this.default_white_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
         this.default_white_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
         this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
 
-        this.single_color_shader  = createGLShader(this.#context, VS_MVP_SOURCE, FS_COLOR_SOURCE);
+        this.single_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_COLOR_SOURCE);
         this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
         this.single_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
         this.single_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
 
-        this.circle_shader  = createGLShader(this.#context, VS_MVP_SOURCE, FS_CIRCLE_SOURCE);
-        this.circle_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.circle_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
-        this.circle_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
-        this.circle_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.circle_shader.addUniform(gl, 'color', 'uColor');
+        this.rounded_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_ROUNDED_SOURCE);
+        this.rounded_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.rounded_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
+        this.rounded_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.rounded_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.rounded_color_shader.addUniform(gl, 'color', 'uColor');
+        this.rounded_color_shader.addUniform(gl, 'corner_weights', 'uCornerWeights');
 
-        this.texture_shader = createGLShader(gl, VS_MVP_SOURCE, FS_TEXTURED_SOURCE);
-        this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.texture_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
-        this.texture_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
-        this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.texture_shader.addUniform(gl, 'color', 'uColor');
-        this.texture_shader.addUniform(gl, 'texture', 'uTexture');
-
-
-        this.test_texture = loadTexture(gl, '/rendering/test_texture.jpg');
     }
 
     getContext() {
@@ -234,21 +230,38 @@ export class Renderer {
     }
 
    
-
-    pushColorQuad(color, position) {
+    getRenderableQuad(color, position) {
         const renderable = {
             position,
             color,
             mesh:   this.quad,
         }
 
+        return renderable;
+    }
+
+    pushColorQuad(color, position) {
+        const renderable = this.getRenderableQuad(color, position);
+        renderable.shader = this.single_color_shader;
+
         this.render_list.push(renderable);
     }
 
-    drawColorQuad(position, color) {
+    pushRoundedColorQuad(color, position, weights) {
+        const renderable = this.getRenderableQuad(color, position);
+        renderable.shader = this.rounded_color_shader;
+        renderable.corner_weights = weights;
+
+        this.render_list.push(renderable);
+    }
+    
+
+    drawColorQuad(renderable) {
+
+
         const gl = this.#context;
 
-        const info = this.circle_shader;
+        const info = renderable.shader;
         gl.useProgram(info.program);
 
         // VERTEX
@@ -289,7 +302,7 @@ export class Renderer {
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
         const model_matrix = mat4.create();
-        mat4.translate(model_matrix, model_matrix, position);
+        mat4.translate(model_matrix, model_matrix, renderable.position);
         const view_matrix = mat4.create();
 
         gl.uniformMatrix4fv(
@@ -311,8 +324,15 @@ export class Renderer {
         
         gl.uniform4fv(
             info.uniforms.color.location,
-            color
+            renderable.color
         );
+
+        if (info.uniforms.corner_weights) {
+            gl.uniform4fv(
+                info.uniforms.corner_weights.location,
+                renderable.corner_weights
+            )
+        }
 
         // Draw call
         {
@@ -345,16 +365,16 @@ export class Renderer {
     drawAll(world) {
         const gl = this.#context;
         gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
-        // gl.clearDepth(1.0);                 // Clear everything
-        // gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        // gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+        gl.clearDepth(1.0);                 // Clear everything
+        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
         
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         while (this.render_list.length) {
             const renderable = this.render_list.pop();
-            this.drawColorQuad(renderable.position, renderable.color);
+            this.drawColorQuad(renderable);
         }
     }
 }
