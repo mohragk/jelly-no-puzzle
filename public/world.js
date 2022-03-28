@@ -1,9 +1,4 @@
 import { 
-    drawArrow,
-    drawBlockNonUnitScale, 
-    drawBlockNonUnitScaleSized,
-    drawTileText, 
-    drawBlockText, 
     getTileCoordFromScreenCoord, 
     getTileSize, 
     getScreenCoordFromTileCoord, 
