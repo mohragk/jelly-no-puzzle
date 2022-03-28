@@ -199,7 +199,6 @@ export class Renderer {
 
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
-        info.uniforms.projection_matrix.value = projection_matrix;
         const model_matrix = mat4.create();
         mat4.translate(model_matrix, model_matrix, position);
         const view_matrix = mat4.create();
@@ -207,7 +206,7 @@ export class Renderer {
         gl.uniformMatrix4fv(
             info.uniforms.projection_matrix.location,
             false,
-            info.uniforms.projection_matrix.value
+            projection_matrix
         );
         gl.uniformMatrix4fv(
             info.uniforms.model_matrix.location,
