@@ -2,8 +2,57 @@
 import * as mat4 from './vendor/glmatrix/esm/mat4.js';
 
 import { VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
-import { FS_WHITE_SOURCE, FS_COLOR_SOURCE } from './rendering/fragment_shaders.js';
+import { FS_WHITE_SOURCE, FS_COLOR_SOURCE, FS_CIRCLE_SOURCE, FS_TEXTURED_SOURCE } from './rendering/fragment_shaders.js';
 
+
+function loadTexture(gl, url) { 
+    const isPowerOf2 = (n) => (n & (n - 1)) === 0;
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // We initially load a single pixel until the resource has been processed.
+    {
+        const pixel = new Uint8Array( [0,0,255, 255] ) // blue
+        gl.texImage2D( 
+            gl.TEXTURE_2D,  
+            0,                  // level
+            gl.RGBA,            // internal format
+            1,                  // width
+            1,                  // height
+            0,                  // border
+            gl.RGBA,            // source format
+            gl.UNSIGNED_BYTE,   // source type (?)
+            pixel
+        );
+    }
+
+    const image = new Image();
+    image.onload = function () {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D( 
+            gl.TEXTURE_2D,  
+            0,                  // level
+            gl.RGBA,            // internal format
+            gl.RGBA,            // source format
+            gl.UNSIGNED_BYTE,   // source type (?)
+            image
+        );
+
+        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
+        else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+    };
+    image.src = url;
+
+
+    return texture;
+}
 
 
 function createGlQuad(gl) {
@@ -13,11 +62,12 @@ function createGlQuad(gl) {
         gl.bindBuffer(gl_buffer_type, BO);
         gl.bufferData( gl_buffer_type, data, gl.STATIC_DRAW );
         gl.bindBuffer(gl_buffer_type, null);
-        
+
         return BO;
     };
         
-        let result = {};
+    let result = {};
+    
     // VERTEX
     {
         const vertices = [
@@ -39,10 +89,10 @@ function createGlQuad(gl) {
     // TEXCOORDS
     {
         const coords = [
-            0.0, 1.0, 
             0.0, 0.0, 
-            1.0, 0.0, 
+            0.0, 1.0, 
             1.0, 1.0, 
+            1.0, 0.0, 
         ];
          
         
@@ -119,6 +169,10 @@ export class Renderer {
     quad;
     default_white_shader;
     single_color_shader;
+    circle_shader;
+    texture_shader;
+
+    test_texture;
 
     render_list = [];
 
@@ -141,6 +195,24 @@ export class Renderer {
         this.single_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
+
+        this.circle_shader  = createGLShader(this.#context, VS_MVP_SOURCE, FS_CIRCLE_SOURCE);
+        this.circle_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.circle_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
+        this.circle_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.circle_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.circle_shader.addUniform(gl, 'color', 'uColor');
+
+        this.texture_shader = createGLShader(gl, VS_MVP_SOURCE, FS_TEXTURED_SOURCE);
+        this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.texture_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
+        this.texture_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.texture_shader.addUniform(gl, 'color', 'uColor');
+        this.texture_shader.addUniform(gl, 'texture', 'uTexture');
+
+
+        this.test_texture = loadTexture(gl, '/rendering/test_texture.jpg');
     }
 
     getContext() {
@@ -153,7 +225,7 @@ export class Renderer {
             console.error("No canvas found! Create a dom element with id: 'opengl_canvas' ");
             return;
         }
-        this.#context = this.canvas.getContext("webgl");
+        this.#context = this.canvas.getContext("webgl", {premultipliedAlpha: false});
 
         if (!this.#context) {
             console.error("WebGL not initialized! Your browser may not support it :(")
@@ -168,7 +240,6 @@ export class Renderer {
             position,
             color,
             mesh:   this.quad,
-            shader: this.single_color_shader,
         }
 
         this.render_list.push(renderable);
@@ -177,29 +248,42 @@ export class Renderer {
     drawColorQuad(position, color) {
         const gl = this.#context;
 
-        const num_components = 3;
-        const type = gl.FLOAT;
-        const normalize = false;
-        const stride = 0;
-        const offset = 0;
-        
-        const info = this.single_color_shader;
+        const info = this.circle_shader;
         gl.useProgram(info.program);
 
         // VERTEX
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
         gl.vertexAttribPointer(
-            info.attributes.vertex_position,
-            num_components,
-            type,
-            normalize,
-            stride,
-            offset
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
         );
         gl.enableVertexAttribArray(
-            info.attributes.vertex_position.location
+            0
         );
+
+        //TEXTURE
+        if (this.quad.texcoord) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
+            gl.vertexAttribPointer(
+                1,
+                2,
+                gl.FLOAT,
+                false,
+                0,
+                0
+            );
+            gl.enableVertexAttribArray(
+                1
+            );
+        }
+       
+
 
 
         // FRAGMENT
@@ -260,12 +344,13 @@ export class Renderer {
 
     drawAll(world) {
         const gl = this.#context;
-        gl.clearColor(0.7, 0.7, 0.7, 1.0);  // Clear to color fully opaque
+        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
         // gl.clearDepth(1.0);                 // Clear everything
         // gl.enable(gl.DEPTH_TEST);           // Enable depth testing
         // gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
         
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         while (this.render_list.length) {
             const renderable = this.render_list.pop();

@@ -6,7 +6,7 @@ export const VS_MVP_SOURCE = `
     uniform mat4 uModelMatrix;
     uniform mat4 uProjectionMatrix;
 
-    varying vec2 texCoord;
+    varying highp vec2 texCoord;
 
     void main() {
         gl_Position = uProjectionMatrix * uModelMatrix * uViewMatrix * vec4(aVertexPosition , 1.0);
