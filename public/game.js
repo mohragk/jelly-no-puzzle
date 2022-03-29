@@ -708,7 +708,7 @@ function timestamp() {
     return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
 }
 
-let time_step = 1/240;
+let time_step = 1/120;
 let time_step_f = 1.0;
 let delta_time = 0;
 let last_time = timestamp();

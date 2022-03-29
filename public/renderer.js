@@ -292,25 +292,25 @@ export class Renderer {
       
         
         
-        this.texture_edge_mask_tl_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_outer.png');
-        this.texture_edge_mask_tl_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_inner.png');
-        this.texture_edge_mask_tl_left      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_left.png');
-        this.texture_edge_mask_tl_top       = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_top.png');
+        this.texture_edge_mask_tl_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png');
+        this.texture_edge_mask_tl_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png');
+        this.texture_edge_mask_tl_left      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_left.png');
+        this.texture_edge_mask_tl_top       = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_top.png');
         
-        this.texture_edge_mask_tr_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_outer.png');
-        this.texture_edge_mask_tr_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_inner.png');
-        this.texture_edge_mask_tr_right     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_right.png');
-        this.texture_edge_mask_tr_top       = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_top.png');
+        this.texture_edge_mask_tr_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png');
+        this.texture_edge_mask_tr_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png');
+        this.texture_edge_mask_tr_right     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_right.png');
+        this.texture_edge_mask_tr_top       = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_top.png');
         
-        this.texture_edge_mask_bl_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_outer.png');
-        this.texture_edge_mask_bl_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_inner.png');
-        this.texture_edge_mask_bl_left      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_left.png');
-        this.texture_edge_mask_bl_bottom    = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_bottom.png');    
+        this.texture_edge_mask_bl_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png');
+        this.texture_edge_mask_bl_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png');
+        this.texture_edge_mask_bl_left      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_left.png');
+        this.texture_edge_mask_bl_bottom    = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png');    
         
-        this.texture_edge_mask_br_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_br_outer.png');
-        this.texture_edge_mask_br_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_br_inner.png');
-        this.texture_edge_mask_br_right     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_right.png');
-        this.texture_edge_mask_br_bottom    = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_bottom.png');    
+        this.texture_edge_mask_br_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_br_outer.png');
+        this.texture_edge_mask_br_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_br_inner.png');
+        this.texture_edge_mask_br_right     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_right.png');
+        this.texture_edge_mask_br_bottom    = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png');    
 
     }
 
