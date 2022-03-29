@@ -44,6 +44,7 @@ ul {
     display: block;
     width: 100vh;
     height: 100vw;
+    cursor: none;
 }
 
 #button-container {

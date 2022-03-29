@@ -56,16 +56,83 @@ export const FS_TEXTURED_SOURCE = `
     precision highp float;
     uniform vec4 uColor;
 
-    uniform sampler2D uMaskTexture;
-    uniform int uUseMask;
     uniform sampler2D uEdgeMaskTexture;
-    uniform int uUseEdgeMask;
-
+   
     varying vec2 texCoord;
     
     void main() {
         float alpha = texture2D(uEdgeMaskTexture, texCoord).r;
-       
         gl_FragColor = vec4(uColor.rgb, alpha);
+    }
+`;
+
+export const FS_CURSOR_SOURCE = `
+    precision highp float;
+
+    #define PI 3.14159265359
+    #define TWO_PI 6.28318530718
+
+
+    uniform vec4 uColor;
+    uniform float uTime;
+
+    varying vec2 texCoord;
+
+    mat2 rotate2d(float _angle){
+        return mat2(cos(_angle),-sin(_angle),
+                    sin(_angle),cos(_angle));
+    }
+
+    float triangle (vec2 st, float rrr) {
+
+        // Remap the space to -1. to 1.
+        st = st * 2. - 1.;
+      
+        // Number of sides of your shape
+        int N = 3;
+      
+        // Angle and radius from the current pixel
+        float a = atan(st.x,st.y)+PI;
+        float r = TWO_PI/float(N);
+      
+        // Shaping function that modulate the distance
+        float dist = cos(floor(.5+a/r)*r-a)*length(st);
+      
+        return 1.0 - smoothstep(.4, .401, dist);
+    }
+
+
+    float box(in vec2 _st, in vec2 _size){
+        _size = vec2(0.5) - _size*0.5;
+        vec2 uv = smoothstep(_size,
+                            _size+vec2(0.001),
+                            _st);
+        uv *= smoothstep(_size,
+                        _size+vec2(0.001),
+                        vec2(1.0)-_st);
+        return uv.x*uv.y;
+    }
+    
+    float cross(in vec2 _st, float _size){
+        return  box(_st, vec2(_size,_size/4.)) +
+                box(_st, vec2(_size/4.,_size));
+    }
+
+    float circle(in vec2 _st, in float _radius){
+        vec2 dist = _st-vec2(0.5);
+        return 1.-smoothstep(_radius-(_radius*0.1),
+                             _radius+(_radius*0.1),
+                             dot(dist,dist)*4.0);
+    }
+
+    void main() {
+        vec2 st = texCoord;
+
+        st -= vec2(0.5)  ;
+        st = rotate2d(uTime * PI) * st;
+        st += vec2(0.5);
+
+        float alpha = cross(st, 0.2);
+        gl_FragColor = vec4(vec3(0.1), alpha);
     }
 `;

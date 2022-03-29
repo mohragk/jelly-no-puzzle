@@ -5,6 +5,7 @@ import { VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
 import { 
     FS_WHITE_SOURCE, 
     FS_COLOR_SOURCE, 
+    FS_CURSOR_SOURCE,
     FS_TEXTURED_SOURCE 
 } from './rendering/fragment_shaders.js';
 
@@ -157,6 +158,50 @@ function createGLShader(gl, vs, fs) {
     return result; 
 }
 
+
+class FrameBuffer {
+    width;
+    height;
+
+    texture;
+    buffer;
+
+    constructor (gl, width, height) {
+        this.width = width;
+        this.height = height;
+
+        this.initializeTexture(gl);
+        this.initializeBuffer(gl);
+    }
+
+    initializeTexture(gl) {
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        const width = this.width;
+        const height = this.height;
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        // Filtering
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        this.texture = texture;
+    }
+
+    initializeBuffer(gl) {
+        const fb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+        // Attach the texture as the first color attachment
+        const point = gl.COLOR_ATTACHMENT0;
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, point, gl.TEXTURE_2D, this.texture, 0);
+
+        this.buffer = fb;
+    }
+}
+
+
 class ShaderProgram {
     program;
     uniforms = {};
@@ -178,17 +223,15 @@ class ShaderProgram {
 export class Renderer {
     canvas;
     #context;
+    frame_buffer;
 
     quad;
+
     default_white_shader;
     single_color_shader;
     rounded_color_shader;
     texture_shader;
-
-    texture_mask_tl;
-    texture_mask_tr;
-    texture_mask_bl;
-    texture_mask_br;
+    cursor_shader;
 
     
     texture_edge_mask_tl_full;
@@ -211,8 +254,6 @@ export class Renderer {
     texture_edge_mask_br_right;
     texture_edge_mask_br_bottom;
 
-  
-
     render_list = [];
 
     camera_projection;
@@ -233,33 +274,22 @@ export class Renderer {
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
 
-        /*
-        this.rounded_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_ROUNDED_SOURCE);
-        this.rounded_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.rounded_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
-        this.rounded_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
-        this.rounded_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.rounded_color_shader.addUniform(gl, 'color', 'uColor');
-        this.rounded_color_shader.addUniform(gl, 'corner_weights', 'uCornerWeights');
-        */
 
         this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_TEXTURED_SOURCE);
         this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
         this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.texture_shader.addUniform(gl, 'mask_texture', 'uMaskTexture');
-        this.texture_shader.addUniform(gl, 'use_mask', 'uUseMask');
         this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uEdgeMaskTexture');
-        this.texture_shader.addUniform(gl, 'use_edge_mask', 'uUseEdgeMask');
         this.texture_shader.addUniform(gl, 'color', 'uColor');
 
+
+        this.cursor_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_CURSOR_SOURCE);
+        this.cursor_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.cursor_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+        this.cursor_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.cursor_shader.addUniform(gl, 'color', 'uColor');
+        this.cursor_shader.addUniform(gl, 'time', 'uTime');
       
-
-        this.texture_mask_tl = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw_sm.png');
-        this.texture_mask_tr = loadTexture(gl, '/assets/textures/rounded_tile_mask_tr_bw_sm.png');
-        this.texture_mask_br = loadTexture(gl, '/assets/textures/rounded_tile_mask_br_bw_sm.png');
-        this.texture_mask_bl = loadTexture(gl, '/assets/textures/rounded_tile_mask_bl_bw_sm.png');
-
         
         
         this.texture_edge_mask_tl_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_outer.png');
@@ -300,12 +330,15 @@ export class Renderer {
             console.error("WebGL not initialized! Your browser may not support it :(")
             return;
         }
+
+        const gl = this.#context;
+        this.frame_buffer = new FrameBuffer(gl, this.canvas.width, this.canvas.height);
     }
 
    
     getRenderableQuad(color, position) {
         const renderable = {
-            position: [...position, -1],
+            position: [...position],
             color,
             mesh: this.quad,
         }
@@ -313,12 +346,39 @@ export class Renderer {
         return renderable;
     }
 
-    pushColoredQuad(named_color, position) {
+    drawCursorQuad(named_color, position) {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, position);
+        renderable.shader = this.cursor_shader;
+        renderable.type = "STANDARD";
+        this.drawColoredQuad(renderable);
+    }
+
+    pushCursorQuad(named_color, position) {
+        const color = [...getRGBForNamedColor(named_color), 1];
+        const renderable = this.getRenderableQuad(color, position);
+        renderable.shader = this.cursor_shader;
+        renderable.type = "STANDARD";
+
+        this.render_list.push(renderable);
+    }
+
+    pushColoredQuad(named_color, position) {
+        const color = [...getRGBForNamedColor(named_color), 1];
+        const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
         renderable.type = "STANDARD";
 
+        this.render_list.push(renderable);
+    }
+
+    pushSubTile(color, tile_position, corner, neighbours) {
+        const renderable = this.getRenderableQuad(color, this.getSubPosition(tile_position, corner));
+        renderable.shader = this.texture_shader;
+        renderable.scale = 0.5;
+        renderable.mask_texture      = this.getMask(corner);
+        renderable.edge_mask_texture = this.getEdgeMask(corner, neighbours);
+        
         this.render_list.push(renderable);
     }
 
@@ -328,17 +388,6 @@ export class Renderer {
         this.pushSubTile(color, position, "TOP_RIGHT",  neighbours);
         this.pushSubTile(color, position, "BOTTOM_LEFT", neighbours);
         this.pushSubTile(color, position, "BOTTOM_RIGHT", neighbours);
-    }
-
-
-    pushSubTile(color, tile_position, corner, neighbours) {
-        const renderable = this.getRenderableQuad(color, this.getSubPosition(tile_position, corner));
-        renderable.shader = this.texture_shader;
-        renderable.scale = 0.5;
-        renderable.mask_texture      = this.getMask(corner);
-        renderable.edge_mask_texture = this.getEdgeMask(corner, neighbours);
-
-        this.render_list.push(renderable);
     }
 
     getSubPosition(position, corner) {
@@ -442,11 +491,11 @@ export class Renderer {
     
   
 
-    drawColoredQuad(renderable) {
+    drawColoredQuad(renderable, time) {
         const gl = this.#context;
 
         // @TODO: should this be hard coded?
-        const info = this.single_color_shader;
+        const info = renderable.shader;
 
         gl.useProgram(info.program);
 
@@ -474,6 +523,17 @@ export class Renderer {
             info.uniforms.color.location,
             color
         );
+
+
+        // OPTIONAL
+
+        if (info.uniforms.time) {
+            
+            gl.uniform1f(
+                info.uniforms.time.location,
+                time || 1.0
+            );  
+        }
  
         // VERTEX
         gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
@@ -538,24 +598,14 @@ export class Renderer {
             // Tell WebGL we want to affect texture unit 0
             gl.activeTexture(gl.TEXTURE0);
 
-            // Bind the texture to texture unit 0
-            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture);
-
-            // Tell the shader we bound the texture to texture unit 0
-            gl.uniform1i(info.uniforms.mask_texture.location, 0);
-
-            // Tell WebGL we want to affect texture unit 0
-            gl.activeTexture(gl.TEXTURE1);
 
             // Bind the texture to texture unit 0
             gl.bindTexture(gl.TEXTURE_2D, renderable.edge_mask_texture);
 
             // Tell the shader we bound the texture to texture unit 0
-            gl.uniform1i(info.uniforms.edge_mask_texture.location, 1);
+            gl.uniform1i(info.uniforms.edge_mask_texture.location, 0);
         }
        
-
-
 
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
@@ -583,10 +633,7 @@ export class Renderer {
             renderable.color
         );
 
-        gl.uniform1i(
-            info.uniforms.use_mask.location,
-            renderable.use_mask ? 1 : 0
-        );
+       
         // Draw call
         {
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
@@ -617,24 +664,40 @@ export class Renderer {
         this.camera_projection = proj_matrix;
     }
 
-    drawAll() {
-        const gl = this.#context;
-        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
-        gl.clearDepth(1.0);                 // Clear everything
-        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+    drawAll(time) {
         
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        while (this.render_list.length) {
-            const renderable = this.render_list.pop();
-            if (renderable.type === "STANDARD") {
-                this.drawColoredQuad(renderable);
+        const gl = this.#context;
+        
+        // WORLD PASS
+        {
+           //gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame_buffer.buffer);
+            gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+            gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
+            gl.clearDepth(1.0);                 // Clear everything
+            gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+            gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+            gl.enable(gl.BLEND)
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+            while (this.render_list.length) {
+                const renderable = this.render_list.pop();
+                if (renderable.type === "STANDARD") {
+                    this.drawColoredQuad(renderable, time);
+                }
+                else {
+                    this.drawRoundedTile(renderable);
+                }
             }
-            else {
-                this.drawRoundedTile(renderable);
-            }
+        }
+
+        // RENDER TO CANVAS
+        {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
         }
     }
 }

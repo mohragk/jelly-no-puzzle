@@ -595,7 +595,23 @@ export class World {
             }
     }
 
-    update(command_buffer, dt, game_state, undo_recorder) {
+    drawMouseCursor(game_state, renderer) {
+         // DRAW MOUSE CURSOR
+         {
+            const getWorldPosForScreenPos = (screen_coord) => {
+                const tile_size_pixels = renderer.canvas.width / this.dimensions.w;
+                const col = screen_coord.x / tile_size_pixels;
+                const row = screen_coord.y / tile_size_pixels;
+                return [col-0.5 , row-0.5];
+            };
+    
+            const [x, y] = getWorldPosForScreenPos(game_state.mouse.screen_coord);
+            renderer.pushCursorQuad("red", [x, y, -1.0]);
+        }
+    }
+
+    update(command_buffer, dt, game_state, undo_recorder, renderer) {
+
         
         this.handleInput(game_state);
         
@@ -731,27 +747,9 @@ export class World {
  
 
     render(renderer, game_state) {
+        // NOTE: we push it first since it will be the LAST item to be rendered.
+        this.drawMouseCursor(game_state, renderer);
 
-        // DRAW BACKGROUND AND WALLS 
-        if (0) {
-            this.forEachCell((row_, col_, index) => {
-                const tile = this.grid[index];
-                if ((tile.gameplay_flags > 0)) {
-                    const [x, y] = tile.visual_pos;
-                    const {row, col} = tile.world_pos;
-    
-                    let neighbours = 0;
-    
-                    if ( !(tile.gameplay_flags & GameplayFlags.MOVABLE)) {
-                       
-                        drawBlockNonUnitScale(x, y, tile.color, neighbours);
-                       
-                    }
-                }
-            });
-    
-
-        }
 
         // DRAW MOVABLES
         {
@@ -795,6 +793,10 @@ export class World {
             });
         }    
 
+
+         
+
+        
 
         // DRAW ANCHORS
 
@@ -863,4 +865,12 @@ export class World {
             }
         }    
     }
+
+
+
+
+
+
+
+    
 };

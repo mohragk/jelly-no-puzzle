@@ -139,6 +139,11 @@ function getCanvas(renderer) {
 
 function reset(level_index) {
 
+   
+    last_time = timestamp();
+
+    renderer.render_list.length = 0;
+
     removeClassesFromHTML();
 
     if (level_index < levels.length) {
@@ -217,7 +222,6 @@ function resizeCanvas(canvas) {
         renderer.canvas.width = new_w;
         renderer.canvas.height = new_h;
         const oversampling_factor = 1.0;
-        renderer.getContext().viewport(0,0, new_w * oversampling_factor, new_h * oversampling_factor)
         renderer.updateCameraProjection(world.dimensions.w, world.dimensions.h, oversampling_factor);
     }
 
@@ -392,6 +396,8 @@ function main() {
         const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         game_state.mouse.over_tile.row = row;
         game_state.mouse.over_tile.col = col;
+
+    
     }
 
     function getTouchCoord(canvas, e) {
@@ -702,7 +708,7 @@ function timestamp() {
     return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
 }
 
-let time_step = 1/120;
+let time_step = 1/240;
 let time_step_f = 1.0;
 let delta_time = 0;
 let last_time = timestamp();
@@ -753,7 +759,7 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 
 function update(world, command_buffer, dt) {
-    world.update(command_buffer, dt, game_state, recorder);
+    world.update(command_buffer, dt, game_state, recorder, renderer);
     for (let trigger of triggers) {
         trigger.update(dt);
     }
@@ -768,7 +774,7 @@ function render(world) {
     
     // OPENGL
     world.render(renderer, game_state);
-    renderer.drawAll();
+    renderer.drawAll(timestamp()/1000.0);
     
     if (DISPLAY_RASTER) {
         //drawRaster(world, 0.4);
