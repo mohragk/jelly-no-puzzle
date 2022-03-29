@@ -234,7 +234,7 @@ export class Renderer {
         const renderable = {
             position,
             color,
-            mesh:   this.quad,
+            mesh: this.quad,
         }
 
         return renderable;
@@ -255,6 +255,17 @@ export class Renderer {
         this.render_list.push(renderable);
     }
     
+    pushRoundedColorTile(color, position, weights) {
+        // TOP LEFT
+        {
+            const sub_position = [ position[0]-0.25, position[1]-0.25, position[2] ];
+            const renderable = this.getRenderableQuad(color, sub_position);
+            renderable.shader = this.rounded_color_shader;
+            renderable.corner_weights = weights;
+            renderable.scale = 0.5;
+            this.render_list.push(renderable);
+        }
+    }
 
     drawColorQuad(renderable) {
 
@@ -303,6 +314,9 @@ export class Renderer {
         const projection_matrix = this.getCameraProjection();
         const model_matrix = mat4.create();
         mat4.translate(model_matrix, model_matrix, renderable.position);
+        if (renderable.scale) {
+            mat4.scale(model_matrix, model_matrix, [renderable.scale, renderable.scale, 1.0]);
+        }
         const view_matrix = mat4.create();
 
         gl.uniformMatrix4fv(
@@ -353,8 +367,8 @@ export class Renderer {
             proj_matrix,
             -0.5,
             world_dim_w-0.5,
-            -(world_dim_h-0.5),
-            0.5,
+            (world_dim_h-0.5),
+            -0.5,
             z_near,
             z_far
         );

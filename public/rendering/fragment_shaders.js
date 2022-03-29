@@ -24,11 +24,11 @@ export const FS_ROUNDED_SOURCE = `
 
    
     float partriallyRoundedBoxSDF(vec2 p, vec2 b, vec4 r) {
-        r.xy = p.x > 0.0 ? r.xy : r.wz;
-        r.x  = p.y > 0.0 ? r.y : r.x;
+        r.xy = p.x > 0.0 ? r.xy : r.zw;
+        r.x  = p.y > 0.0 ? r.x : r.y;
 
         vec2 q = abs(p)-b+r.x;
-        float distance = min(max(q.x, q.y), 0.0) + length( max(q, 0.0)) - r.x;
+        float distance = min(max(q.x, q.y), 0.0) + length( max(q, 0.0) ) - r.x;
 
         return 0.0-distance;
     }
@@ -43,20 +43,12 @@ export const FS_ROUNDED_SOURCE = `
         vec4 radii = uCornerWeights * max_radius;
         float dist = partriallyRoundedBoxSDF(uv, vec2(1.0), radii);
        
-        const float border_opacity = 0.6;
-        const float border_thickness = 0.25;
         const float smoothing = 0.0085;
-        float mask = smoothstep(0.0-smoothing, 0.0+smoothing, dist) * border_opacity;
+        float mask = smoothstep(0.0-smoothing, 0.0+smoothing, dist);
 
-
-        if (dist > border_thickness) {
-            mask = 1.0;
-        }
         
        
         gl_FragColor = vec4( uColor.rgb, mask);
-
-        //gl_FragColor = vec4( vec3(dist) , 1.0);
     }
 `;
 

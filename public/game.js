@@ -450,7 +450,6 @@ function main() {
                 const command = new MoveCommand({row, col}, direction);
                 command_buffer.add(command);
             }
-            
         }
     }
 
@@ -798,14 +797,9 @@ function render(world) {
                     }
                     return false;
                 }
-               // renderer.pushColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1])
             }
            
             {
-
-               
-               
-
                 let weights = [1,1,1,1];
                 // TOP
                 {
@@ -844,7 +838,6 @@ function render(world) {
                 renderer.pushRoundedColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1], weights)
             }
         }
-        
     });
     renderer.drawAll(world);
     
