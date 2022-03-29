@@ -7,6 +7,7 @@ import { AnchorPoints, GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
 import { lerp } from './math.js';
 import { EventManager, Events } from './events.js';
+import { Renderer } from './renderer.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -729,10 +730,10 @@ export class World {
     }
  
 
-    render(game_state) {
+    render(renderer, game_state) {
 
         // DRAW BACKGROUND AND WALLS 
-        {
+        if (0) {
             this.forEachCell((row_, col_, index) => {
                 const tile = this.grid[index];
                 if ((tile.gameplay_flags > 0)) {
@@ -760,8 +761,7 @@ export class World {
                     const [x, y] = tile.visual_pos;
                     const {row, col} = tile.world_pos;
     
-                    let neighbours = 0;
-    
+                    
                     if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                         const addNeigbour = (row, col, placement) => {
                             let t = this.getTile(row, col);
@@ -771,6 +771,7 @@ export class World {
                                 }
                             }
                         }
+                        let neighbours = 0;
     
                         addNeigbour(row-1, col, Neighbours.TOP);
                         addNeigbour(row+1, col, Neighbours.BOTTOM);
@@ -782,8 +783,13 @@ export class World {
                         addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
                         addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
                    
-                        drawBlockNonUnitScale(x, y, tile.color, neighbours);
+                        renderer.pushRoundedColorTile( tile.color, tile.opengl_visual_pos, neighbours );
                         
+                    }
+                    else {
+                       
+                        renderer.pushColoredQuad(tile.color, tile.opengl_visual_pos);
+                       
                     }
                 }
             });
@@ -792,7 +798,7 @@ export class World {
 
         // DRAW ANCHORS
 
-        {
+        if(0) {
             this.forEachCell( (row, col, index) => {
                 const tile = this.getTile(row, col);
                 if (tile.anchor_points) {
@@ -802,7 +808,7 @@ export class World {
         }
 
         // DRAW ARROWS FOR SELECTED TILES
-        {
+        if (0) {
 
             const apply = input_mode === InputModes.DIRECT && game_state.selected_tiles.length && !game_state.has_won && !game_state.halt_input;
             if (apply) {

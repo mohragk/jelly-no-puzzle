@@ -134,7 +134,6 @@ function getCanvas(renderer) {
         return renderer.canvas
     } 
 
-
     return document.getElementById("grid_canvas");
 }
 
@@ -161,8 +160,6 @@ function reset(level_index) {
         
         game_state.running = true;
     
-       
-       
         mainLoop();
     }
 }
@@ -765,75 +762,13 @@ function update(world, command_buffer, dt) {
 
 
 
-function getRGBForNamedColor (name) {
-    switch(name) {
-        case "gray":    return [0.5,0.5,0.5];
-        case "red":     return [1.0, 0.0, 0.0];
-        case "green":   return [0.0, 0.5, 0.0];
-        case "blue":    return [0.0, 0.0, 1.0];
-    }
-    return [0,0,0];
-}
 
 
 function render(world) {
     
     // OPENGL
-    world.forEachCell( (row, col, index) => {
-        const tile = world.getTile(row, col);
-        if (tile.gameplay_flags) {
-            const rgb = getRGBForNamedColor(tile.color);
-            let checkNeighbourIsSelf = (row, col) => {
-                let t = world.getTile(row, col);
-                if (t) {
-                    return t.id === tile.id;
-                }
-                return false;
-            }
-            if (tile.color === "gray") {
-                renderer.pushColorQuad( [...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1]);                
-            }
-            else {
-                let weights = [1,1,1,1];
-                // TOP
-                {
-                    let success = checkNeighbourIsSelf(row-1, col);
-                    if (success) {
-                        weights[0] = 0;
-                        weights[3] = 0;
-                    }
-                }
-                // BOTTOM
-                {
-                    let success = checkNeighbourIsSelf(row+1, col);
-                    if (success) {
-                        weights[1] = 0;
-                        weights[2] = 0;
-                    }
-                }
-                //LEFT
-                {
-                    let success = checkNeighbourIsSelf(row, col-1);
-                    if (success) {
-                        weights[2] = 0;
-                        weights[3] = 0;
-                    }
-                }
-               
-                // RIGHT
-                {
-                    let success = checkNeighbourIsSelf(row, col+1);
-                    if (success) {
-                        weights[0] = 0;
-                        weights[1] = 0;
-                    }
-                }
-
-                renderer.pushRoundedColorTile([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1], weights)
-            }
-        }
-    });
-    renderer.drawAll(world);
+    world.render(renderer, game_state);
+    renderer.drawAll();
     
     if (DISPLAY_RASTER) {
         //drawRaster(world, 0.4);

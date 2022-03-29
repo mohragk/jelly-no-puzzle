@@ -8,6 +8,8 @@ import {
     FS_TEXTURED_SOURCE 
 } from './rendering/fragment_shaders.js';
 
+import {Neighbours} from './world.js'
+
 
 function loadTexture(gl, url) { 
     const isPowerOf2 = (n) => (n & (n - 1)) === 0;
@@ -56,6 +58,15 @@ function loadTexture(gl, url) {
     return texture;
 }
 
+function getRGBForNamedColor (name) {
+    switch(name) {
+        case "gray":    return [0.5,0.5,0.5];
+        case "red":     return [1.0, 0.0, 0.0];
+        case "green":   return [0.0, 0.5, 0.0];
+        case "blue":    return [0.0, 0.0, 1.0];
+    }
+    return [0,0,0];
+}
 
 function createGlQuad(gl) {
     
@@ -179,6 +190,29 @@ export class Renderer {
     texture_mask_bl;
     texture_mask_br;
 
+    
+    texture_edge_mask_tl_full;
+    texture_edge_mask_tl_inner;
+    texture_edge_mask_tl_left;
+    texture_edge_mask_tl_top;
+
+    texture_edge_mask_tr_full;
+    texture_edge_mask_tr_inner;
+    texture_edge_mask_tr_right;
+    texture_edge_mask_tr_top;
+
+    texture_edge_mask_bl_full;
+    texture_edge_mask_bl_inner;
+    texture_edge_mask_bl_left;
+    texture_edge_mask_bl_bottom;
+
+    texture_edge_mask_br_full;
+    texture_edge_mask_br_inner;
+    texture_edge_mask_br_right;
+    texture_edge_mask_br_bottom;
+
+  
+
     render_list = [];
 
     camera_projection;
@@ -215,12 +249,38 @@ export class Renderer {
         this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.texture_shader.addUniform(gl, 'mask_texture', 'uMaskTexture');
         this.texture_shader.addUniform(gl, 'use_mask', 'uUseMask');
+        this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uEdgeMaskTexture');
+        this.texture_shader.addUniform(gl, 'use_edge_mask', 'uUseEdgeMask');
         this.texture_shader.addUniform(gl, 'color', 'uColor');
 
-        this.texture_mask_tl = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw.png');
-        this.texture_mask_tr = loadTexture(gl, '/assets/textures/rounded_tile_mask_tr_bw.png');
-        this.texture_mask_br = loadTexture(gl, '/assets/textures/rounded_tile_mask_br_bw.png');
-        this.texture_mask_bl = loadTexture(gl, '/assets/textures/rounded_tile_mask_bl_bw.png');
+      
+
+        this.texture_mask_tl = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw_sm.png');
+        this.texture_mask_tr = loadTexture(gl, '/assets/textures/rounded_tile_mask_tr_bw_sm.png');
+        this.texture_mask_br = loadTexture(gl, '/assets/textures/rounded_tile_mask_br_bw_sm.png');
+        this.texture_mask_bl = loadTexture(gl, '/assets/textures/rounded_tile_mask_bl_bw_sm.png');
+
+        
+        
+        this.texture_edge_mask_tl_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_outer.png');
+        this.texture_edge_mask_tl_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_inner.png');
+        this.texture_edge_mask_tl_left      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_left.png');
+        this.texture_edge_mask_tl_top       = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_top.png');
+        
+        this.texture_edge_mask_tr_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_outer.png');
+        this.texture_edge_mask_tr_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_inner.png');
+        this.texture_edge_mask_tr_right     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_right.png');
+        this.texture_edge_mask_tr_top       = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_top.png');
+        
+        this.texture_edge_mask_bl_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_outer.png');
+        this.texture_edge_mask_bl_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_inner.png');
+        this.texture_edge_mask_bl_left      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tl_left.png');
+        this.texture_edge_mask_bl_bottom    = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_bottom.png');    
+        
+        this.texture_edge_mask_br_full      = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_br_outer.png');
+        this.texture_edge_mask_br_inner     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_br_inner.png');
+        this.texture_edge_mask_br_right     = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_tr_right.png');
+        this.texture_edge_mask_br_bottom    = loadTexture(gl, '/assets/textures/rounded_tile_mask_edge_bl_bottom.png');    
 
     }
 
@@ -245,7 +305,7 @@ export class Renderer {
    
     getRenderableQuad(color, position) {
         const renderable = {
-            position,
+            position: [...position, -1],
             color,
             mesh: this.quad,
         }
@@ -253,7 +313,8 @@ export class Renderer {
         return renderable;
     }
 
-    pushColorQuad(color, position) {
+    pushColoredQuad(named_color, position) {
+        const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, position);
         renderable.shader = this.single_color_shader;
         renderable.type = "STANDARD";
@@ -261,56 +322,125 @@ export class Renderer {
         this.render_list.push(renderable);
     }
 
-    
-    pushRoundedColorTile(color, position, weights) {
-        const shader = this.texture_shader;
-        // TOP LEFT
-        {
-            const sub_position = [ position[0]-0.25, position[1]-0.25, position[2] ];
-            const renderable = this.getRenderableQuad(color, sub_position);
-            renderable.shader = shader;
-            renderable.texture = this.texture_mask_tl;
-            renderable.use_mask = weights[3] == 1;
-            renderable.scale = 0.5;
-            renderable.type = "ROUNDED";
-            this.render_list.push(renderable);
-        }
-        // TOP RIGHT
-        {
-            const sub_position = [ position[0]+0.25, position[1]-0.25, position[2] ];
-            const renderable = this.getRenderableQuad(color, sub_position);
-            renderable.shader = shader;
-            renderable.texture = this.texture_mask_tr;
-            renderable.scale = 0.5;
-            renderable.use_mask = weights[0] == 1;
-            renderable.type = "ROUNDED";
-            this.render_list.push(renderable);
-        }
-        // BOTTOM RIGHT
-        {
-            const sub_position = [ position[0]+0.25, position[1]+0.25, position[2] ];
-            const renderable = this.getRenderableQuad(color, sub_position);
-            renderable.shader = shader;
-            renderable.texture = this.texture_mask_br;
-            renderable.scale = 0.5;
-            renderable.use_mask = weights[1] == 1;
-            renderable.type = "ROUNDED";
-            this.render_list.push(renderable);
-        }
-        // BOTTOM LEFT
-        {
-            const sub_position = [ position[0]-0.25, position[1]+0.25, position[2] ];
-            const renderable = this.getRenderableQuad(color, sub_position);
-            renderable.shader = shader;
-            renderable.texture = this.texture_mask_bl;
-            renderable.scale = 0.5;
-            renderable.use_mask = weights[2] == 1;
-            renderable.type = "ROUNDED";
+    pushRoundedColorTile(named_color, position, neighbours) {
+        const color = [...getRGBForNamedColor(named_color), 1.0];
+        this.pushSubTile(color, position, "TOP_LEFT",    neighbours);
+        this.pushSubTile(color, position, "TOP_RIGHT",  neighbours);
+        this.pushSubTile(color, position, "BOTTOM_LEFT", neighbours);
+        this.pushSubTile(color, position, "BOTTOM_RIGHT", neighbours);
+    }
 
-            this.render_list.push(renderable);
+
+    pushSubTile(color, tile_position, corner, neighbours) {
+        const renderable = this.getRenderableQuad(color, this.getSubPosition(tile_position, corner));
+        renderable.shader = this.texture_shader;
+        renderable.scale = 0.5;
+        renderable.mask_texture      = this.getMask(corner);
+        renderable.edge_mask_texture = this.getEdgeMask(corner, neighbours);
+
+        this.render_list.push(renderable);
+    }
+
+    getSubPosition(position, corner) {
+        const offset = 0.25;
+        switch(corner) {
+            case "TOP_LEFT":        return [ position[0] - offset, position[1] - offset, -1 ];
+            case "TOP_RIGHT":       return [ position[0] + offset, position[1] - offset, -1 ];
+            case "BOTTOM_LEFT":     return [ position[0] - offset, position[1] + offset, -1 ];
+            case "BOTTOM_RIGHT":    return [ position[0] + offset, position[1] + offset, -1 ];
         }
     }
 
+    getMask(corner) {
+        switch(corner) {
+            case "TOP_LEFT":        return this.texture_mask_tl;
+            case "TOP_RIGHT":       return this.texture_mask_tr;
+            case "BOTTOM_LEFT":     return this.texture_mask_bl;
+            case "BOTTOM_RIGHT":    return this.texture_mask_br;
+        }
+    }
+
+    getEdgeMask(corner, neighbours) {
+        switch(corner) {
+            case "TOP_LEFT": {
+                if (neighbours & Neighbours.TOP_LEFT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.LEFT)) {
+                    return this.texture_edge_mask_tl_inner;
+                }
+                else if (neighbours & Neighbours.TOP && neighbours & Neighbours.LEFT) {
+                    return this.texture_edge_mask_tl_full;
+                }
+
+                else if (neighbours & Neighbours.LEFT) {
+                    return this.texture_edge_mask_tl_left;
+                }
+                else if (neighbours & Neighbours.TOP) {
+                    // INCORRECT!
+                    return this.texture_edge_mask_tl_top;
+                }
+            }
+            break;
+
+            case "TOP_RIGHT": {
+                if (neighbours & Neighbours.TOP_RIGHT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.RIGHT)) {
+                    // INCORRECT!
+                    return this.texture_edge_mask_tr_inner;
+                }
+                else if (neighbours & Neighbours.TOP && neighbours & Neighbours.RIGHT) {
+                    return this.texture_edge_mask_tr_full;
+                }
+
+                else if (neighbours & Neighbours.RIGHT) {
+                    return this.texture_edge_mask_tr_right;
+                }
+                else if (neighbours & Neighbours.TOP) {
+                    return this.texture_edge_mask_tr_top;
+                }
+
+            }
+            break;
+
+            case "BOTTOM_LEFT": {
+                if (neighbours & Neighbours.BOTTOM_LEFT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.LEFT)) {
+                    // INCORRECT!
+                    return this.texture_edge_mask_bl_inner;
+                }
+                else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.LEFT) {
+                    return this.texture_edge_mask_bl_full;
+                }
+
+                else if (neighbours & Neighbours.LEFT) {
+                    return this.texture_edge_mask_bl_left;
+                }
+                else if (neighbours & Neighbours.BOTTOM) {
+                    return this.texture_edge_mask_bl_bottom;
+                }
+
+            }
+            break;
+
+            case "BOTTOM_RIGHT": {
+                if (neighbours & Neighbours.BOTTOM_RIGHT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.RIGHT)) {
+                    // INCORRECT!
+                    return this.texture_edge_mask_br_inner;
+                }
+                else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.RIGHT) {
+                    return this.texture_edge_mask_br_full;
+                }
+
+                else if (neighbours & Neighbours.RIGHT) {
+                    return this.texture_edge_mask_br_right;
+                }
+                else if (neighbours & Neighbours.BOTTOM) {
+                    return this.texture_edge_mask_br_bottom;
+                }
+
+            }
+            break;
+        }
+    }
+
+    
+  
 
     drawColoredQuad(renderable) {
         const gl = this.#context;
@@ -320,20 +450,7 @@ export class Renderer {
 
         gl.useProgram(info.program);
 
-        // VERTEX
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
-        gl.vertexAttribPointer(
-            0,
-            3,
-            gl.FLOAT,
-            false,
-            0,
-            0
-        );
-        gl.enableVertexAttribArray(
-            0
-        );
+        
 
         const {position, color} = renderable;
 
@@ -358,6 +475,20 @@ export class Renderer {
             color
         );
  
+        // VERTEX
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
          
         // Draw call
         {
@@ -367,7 +498,6 @@ export class Renderer {
 
 
     drawRoundedTile(renderable) {
-
 
         const gl = this.#context;
 
@@ -409,10 +539,19 @@ export class Renderer {
             gl.activeTexture(gl.TEXTURE0);
 
             // Bind the texture to texture unit 0
-            gl.bindTexture(gl.TEXTURE_2D, renderable.texture);
+            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture);
 
             // Tell the shader we bound the texture to texture unit 0
             gl.uniform1i(info.uniforms.mask_texture.location, 0);
+
+            // Tell WebGL we want to affect texture unit 0
+            gl.activeTexture(gl.TEXTURE1);
+
+            // Bind the texture to texture unit 0
+            gl.bindTexture(gl.TEXTURE_2D, renderable.edge_mask_texture);
+
+            // Tell the shader we bound the texture to texture unit 0
+            gl.uniform1i(info.uniforms.edge_mask_texture.location, 1);
         }
        
 
@@ -478,7 +617,7 @@ export class Renderer {
         this.camera_projection = proj_matrix;
     }
 
-    drawAll(world) {
+    drawAll() {
         const gl = this.#context;
         gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
         gl.clearDepth(1.0);                 // Clear everything
@@ -490,12 +629,12 @@ export class Renderer {
 
         while (this.render_list.length) {
             const renderable = this.render_list.pop();
-            if (renderable.type == "ROUNDED") {
-                this.drawRoundedTile(renderable);
+            if (renderable.type === "STANDARD") {
+                this.drawColoredQuad(renderable);
             }
             else {
-                this.drawColoredQuad(renderable);
-            } 
+                this.drawRoundedTile(renderable);
+            }
         }
     }
 }

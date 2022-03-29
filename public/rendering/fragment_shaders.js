@@ -58,11 +58,14 @@ export const FS_TEXTURED_SOURCE = `
 
     uniform sampler2D uMaskTexture;
     uniform int uUseMask;
+    uniform sampler2D uEdgeMaskTexture;
+    uniform int uUseEdgeMask;
 
     varying vec2 texCoord;
     
     void main() {
-        float alpha = uUseMask == 1 ? texture2D(uMaskTexture, texCoord).r : 1.0;
+        float alpha = texture2D(uEdgeMaskTexture, texCoord).r;
+       
         gl_FragColor = vec4(uColor.rgb, alpha);
     }
 `;
