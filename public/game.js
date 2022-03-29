@@ -219,8 +219,9 @@ function resizeCanvas(canvas) {
         canvas.style.height = `${new_h}px`;;
         renderer.canvas.width = new_w;
         renderer.canvas.height = new_h;
-        renderer.getContext().viewport(0,0, new_w, new_h)
-        renderer.updateCameraProjection(world.dimensions.w, world.dimensions.h);
+        const oversampling_factor = 1.0;
+        renderer.getContext().viewport(0,0, new_w * oversampling_factor, new_h * oversampling_factor)
+        renderer.updateCameraProjection(world.dimensions.w, world.dimensions.h, oversampling_factor);
     }
 
 }
@@ -790,16 +791,9 @@ function render(world) {
                 return false;
             }
             if (tile.color === "gray") {
-                checkNeighbourIsSelf = (row, col) => {
-                    let t = world.getTile(row, col);
-                    if (t) {
-                        return t.color === "gray";
-                    }
-                    return false;
-                }
+                renderer.pushColorQuad( [...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1]);                
             }
-           
-            {
+            else {
                 let weights = [1,1,1,1];
                 // TOP
                 {
@@ -835,7 +829,7 @@ function render(world) {
                     }
                 }
 
-                renderer.pushRoundedColorQuad([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1], weights)
+                renderer.pushRoundedColorTile([...rgb, 1.0], [tile.opengl_visual_pos[0], tile.opengl_visual_pos[1], -1], weights)
             }
         }
     });

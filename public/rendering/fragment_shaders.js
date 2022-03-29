@@ -24,7 +24,7 @@ export const FS_ROUNDED_SOURCE = `
 
    
     float partriallyRoundedBoxSDF(vec2 p, vec2 b, vec4 r) {
-        r.xy = p.x > 0.0 ? r.xy : r.zw;
+        r.xy = p.x > 0.0 ? r.xy : r.wz;
         r.x  = p.y > 0.0 ? r.x : r.y;
 
         vec2 q = abs(p)-b+r.x;
@@ -39,7 +39,7 @@ export const FS_ROUNDED_SOURCE = `
     
     void main() {
         vec2 uv = texCoord * 2.0 - 1.0;
-        const float max_radius = 0.3;
+        const float max_radius = 0.5;
         vec4 radii = uCornerWeights * max_radius;
         float dist = partriallyRoundedBoxSDF(uv, vec2(1.0), radii);
        
@@ -53,15 +53,16 @@ export const FS_ROUNDED_SOURCE = `
 `;
 
 export const FS_TEXTURED_SOURCE = `
-    precision mediump float;
+    precision highp float;
     uniform vec4 uColor;
 
-    uniform sampler2D uTexture;
+    uniform sampler2D uMaskTexture;
+    uniform int uUseMask;
 
-    varying highp vec2 texCoord;
+    varying vec2 texCoord;
     
     void main() {
-        vec4 col = texture2D(uTexture, texCoord);
-        gl_FragColor = col;
+        float alpha = uUseMask == 1 ? texture2D(uMaskTexture, texCoord).r : 1.0;
+        gl_FragColor = vec4(uColor.rgb, alpha);
     }
 `;

@@ -5,7 +5,6 @@ import { VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
 import { 
     FS_WHITE_SOURCE, 
     FS_COLOR_SOURCE, 
-    FS_ROUNDED_SOURCE,
     FS_TEXTURED_SOURCE 
 } from './rendering/fragment_shaders.js';
 
@@ -44,17 +43,15 @@ function loadTexture(gl, url) {
             image
         );
 
-        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-            gl.generateMipmap(gl.TEXTURE_2D);
-        }
-        else {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        }
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     };
     image.src = url;
-
+    
+    
 
     return texture;
 }
@@ -94,10 +91,10 @@ function createGlQuad(gl) {
     // TEXCOORDS
     {
         const coords = [
-            0.0, 0.0, 
             0.0, 1.0, 
-            1.0, 1.0, 
+            0.0, 0.0, 
             1.0, 0.0, 
+            1.0, 1.0, 
         ];
          
         
@@ -177,7 +174,10 @@ export class Renderer {
     rounded_color_shader;
     texture_shader;
 
-    test_texture;
+    texture_mask_tl;
+    texture_mask_tr;
+    texture_mask_bl;
+    texture_mask_br;
 
     render_list = [];
 
@@ -190,17 +190,16 @@ export class Renderer {
 
         this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
         this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.default_white_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
-        this.default_white_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.default_white_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
 
         this.single_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_COLOR_SOURCE);
         this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.single_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
-        this.single_color_shader.addUniform(gl, 'model_matrix', 'uModelMatrix');
+        this.single_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
 
+        /*
         this.rounded_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_ROUNDED_SOURCE);
         this.rounded_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
         this.rounded_color_shader.addUniform(gl, 'view_matrix', 'uViewMatrix');
@@ -208,6 +207,20 @@ export class Renderer {
         this.rounded_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.rounded_color_shader.addUniform(gl, 'color', 'uColor');
         this.rounded_color_shader.addUniform(gl, 'corner_weights', 'uCornerWeights');
+        */
+
+        this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_TEXTURED_SOURCE);
+        this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+        this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.texture_shader.addUniform(gl, 'mask_texture', 'uMaskTexture');
+        this.texture_shader.addUniform(gl, 'use_mask', 'uUseMask');
+        this.texture_shader.addUniform(gl, 'color', 'uColor');
+
+        this.texture_mask_tl = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw.png');
+        this.texture_mask_tr = loadTexture(gl, '/assets/textures/rounded_tile_mask_tr_bw.png');
+        this.texture_mask_br = loadTexture(gl, '/assets/textures/rounded_tile_mask_br_bw.png');
+        this.texture_mask_bl = loadTexture(gl, '/assets/textures/rounded_tile_mask_bl_bw.png');
 
     }
 
@@ -243,31 +256,117 @@ export class Renderer {
     pushColorQuad(color, position) {
         const renderable = this.getRenderableQuad(color, position);
         renderable.shader = this.single_color_shader;
+        renderable.type = "STANDARD";
 
         this.render_list.push(renderable);
     }
 
-    pushRoundedColorQuad(color, position, weights) {
-        const renderable = this.getRenderableQuad(color, position);
-        renderable.shader = this.rounded_color_shader;
-        renderable.corner_weights = weights;
-
-        this.render_list.push(renderable);
-    }
     
     pushRoundedColorTile(color, position, weights) {
+        const shader = this.texture_shader;
         // TOP LEFT
         {
             const sub_position = [ position[0]-0.25, position[1]-0.25, position[2] ];
             const renderable = this.getRenderableQuad(color, sub_position);
-            renderable.shader = this.rounded_color_shader;
-            renderable.corner_weights = weights;
+            renderable.shader = shader;
+            renderable.texture = this.texture_mask_tl;
+            renderable.use_mask = weights[3] == 1;
             renderable.scale = 0.5;
+            renderable.type = "ROUNDED";
+            this.render_list.push(renderable);
+        }
+        // TOP RIGHT
+        {
+            const sub_position = [ position[0]+0.25, position[1]-0.25, position[2] ];
+            const renderable = this.getRenderableQuad(color, sub_position);
+            renderable.shader = shader;
+            renderable.texture = this.texture_mask_tr;
+            renderable.scale = 0.5;
+            renderable.use_mask = weights[0] == 1;
+            renderable.type = "ROUNDED";
+            this.render_list.push(renderable);
+        }
+        // BOTTOM RIGHT
+        {
+            const sub_position = [ position[0]+0.25, position[1]+0.25, position[2] ];
+            const renderable = this.getRenderableQuad(color, sub_position);
+            renderable.shader = shader;
+            renderable.texture = this.texture_mask_br;
+            renderable.scale = 0.5;
+            renderable.use_mask = weights[1] == 1;
+            renderable.type = "ROUNDED";
+            this.render_list.push(renderable);
+        }
+        // BOTTOM LEFT
+        {
+            const sub_position = [ position[0]-0.25, position[1]+0.25, position[2] ];
+            const renderable = this.getRenderableQuad(color, sub_position);
+            renderable.shader = shader;
+            renderable.texture = this.texture_mask_bl;
+            renderable.scale = 0.5;
+            renderable.use_mask = weights[2] == 1;
+            renderable.type = "ROUNDED";
+
             this.render_list.push(renderable);
         }
     }
 
-    drawColorQuad(renderable) {
+
+    drawColoredQuad(renderable) {
+        const gl = this.#context;
+
+        // @TODO: should this be hard coded?
+        const info = this.single_color_shader;
+
+        gl.useProgram(info.program);
+
+        // VERTEX
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
+
+        const {position, color} = renderable;
+
+        // FRAGMENT
+        const projection_matrix = this.getCameraProjection();
+        const modelview_matrix = mat4.create();
+        mat4.translate(modelview_matrix, modelview_matrix, position);
+        gl.uniformMatrix4fv(
+            info.uniforms.projection_matrix.location,
+            false,
+            projection_matrix
+        );
+        gl.uniformMatrix4fv(
+            info.uniforms.modelview_matrix.location,
+            false,
+            modelview_matrix
+        );
+        
+        
+        gl.uniform4fv(
+            info.uniforms.color.location,
+            color
+        );
+ 
+         
+        // Draw call
+        {
+            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+        }
+    }
+
+
+    drawRoundedTile(renderable) {
 
 
         const gl = this.#context;
@@ -305,6 +404,15 @@ export class Renderer {
             gl.enableVertexAttribArray(
                 1
             );
+
+            // Tell WebGL we want to affect texture unit 0
+            gl.activeTexture(gl.TEXTURE0);
+
+            // Bind the texture to texture unit 0
+            gl.bindTexture(gl.TEXTURE_2D, renderable.texture);
+
+            // Tell the shader we bound the texture to texture unit 0
+            gl.uniform1i(info.uniforms.mask_texture.location, 0);
         }
        
 
@@ -312,12 +420,12 @@ export class Renderer {
 
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
-        const model_matrix = mat4.create();
-        mat4.translate(model_matrix, model_matrix, renderable.position);
+        const modelview_matrix = mat4.create();
+        mat4.translate(modelview_matrix, modelview_matrix, renderable.position);
         if (renderable.scale) {
-            mat4.scale(model_matrix, model_matrix, [renderable.scale, renderable.scale, 1.0]);
+            mat4.scale(modelview_matrix, modelview_matrix, [renderable.scale, renderable.scale, 1.0]);
         }
-        const view_matrix = mat4.create();
+        
 
         gl.uniformMatrix4fv(
             info.uniforms.projection_matrix.location,
@@ -325,29 +433,21 @@ export class Renderer {
             projection_matrix
         );
         gl.uniformMatrix4fv(
-            info.uniforms.model_matrix.location,
+            info.uniforms.modelview_matrix.location,
             false,
-            model_matrix
+            modelview_matrix
         );
-        gl.uniformMatrix4fv(
-            info.uniforms.view_matrix.location,
-            false,
-            view_matrix
-        );
-
+        
         
         gl.uniform4fv(
             info.uniforms.color.location,
             renderable.color
         );
 
-        if (info.uniforms.corner_weights) {
-            gl.uniform4fv(
-                info.uniforms.corner_weights.location,
-                renderable.corner_weights
-            )
-        }
-
+        gl.uniform1i(
+            info.uniforms.use_mask.location,
+            renderable.use_mask ? 1 : 0
+        );
         // Draw call
         {
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
@@ -358,16 +458,18 @@ export class Renderer {
         return this.camera_projection;
     }
 
-    updateCameraProjection(world_dim_w, world_dim_h) {
+    updateCameraProjection(world_dim_w, world_dim_h, os_factor) {
         const z_near = 0.1;
         const z_far = 100.0;
         const proj_matrix = mat4.create();
 
+        const dim_w = world_dim_w * os_factor;
+        const dim_h = world_dim_h // * os_factor;
         mat4.ortho(
             proj_matrix,
             -0.5,
-            world_dim_w-0.5,
-            (world_dim_h-0.5),
+            dim_w-0.5,
+            (dim_h)-0.5,
             -0.5,
             z_near,
             z_far
@@ -388,7 +490,12 @@ export class Renderer {
 
         while (this.render_list.length) {
             const renderable = this.render_list.pop();
-            this.drawColorQuad(renderable);
+            if (renderable.type == "ROUNDED") {
+                this.drawRoundedTile(renderable);
+            }
+            else {
+                this.drawColoredQuad(renderable);
+            } 
         }
     }
 }
