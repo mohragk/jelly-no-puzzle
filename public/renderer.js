@@ -431,7 +431,6 @@ export class Renderer {
             renderable.edge_mask_texture = push_dir === MoveDirections.LEFT ? this.texture_cursor_arrow_mask_left : this.texture_cursor_arrow_mask_right;
         }
 
-        renderable.type = "STANDARD";
         renderable.scale = 2.0;
 
         this.render_list.push(renderable);
@@ -443,7 +442,6 @@ export class Renderer {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
-        renderable.type = "STANDARD";
         renderable.scale = scale;
 
         this.environment_list.push(renderable);
@@ -455,7 +453,6 @@ export class Renderer {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
-        renderable.type = "STANDARD";
         renderable.scale = scale;
 
         this.render_list.push(renderable);
