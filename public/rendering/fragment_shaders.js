@@ -55,6 +55,9 @@ export const FS_ROUNDED_SOURCE = `
 export const FS_TEXTURED_SOURCE = `
     precision highp float;
     uniform vec4 uColor;
+    
+    uniform sampler2D uColorTexture;
+    uniform bool uUseColorTexture;
 
     uniform sampler2D uEdgeMaskTexture;
    
@@ -62,7 +65,8 @@ export const FS_TEXTURED_SOURCE = `
     
     void main() {
         float alpha = texture2D(uEdgeMaskTexture, texCoord).r;
-        gl_FragColor = vec4(uColor.rgb, alpha);
+        vec3 col = uUseColorTexture ? texture2D(uColorTexture, texCoord).rgb : uColor.rgb;
+        gl_FragColor = vec4(col.rgb, alpha);
     }
 `;
 
