@@ -1,4 +1,4 @@
-import { Renderer } from './renderer.js';
+import { Renderer, FrameBuffer } from './renderer.js';
 
 
 import { levels }  from './levels2.js';

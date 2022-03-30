@@ -70,6 +70,19 @@ export const FS_TEXTURED_SOURCE = `
     }
 `;
 
+export const FS_MATTE_SOURCE = `
+    precision highp float;
+    
+    uniform sampler2D uColorTexture;
+   
+    varying vec2 texCoord;
+    
+    void main() {
+        vec4 col = texture2D(uColorTexture, texCoord);
+        gl_FragColor = col;
+    }
+`
+
 export const FS_CURSOR_SOURCE = `
     precision highp float;
 

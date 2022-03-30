@@ -6,7 +6,8 @@ import {
     FS_WHITE_SOURCE, 
     FS_COLOR_SOURCE, 
     FS_CURSOR_SOURCE,
-    FS_TEXTURED_SOURCE 
+    FS_TEXTURED_SOURCE,
+    FS_MATTE_SOURCE
 } from './rendering/fragment_shaders.js';
 
 import {Neighbours} from './world.js'
@@ -69,6 +70,61 @@ function getRGBForNamedColor (name) {
         case "white":   return [1.0, 1.0, 1.0];
     }
     return [0,0,0];
+}
+
+function createFullscreenQuad(gl) {
+    const getBuffer = (data, gl_buffer_type) => {
+        const BO = gl.createBuffer();
+        gl.bindBuffer(gl_buffer_type, BO);
+        gl.bufferData( gl_buffer_type, data, gl.STATIC_DRAW );
+        gl.bindBuffer(gl_buffer_type, null);
+
+        return BO;
+    };
+        
+    let result = {};
+    
+    // VERTEX
+    {
+        const vertices = [
+            -1.0,  1.0, 0.0,
+            -1.0, -1.0, 0.0,
+             1.0, -1.0, 0.0,
+             1.0,  1.0, 0.0 
+        ];
+        const vertex_buffer = getBuffer(new Float32Array(vertices), gl.ARRAY_BUFFER)
+        result.position = vertex_buffer;
+            
+        const indices = [3,2,1,3,1,0]; 
+        const index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
+        result.position_indices = index_buffer;
+        result.position_indices_count = indices.length;
+    }
+
+    
+    // TEXCOORDS
+    {
+        const coords = [
+            0.0, 1.0, 
+            0.0, 0.0, 
+            1.0, 0.0, 
+            1.0, 1.0, 
+        ];
+         
+        
+        const texcoord_buffer = getBuffer(new Float32Array(coords), gl.ARRAY_BUFFER);
+        result.texcoord = texcoord_buffer;
+            
+        
+        const indices = [3,2,1,3,1,0]; 
+        const texcoord_index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
+        result.texcoord_indices = texcoord_index_buffer;
+        result.texcoord_indices_count = indices.length;
+    }
+
+
+
+    return result;
 }
 
 function createGlQuad(gl) {
@@ -161,7 +217,7 @@ function createGLShader(gl, vs, fs) {
 }
 
 
-class FrameBuffer {
+export class FrameBuffer {
     width;
     height;
 
@@ -252,6 +308,7 @@ export class Renderer {
     frame_buffer;
 
     quad;
+    fs_quad;
 
     fullscreen_shader;
     default_white_shader;
@@ -295,6 +352,7 @@ export class Renderer {
     texture_edge_mask_br_bottom;
 
     render_list = [];
+    environment_list = [];
 
     camera_projection;
 
@@ -303,9 +361,10 @@ export class Renderer {
         const gl = this.#context;
         this.quad = createGlQuad(gl);
 
-        this.fullscreen_quad = createGlQuad
+        this.fs_quad = createFullscreenQuad(gl);
 
-        this.fullscreen_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_TEXTURED_SOURCE);
+        this.fullscreen_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_MATTE_SOURCE);
+        this.fullscreen_shader.addUniform(gl, 'color_texture', 'uColorTexture');
 
         this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
         this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
@@ -418,6 +477,20 @@ export class Renderer {
         this.render_list.push(renderable);
     }
 
+
+    
+    pushEnvironmentQuad(named_color, position, scale) {
+        if (named_color === "gray")
+            debugger
+        const color = [...getRGBForNamedColor(named_color), 1];
+        const renderable = this.getRenderableQuad(color, [...position, -1]);
+        renderable.shader = this.single_color_shader;
+        renderable.type = "STANDARD";
+        renderable.scale = scale;
+
+        this.environment_list.push(renderable);
+
+    }
   
 
     pushColoredQuad(named_color, position, scale = 1.0) {
@@ -440,7 +513,7 @@ export class Renderer {
         this.render_list.push(renderable);
     }
 
-    pushFulllRoundedColorTile(named_color, position, neighbours) {
+    pushFullRoundedColorTile(named_color, position, neighbours) {
         this.pushRoundedColorTile(named_color, position, neighbours, true);
     }
 
@@ -579,6 +652,8 @@ export class Renderer {
 
         const {position, color} = renderable;
 
+        
+
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
         const modelview_matrix = mat4.create();
@@ -663,18 +738,48 @@ export class Renderer {
                 0
             );
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+
         }
     }
 
 
     drawFullScreenQuad(texture) {
-        const shader = this.fullscreen_shader;
+        const gl = this.#context;
+        const quad = this.fs_quad;
+        const info = this.fullscreen_shader;
+        gl.useProgram(info.program);
+
+        // TEXTURE
+        {
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad.texcoord);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.texcoord_indices);
+            gl.vertexAttribPointer(
+                1,
+                2,
+                gl.FLOAT,
+                false,
+                0,
+                0
+            );
+            gl.enableVertexAttribArray(
+                1
+            );
+            
+            // Bind the texture to texture unit 0
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            // Tell WebGL we want to affect texture unit 0
+            gl.activeTexture(gl.TEXTURE0);
+            
+            // Tell the shader we bound the texture to texture unit 0
+            gl.uniform1i(info.uniforms.color_texture.location, 0);
+        }
 
         // Draw call
         {
             // VERTEX
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
             gl.vertexAttribPointer(
                 0,
                 3,
@@ -686,7 +791,7 @@ export class Renderer {
             gl.enableVertexAttribArray(
                 0
             );
-            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+            gl.drawElements(gl.TRIANGLES, quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
         }
     }
 
@@ -715,59 +820,68 @@ export class Renderer {
     }
 
 
-    updateEnvironmentTexture(renderables, frame_buffer) {
+    updateEnvironmentTexture(frame_buffer) {
+
+        if (!this.environment_list.length) return;
+
         const gl = this.#context;
+        const renderables = this.environment_list;
+
+       
 
         // DRAW TO FRAMEBUFFER
         {
             gl.bindFramebuffer(gl.FRAMEBUFFER, frame_buffer.buffer);
             gl.viewport(0, 0, frame_buffer.width, frame_buffer.height);
-
-            gl.bindTexture(gl.TEXTURE_2D, frame_buffer.texture);
-            gl.activeTexture(gl.TEXTURE0);
-
+            
             gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
             gl.clearDepth(1.0);                 // Clear everything
             gl.enable(gl.DEPTH_TEST);           // Enable depth testing
             gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
             gl.enable(gl.BLEND)
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-            
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            
+            gl.bindTexture(gl.TEXTURE_2D, frame_buffer.texture);
+
     
             while (renderables.length) {
                 const renderable = renderables.pop();
                 this.drawColoredQuad(renderable);
             }
-
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
 
         this.texture_environment_background = frame_buffer.texture;
+        this.environment_list.lenght = 0;
     }
 
     drawAll(time) {
         const gl = this.#context;
-        
+        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
+        gl.clearDepth(1.0);                 // Clear everything
+        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+        gl.enable(gl.BLEND)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        //this.updateEnvironmentTexture(this.render_list, this.frame_buffer);
+        this.updateEnvironmentTexture(this.frame_buffer);
         
         {
             gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-
-            gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully opaque
-            gl.clearDepth(1.0);                 // Clear everything
-            gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-            gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-            gl.enable(gl.BLEND)
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
             
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+            if (this.texture_environment_background) {
+                this.drawFullScreenQuad(this.texture_environment_background);
+            }
+
+            
             while (this.render_list.length) {
                 const renderable = this.render_list.pop();
                 this.drawColoredQuad(renderable);
             }
+            
             
         }
 

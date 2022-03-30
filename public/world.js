@@ -50,6 +50,8 @@ export class World {
     
     debug_grid = [];
 
+    initialized = false;
+
     setDimensions(w, h) {
         this.dimensions.w = w;
         this.dimensions.h = h;
@@ -80,6 +82,8 @@ export class World {
         tile.world_pos.col = col;
         tile.target_pos.row = row;
         tile.target_pos.col = col;
+        tile.opengl_visual_pos[0] = col;
+        tile.opengl_visual_pos[1] = row;
 
         // NOTE: this assumes STATIC tiles have one or more corresponding MOVABLE tiles.
         if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
@@ -781,11 +785,9 @@ export class World {
                     renderer.pushRoundedColorTile( tile.color, tile.opengl_visual_pos, neighbours );
                 }
                 else if (tile.color !== "gray") {
-                    renderer.pushFulllRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
+                    renderer.pushFullRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
                 }
-                else {
-                    renderer.pushColoredQuad(tile.color, tile.opengl_visual_pos);
-                }
+               
             }
         });
 
@@ -806,6 +808,44 @@ export class World {
         {
             this.drawMovables(renderer);
         }    
+
+
+        if (!this.initialized) {
+            this.initialized = true;
+            this.forEachCell((row_, col_, index) => {
+                const tile = this.grid[index];
+                if ((tile.gameplay_flags > 0 ) && tile.color === "gray" ) {
+                    const {row, col} = tile.world_pos;
+                    
+                    if (0) {
+
+                        const addNeigbour = (row, col, placement) => {
+                            let t = this.getTile(row, col);
+                            if (t) {
+                                if (t.id !== tile.id) {
+                                        neighbours |= placement;
+                                }
+                            }
+                        };
+                        let neighbours = 0;
+                        
+                        addNeigbour(row-1, col, Neighbours.TOP);
+                        addNeigbour(row+1, col, Neighbours.BOTTOM);
+                        addNeigbour(row, col-1, Neighbours.LEFT);
+                        addNeigbour(row, col+1, Neighbours.RIGHT);
+                        
+                        addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
+                        addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
+                        addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
+                        addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                    }
+                    
+                    
+                    renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0);
+                  
+                }
+            });
+        }
     }
     
 };
