@@ -568,7 +568,6 @@ export class World {
         const mouse_x = game_state.mouse.screen_coord.x;
         const mouse_y = game_state.mouse.screen_coord.y;
 
-        // NOTE: maybe store this in game state?
         const {row, col} = getTileCoordFromScreenCoord(mouse_x, mouse_y);
         const {selected} = this.selectTiles(row, col, mouse_x);
 

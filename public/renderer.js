@@ -407,15 +407,7 @@ export class Renderer {
         this.render_list.push(renderable);
     }
 
-    pushTextureMaskedColorQuad(named_color, position, mask_texture, scale = 1.0) {
-        const color = [...getRGBForNamedColor(named_color), 1];
-        const renderable = this.getRenderableQuad(color, [...position, -1]);
-        renderable.shader = this.texture_shader;
-        renderable.type = "STANDARD";
-        renderable.scale = scale;
-
-        this.render_list.push(renderable);
-    }
+  
 
     pushColoredQuad(named_color, position, scale = 1.0) {
         const color = [...getRGBForNamedColor(named_color), 1];
@@ -490,20 +482,16 @@ export class Renderer {
             case "TOP_LEFT": {
                 if (neighbours & Neighbours.TOP_LEFT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.LEFT)) {
                     return EdgeMaskTypes.TOP_LEFT_INNER;
-                    return this.texture_edge_mask_tl_inner;
                 }
                 else if (neighbours & Neighbours.TOP && neighbours & Neighbours.LEFT) {
                     return EdgeMaskTypes.TOP_LEFT_OUTER;
-                    return this.texture_edge_mask_tl_full;
                 }
 
                 else if (neighbours & Neighbours.LEFT) {
                     return EdgeMaskTypes.TOP_LEFT_LEFT;
-                    return this.texture_edge_mask_tl_left;
                 }
                 else if (neighbours & Neighbours.TOP) {
                     return EdgeMaskTypes.TOP_LEFT_TOP;
-                    return this.texture_edge_mask_tl_top;
                 }
             }
             break;
@@ -511,21 +499,17 @@ export class Renderer {
             case "TOP_RIGHT": {
                 if (neighbours & Neighbours.TOP_RIGHT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.RIGHT)) {
                     return EdgeMaskTypes.TOP_RIGHT_INNER;
-                    return this.texture_edge_mask_tr_inner;
                     
                 }
                 else if (neighbours & Neighbours.TOP && neighbours & Neighbours.RIGHT) {
                     return EdgeMaskTypes.TOP_RIGHT_OUTER;
-                    return this.texture_edge_mask_tr_full;
                 }
 
                 else if (neighbours & Neighbours.RIGHT) {
                     return EdgeMaskTypes.TOP_RIGHT_RIGHT;
-                    return this.texture_edge_mask_tr_right;
                 }
                 else if (neighbours & Neighbours.TOP) {
                     return EdgeMaskTypes.TOP_RIGHT_TOP;
-                    return this.texture_edge_mask_tr_top;
                 }
 
             }
@@ -534,20 +518,16 @@ export class Renderer {
             case "BOTTOM_LEFT": {
                 if (neighbours & Neighbours.BOTTOM_LEFT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.LEFT)) {
                     return EdgeMaskTypes.BOTTOM_LEFT_INNER;
-                    return this.texture_edge_mask_bl_inner;
                 }
                 else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.LEFT) {
                     return EdgeMaskTypes.BOTTOM_LEFT_OUTER;
-                    return this.texture_edge_mask_bl_full;
                 }
 
                 else if (neighbours & Neighbours.LEFT) {
                     return EdgeMaskTypes.BOTTOM_LEFT_LEFT;
-                    return this.texture_edge_mask_bl_left;
                 }
                 else if (neighbours & Neighbours.BOTTOM) {
                     return EdgeMaskTypes.BOTTOM_LEFT_BOTTOM;
-                    return this.texture_edge_mask_bl_bottom;
                 }
 
             }
@@ -556,20 +536,16 @@ export class Renderer {
             case "BOTTOM_RIGHT": {
                 if (neighbours & Neighbours.BOTTOM_RIGHT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.RIGHT)) {
                     return EdgeMaskTypes.BOTTOM_RIGHT_INNER;
-                    return this.texture_edge_mask_br_inner;
                 }
                 else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.RIGHT) {
                     return EdgeMaskTypes.BOTTOM_RIGHT_OUTER;
-                    return this.texture_edge_mask_br_full;
                 }
 
                 else if (neighbours & Neighbours.RIGHT) {
                     return EdgeMaskTypes.BOTTOM_RIGHT_RIGHT;
-                    return this.texture_edge_mask_br_right;
                 }
                 else if (neighbours & Neighbours.BOTTOM) {
                     return EdgeMaskTypes.BOTTOM_RIGHT_BOTTOM;
-                    return this.texture_edge_mask_br_bottom;
                 }
 
             }
@@ -613,13 +589,12 @@ export class Renderer {
             modelview_matrix
         );
         
-        
         gl.uniform4fv(
             info.uniforms.color.location,
             color
         );
 
-        //TEXTURE
+        // MASK TEXTURE
         if (renderable.edge_mask_texture) {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
@@ -648,7 +623,7 @@ export class Renderer {
        
 
 
-        // OPTIONAL
+        // OPTIONALS
 
         if (info.uniforms.time) {
             
@@ -658,110 +633,28 @@ export class Renderer {
             );  
         }
  
-        // VERTEX
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
-        gl.vertexAttribPointer(
-            0,
-            3,
-            gl.FLOAT,
-            false,
-            0,
-            0
-        );
-        gl.enableVertexAttribArray(
-            0
-        );
-         
+        
         // Draw call
         {
-            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
-        }
-    }
-
-
-    drawRoundedTile(renderable) {
-
-        const gl = this.#context;
-
-        const info = renderable.shader;
-        gl.useProgram(info.program);
-
-        // VERTEX
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
-        gl.vertexAttribPointer(
-            0,
-            3,
-            gl.FLOAT,
-            false,
-            0,
-            0
-        );
-        gl.enableVertexAttribArray(
-            0
-        );
-
-        //TEXTURE
-        if (this.quad.texcoord) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
+            // VERTEX
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
             gl.vertexAttribPointer(
-                1,
-                2,
+                0,
+                3,
                 gl.FLOAT,
                 false,
                 0,
                 0
             );
             gl.enableVertexAttribArray(
-                1
+                0
             );
-
-            // Tell WebGL we want to affect texture unit 0
-            gl.activeTexture(gl.TEXTURE0);
-
-
-            // Bind the texture to texture unit 0
-            gl.bindTexture(gl.TEXTURE_2D, renderable.edge_mask_texture);
-
-            // Tell the shader we bound the texture to texture unit 0
-            gl.uniform1i(info.uniforms.edge_mask_texture.location, 0);
-        }
-       
-
-        // FRAGMENT
-        const projection_matrix = this.getCameraProjection();
-        const modelview_matrix = mat4.create();
-        mat4.translate(modelview_matrix, modelview_matrix, renderable.position);
-        if (renderable.scale) {
-            mat4.scale(modelview_matrix, modelview_matrix, [renderable.scale, renderable.scale, 1.0]);
-        }
-        
-
-        gl.uniformMatrix4fv(
-            info.uniforms.projection_matrix.location,
-            false,
-            projection_matrix
-        );
-        gl.uniformMatrix4fv(
-            info.uniforms.modelview_matrix.location,
-            false,
-            modelview_matrix
-        );
-        
-        
-        gl.uniform4fv(
-            info.uniforms.color.location,
-            renderable.color
-        );
-
-       
-        // Draw call
-        {
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
         }
     }
+
+
 
     getCameraProjection() {
         return this.camera_projection;
@@ -808,12 +701,7 @@ export class Renderer {
     
             while (this.render_list.length) {
                 const renderable = this.render_list.pop();
-                if (renderable.type === "STANDARD") {
-                    this.drawColoredQuad(renderable, time);
-                }
-                else {
-                    this.drawRoundedTile(renderable);
-                }
+                this.drawColoredQuad(renderable);
             }
         }
 
