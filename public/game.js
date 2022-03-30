@@ -798,7 +798,6 @@ function render(world) {
         if (render) {
             render();
         }
-       
     }
 }
 

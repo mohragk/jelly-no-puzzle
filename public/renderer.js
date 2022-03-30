@@ -10,6 +10,7 @@ import {
 } from './rendering/fragment_shaders.js';
 
 import {Neighbours} from './world.js'
+import { MoveDirections } from './command.js';
 
 
 function loadTexture(gl, url) { 
@@ -65,6 +66,7 @@ function getRGBForNamedColor (name) {
         case "red":     return [1.0, 0.0, 0.0];
         case "green":   return [0.0, 0.5, 0.0];
         case "blue":    return [0.0, 0.0, 1.0];
+        case "white":   return [1.0, 1.0, 1.0];
     }
     return [0,0,0];
 }
@@ -220,6 +222,29 @@ class ShaderProgram {
     }
 };
 
+
+const EdgeMaskTypes = {
+    TOP_LEFT_OUTER: 0,
+    TOP_LEFT_INNER: 1,
+    TOP_LEFT_LEFT:  2,
+    TOP_LEFT_TOP:   3,
+
+    TOP_RIGHT_OUTER: 10,
+    TOP_RIGHT_INNER: 11,
+    TOP_RIGHT_RIGHT: 12,
+    TOP_RIGHT_TOP:   13,
+
+    BOTTOM_LEFT_OUTER:  20,
+    BOTTOM_LEFT_INNER:  21,
+    BOTTOM_LEFT_LEFT:   22,
+    BOTTOM_LEFT_BOTTOM: 23,
+
+    BOTTOM_RIGHT_OUTER:  30,
+    BOTTOM_RIGHT_INNER:  31,
+    BOTTOM_RIGHT_RIGHT:  32,
+    BOTTOM_RIGHT_BOTTOM: 33,
+};
+
 export class Renderer {
     canvas;
     #context;
@@ -232,6 +257,16 @@ export class Renderer {
     rounded_color_shader;
     texture_shader;
     cursor_shader;
+
+    texture_cursor_arrow_mask_left;
+    texture_cursor_arrow_mask_right;
+
+
+    texture_full_mask_none;
+    texture_full_mask_tl;
+    texture_full_mask_tr;
+    texture_full_mask_bl;
+    texture_full_mask_br;
 
     
     texture_edge_mask_tl_full;
@@ -290,7 +325,15 @@ export class Renderer {
         this.cursor_shader.addUniform(gl, 'color', 'uColor');
         this.cursor_shader.addUniform(gl, 'time', 'uTime');
       
-        
+        this.texture_cursor_arrow_mask_left  = loadTexture(gl, '/assets/textures/cursor_arrow_left.png');
+        this.texture_cursor_arrow_mask_right = loadTexture(gl, '/assets/textures/cursor_arrow_right.png');
+
+        this.texture_full_mask_none         = loadTexture(gl, '/assets/textures/rounded_tile_mask_none.png');
+        this.texture_full_mask_tl           = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw_sm.png');
+        this.texture_full_mask_tr           = loadTexture(gl, '/assets/textures/rounded_tile_mask_tr_bw_sm.png');
+        this.texture_full_mask_bl           = loadTexture(gl, '/assets/textures/rounded_tile_mask_bl_bw_sm.png');
+        this.texture_full_mask_br           = loadTexture(gl, '/assets/textures/rounded_tile_mask_br_bw_sm.png');
+
         
         this.texture_edge_mask_tl_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png');
         this.texture_edge_mask_tl_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png');
@@ -346,48 +389,64 @@ export class Renderer {
         return renderable;
     }
 
-    drawCursorQuad(named_color, position) {
-        const color = [...getRGBForNamedColor(named_color), 1];
-        const renderable = this.getRenderableQuad(color, position);
-        renderable.shader = this.cursor_shader;
-        renderable.type = "STANDARD";
-        this.drawColoredQuad(renderable);
-    }
+  
 
-    pushCursorQuad(named_color, position) {
+    pushCursorQuad(named_color, position, push_dir) {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, position);
         renderable.shader = this.cursor_shader;
+
+        if (push_dir) {
+            renderable.shader = this.texture_shader;
+            renderable.edge_mask_texture = push_dir === MoveDirections.LEFT ? this.texture_cursor_arrow_mask_left : this.texture_cursor_arrow_mask_right;
+        }
+
         renderable.type = "STANDARD";
+        renderable.scale = 2.0;
 
         this.render_list.push(renderable);
     }
 
-    pushColoredQuad(named_color, position) {
+    pushTextureMaskedColorQuad(named_color, position, mask_texture, scale = 1.0) {
+        const color = [...getRGBForNamedColor(named_color), 1];
+        const renderable = this.getRenderableQuad(color, [...position, -1]);
+        renderable.shader = this.texture_shader;
+        renderable.type = "STANDARD";
+        renderable.scale = scale;
+
+        this.render_list.push(renderable);
+    }
+
+    pushColoredQuad(named_color, position, scale = 1.0) {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
         renderable.type = "STANDARD";
+        renderable.scale = scale;
 
         this.render_list.push(renderable);
     }
 
-    pushSubTile(color, tile_position, corner, neighbours) {
+    pushSubTile(color, tile_position, corner, neighbours, is_full) {
         const renderable = this.getRenderableQuad(color, this.getSubPosition(tile_position, corner));
         renderable.shader = this.texture_shader;
         renderable.scale = 0.5;
-        renderable.mask_texture      = this.getMask(corner);
-        renderable.edge_mask_texture = this.getEdgeMask(corner, neighbours);
+        const mask_type = this.getEdgeMaskType(corner, neighbours);
+        renderable.edge_mask_texture = this.getMaskForType(mask_type, is_full);
         
         this.render_list.push(renderable);
     }
 
-    pushRoundedColorTile(named_color, position, neighbours) {
+    pushFulllRoundedColorTile(named_color, position, neighbours) {
+        this.pushRoundedColorTile(named_color, position, neighbours, true);
+    }
+
+    pushRoundedColorTile(named_color, position, neighbours, is_full = false) {
         const color = [...getRGBForNamedColor(named_color), 1.0];
-        this.pushSubTile(color, position, "TOP_LEFT",    neighbours);
-        this.pushSubTile(color, position, "TOP_RIGHT",  neighbours);
-        this.pushSubTile(color, position, "BOTTOM_LEFT", neighbours);
-        this.pushSubTile(color, position, "BOTTOM_RIGHT", neighbours);
+        this.pushSubTile(color, position, "TOP_LEFT",     neighbours, is_full);
+        this.pushSubTile(color, position, "TOP_RIGHT",    neighbours, is_full);
+        this.pushSubTile(color, position, "BOTTOM_LEFT",  neighbours, is_full);
+        this.pushSubTile(color, position, "BOTTOM_RIGHT", neighbours, is_full);
     }
 
     getSubPosition(position, corner) {
@@ -400,30 +459,50 @@ export class Renderer {
         }
     }
 
-    getMask(corner) {
-        switch(corner) {
-            case "TOP_LEFT":        return this.texture_mask_tl;
-            case "TOP_RIGHT":       return this.texture_mask_tr;
-            case "BOTTOM_LEFT":     return this.texture_mask_bl;
-            case "BOTTOM_RIGHT":    return this.texture_mask_br;
+    getMaskForType(type, is_full) {
+        switch(type) {
+            case EdgeMaskTypes.TOP_LEFT_OUTER:  return is_full ? this.texture_full_mask_tl      : this.texture_edge_mask_tl_full;
+            case EdgeMaskTypes.TOP_LEFT_INNER:  return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tl_inner;
+            case EdgeMaskTypes.TOP_LEFT_LEFT:   return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tl_left;
+            case EdgeMaskTypes.TOP_LEFT_TOP:    return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tl_top;
+
+            case EdgeMaskTypes.TOP_RIGHT_OUTER:  return is_full ? this.texture_full_mask_tr      : this.texture_edge_mask_tr_full;
+            case EdgeMaskTypes.TOP_RIGHT_INNER:  return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tr_inner;
+            case EdgeMaskTypes.TOP_RIGHT_RIGHT:  return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tr_right;
+            case EdgeMaskTypes.TOP_RIGHT_TOP:    return is_full ? this.texture_full_mask_none    : this.texture_edge_mask_tr_top;
+
+            case EdgeMaskTypes.BOTTOM_LEFT_OUTER:   return is_full ? this.texture_full_mask_bl   : this.texture_edge_mask_bl_full;
+            case EdgeMaskTypes.BOTTOM_LEFT_INNER:   return is_full ? this.texture_full_mask_none : this.texture_edge_mask_bl_inner;
+            case EdgeMaskTypes.BOTTOM_LEFT_LEFT:    return is_full ? this.texture_full_mask_none : this.texture_edge_mask_bl_left;
+            case EdgeMaskTypes.BOTTOM_LEFT_BOTTOM:  return is_full ? this.texture_full_mask_none : this.texture_edge_mask_bl_bottom;
+
+            case EdgeMaskTypes.BOTTOM_RIGHT_OUTER:  return is_full ? this.texture_full_mask_br   : this.texture_edge_mask_br_full;
+            case EdgeMaskTypes.BOTTOM_RIGHT_INNER:  return is_full ? this.texture_full_mask_none : this.texture_edge_mask_br_inner;
+            case EdgeMaskTypes.BOTTOM_RIGHT_RIGHT:  return is_full ? this.texture_full_mask_none : this.texture_edge_mask_br_right;
+            case EdgeMaskTypes.BOTTOM_RIGHT_BOTTOM: return is_full ? this.texture_full_mask_none : this.texture_edge_mask_br_bottom;
         }
+
+        return this.texture_full_mask_none;
     }
 
-    getEdgeMask(corner, neighbours) {
+    getEdgeMaskType(corner, neighbours) {
         switch(corner) {
             case "TOP_LEFT": {
                 if (neighbours & Neighbours.TOP_LEFT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.LEFT)) {
+                    return EdgeMaskTypes.TOP_LEFT_INNER;
                     return this.texture_edge_mask_tl_inner;
                 }
                 else if (neighbours & Neighbours.TOP && neighbours & Neighbours.LEFT) {
+                    return EdgeMaskTypes.TOP_LEFT_OUTER;
                     return this.texture_edge_mask_tl_full;
                 }
 
                 else if (neighbours & Neighbours.LEFT) {
+                    return EdgeMaskTypes.TOP_LEFT_LEFT;
                     return this.texture_edge_mask_tl_left;
                 }
                 else if (neighbours & Neighbours.TOP) {
-                    // INCORRECT!
+                    return EdgeMaskTypes.TOP_LEFT_TOP;
                     return this.texture_edge_mask_tl_top;
                 }
             }
@@ -431,17 +510,21 @@ export class Renderer {
 
             case "TOP_RIGHT": {
                 if (neighbours & Neighbours.TOP_RIGHT && !(neighbours & Neighbours.TOP || neighbours & Neighbours.RIGHT)) {
-                    // INCORRECT!
+                    return EdgeMaskTypes.TOP_RIGHT_INNER;
                     return this.texture_edge_mask_tr_inner;
+                    
                 }
                 else if (neighbours & Neighbours.TOP && neighbours & Neighbours.RIGHT) {
+                    return EdgeMaskTypes.TOP_RIGHT_OUTER;
                     return this.texture_edge_mask_tr_full;
                 }
 
                 else if (neighbours & Neighbours.RIGHT) {
+                    return EdgeMaskTypes.TOP_RIGHT_RIGHT;
                     return this.texture_edge_mask_tr_right;
                 }
                 else if (neighbours & Neighbours.TOP) {
+                    return EdgeMaskTypes.TOP_RIGHT_TOP;
                     return this.texture_edge_mask_tr_top;
                 }
 
@@ -450,17 +533,20 @@ export class Renderer {
 
             case "BOTTOM_LEFT": {
                 if (neighbours & Neighbours.BOTTOM_LEFT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.LEFT)) {
-                    // INCORRECT!
+                    return EdgeMaskTypes.BOTTOM_LEFT_INNER;
                     return this.texture_edge_mask_bl_inner;
                 }
                 else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.LEFT) {
+                    return EdgeMaskTypes.BOTTOM_LEFT_OUTER;
                     return this.texture_edge_mask_bl_full;
                 }
 
                 else if (neighbours & Neighbours.LEFT) {
+                    return EdgeMaskTypes.BOTTOM_LEFT_LEFT;
                     return this.texture_edge_mask_bl_left;
                 }
                 else if (neighbours & Neighbours.BOTTOM) {
+                    return EdgeMaskTypes.BOTTOM_LEFT_BOTTOM;
                     return this.texture_edge_mask_bl_bottom;
                 }
 
@@ -469,17 +555,20 @@ export class Renderer {
 
             case "BOTTOM_RIGHT": {
                 if (neighbours & Neighbours.BOTTOM_RIGHT && !(neighbours & Neighbours.BOTTOM || neighbours & Neighbours.RIGHT)) {
-                    // INCORRECT!
+                    return EdgeMaskTypes.BOTTOM_RIGHT_INNER;
                     return this.texture_edge_mask_br_inner;
                 }
                 else if (neighbours & Neighbours.BOTTOM && neighbours & Neighbours.RIGHT) {
+                    return EdgeMaskTypes.BOTTOM_RIGHT_OUTER;
                     return this.texture_edge_mask_br_full;
                 }
 
                 else if (neighbours & Neighbours.RIGHT) {
+                    return EdgeMaskTypes.BOTTOM_RIGHT_RIGHT;
                     return this.texture_edge_mask_br_right;
                 }
                 else if (neighbours & Neighbours.BOTTOM) {
+                    return EdgeMaskTypes.BOTTOM_RIGHT_BOTTOM;
                     return this.texture_edge_mask_br_bottom;
                 }
 
@@ -507,6 +596,12 @@ export class Renderer {
         const projection_matrix = this.getCameraProjection();
         const modelview_matrix = mat4.create();
         mat4.translate(modelview_matrix, modelview_matrix, position);
+
+        if (renderable.scale) {
+            const {scale} = renderable;
+            mat4.scale(modelview_matrix, modelview_matrix, [scale, scale, scale])
+        }
+
         gl.uniformMatrix4fv(
             info.uniforms.projection_matrix.location,
             false,
@@ -523,6 +618,34 @@ export class Renderer {
             info.uniforms.color.location,
             color
         );
+
+        //TEXTURE
+        if (renderable.edge_mask_texture) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
+            gl.vertexAttribPointer(
+                1,
+                2,
+                gl.FLOAT,
+                false,
+                0,
+                0
+            );
+            gl.enableVertexAttribArray(
+                1
+            );
+
+            // Tell WebGL we want to affect texture unit 0
+            gl.activeTexture(gl.TEXTURE0);
+
+
+            // Bind the texture to texture unit 0
+            gl.bindTexture(gl.TEXTURE_2D, renderable.edge_mask_texture);
+
+            // Tell the shader we bound the texture to texture unit 0
+            gl.uniform1i(info.uniforms.edge_mask_texture.location, 0);
+        }
+       
 
 
         // OPTIONAL
