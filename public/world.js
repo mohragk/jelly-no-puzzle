@@ -611,6 +611,8 @@ export class World {
     }
 
     update(command_buffer, dt, game_state, undo_recorder, renderer) {
+        // NOTE: we push it first since it will be the LAST item to be rendered.
+        this.drawMouseCursor(game_state, renderer);
 
         
         this.handleInput(game_state);
@@ -795,9 +797,7 @@ export class World {
  
 
     render(renderer, game_state) {
-        // NOTE: we push it first since it will be the LAST item to be rendered.
-        this.drawMouseCursor(game_state, renderer);
-
+       
 
         // DRAW ANCHORS
         {

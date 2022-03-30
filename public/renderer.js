@@ -437,24 +437,25 @@ export class Renderer {
     }
 
 
-    
-    pushEnvironmentQuad(named_color, position, scale) {
+    getSingleColoredQuad(named_color, position, scale) {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
         renderable.scale = scale;
+        
+        return renderable;
+    }
+    
+    pushEnvironmentQuad(named_color, position, scale) {
+        const renderable = this.getSingleColoredQuad(named_color, position, scale);
 
         this.environment_list.push(renderable);
-
     }
   
 
     pushColoredQuad(named_color, position, scale = 1.0) {
-        const color = [...getRGBForNamedColor(named_color), 1];
-        const renderable = this.getRenderableQuad(color, [...position, -1]);
-        renderable.shader = this.single_color_shader;
-        renderable.scale = scale;
-
+        const renderable = this.getSingleColoredQuad(named_color, position, scale);
+        
         this.render_list.push(renderable);
     }
 

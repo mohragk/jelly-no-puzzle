@@ -165,7 +165,7 @@ function reset(level_index) {
         
         game_state.running = true;
     
-        mainLoop();
+        //mainLoop();
     }
 }
 
@@ -287,6 +287,8 @@ function main() {
                 time_step_f /= 2;
             }
         }
+
+        
     })
 
     function handleUndo() {
@@ -516,6 +518,8 @@ function main() {
     let level_index = parseInt(localStorage.getItem('last_level')) || 0;
     select.value = `${level_index + 1}`;
     reset(level_index);
+
+    mainLoop();
 }
 
 
@@ -708,7 +712,7 @@ function timestamp() {
     return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
 }
 
-let time_step = 1/120;
+let time_step = 1/240;
 let time_step_f = 1.0;
 let delta_time = 0;
 let last_time = timestamp();
