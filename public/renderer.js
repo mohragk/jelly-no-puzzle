@@ -73,62 +73,28 @@ function getRGBForNamedColor (name) {
 }
 
 function createFullscreenQuad(gl) {
-    const getBuffer = (data, gl_buffer_type) => {
-        const BO = gl.createBuffer();
-        gl.bindBuffer(gl_buffer_type, BO);
-        gl.bufferData( gl_buffer_type, data, gl.STATIC_DRAW );
-        gl.bindBuffer(gl_buffer_type, null);
-
-        return BO;
-    };
-        
-    let result = {};
-    
-    // VERTEX
-    {
-        const vertices = [
-            -1.0,  1.0, 0.0,
-            -1.0, -1.0, 0.0,
-             1.0, -1.0, 0.0,
-             1.0,  1.0, 0.0 
-        ];
-        const vertex_buffer = getBuffer(new Float32Array(vertices), gl.ARRAY_BUFFER)
-        result.position = vertex_buffer;
-            
-        const indices = [3,2,1,3,1,0]; 
-        const index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
-        result.position_indices = index_buffer;
-        result.position_indices_count = indices.length;
-    }
-
-    
-    // TEXCOORDS
-    {
-        const coords = [
-            0.0, 1.0, 
-            0.0, 0.0, 
-            1.0, 0.0, 
-            1.0, 1.0, 
-        ];
-         
-        
-        const texcoord_buffer = getBuffer(new Float32Array(coords), gl.ARRAY_BUFFER);
-        result.texcoord = texcoord_buffer;
-            
-        
-        const indices = [3,2,1,3,1,0]; 
-        const texcoord_index_buffer = getBuffer(new Uint16Array(indices), gl.ELEMENT_ARRAY_BUFFER);
-        result.texcoord_indices = texcoord_index_buffer;
-        result.texcoord_indices_count = indices.length;
-    }
-
-
-
-    return result;
+    const vertices = [
+        -1.0,  1.0, 0.0,
+        -1.0, -1.0, 0.0,
+         1.0, -1.0, 0.0,
+         1.0,  1.0, 0.0 
+    ];
+    return getQuadForVerts(gl, vertices);
 }
 
 function createGlQuad(gl) {
-    
+    const vertices = [
+        -0.5,  0.5, 0.0,
+        -0.5, -0.5, 0.0,
+         0.5, -0.5, 0.0,
+         0.5,  0.5, 0.0 
+    ];
+    return getQuadForVerts(gl, vertices);
+   
+}
+
+
+function getQuadForVerts(gl, verts) {
     const getBuffer = (data, gl_buffer_type) => {
         const BO = gl.createBuffer();
         gl.bindBuffer(gl_buffer_type, BO);
@@ -142,13 +108,8 @@ function createGlQuad(gl) {
     
     // VERTEX
     {
-        const vertices = [
-            -0.5,  0.5, 0.0,
-            -0.5, -0.5, 0.0,
-             0.5, -0.5, 0.0,
-             0.5,  0.5, 0.0 
-        ];
-        const vertex_buffer = getBuffer(new Float32Array(vertices), gl.ARRAY_BUFFER)
+        
+        const vertex_buffer = getBuffer(new Float32Array(verts), gl.ARRAY_BUFFER)
         result.position = vertex_buffer;
             
         const indices = [3,2,1,3,1,0]; 
@@ -182,7 +143,6 @@ function createGlQuad(gl) {
 
     return result;
 }
-
 
 function createGLShader(gl, vs, fs) {
     const loadShader = (gl, type, src) => {
@@ -480,8 +440,6 @@ export class Renderer {
 
     
     pushEnvironmentQuad(named_color, position, scale) {
-        if (named_color === "gray")
-            debugger
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, [...position, -1]);
         renderable.shader = this.single_color_shader;
@@ -881,10 +839,6 @@ export class Renderer {
                 const renderable = this.render_list.pop();
                 this.drawColoredQuad(renderable);
             }
-            
-            
         }
-
-
     }
 }
