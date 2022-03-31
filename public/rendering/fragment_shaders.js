@@ -56,12 +56,54 @@ export const FS_MASKED_SOURCE = `
     precision highp float;
     uniform vec4 uColor;
 
-    uniform sampler2D uEdgeMaskTexture;
+    uniform sampler2D uMaskTexture;
    
     varying vec2 texCoord;
     
     void main() {
-        float alpha = texture2D(uEdgeMaskTexture, texCoord).r;
+        float alpha = texture2D(uMaskTexture, texCoord).r;
+        vec3 col = uColor.rgb;
+        gl_FragColor = vec4(col, alpha);
+    }
+`;
+
+export const FS_TILE_SOURCE = `
+    precision highp float;
+    uniform vec4 uColor;
+
+    uniform sampler2D uMaskTextureTL;
+    uniform sampler2D uMaskTextureTR;
+    uniform sampler2D uMaskTextureBL;
+    uniform sampler2D uMaskTextureBR;
+
+    varying vec2 texCoord;
+
+    float map(float value, float min1, float max1, float min2, float max2) {
+        return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+    }
+
+    void main() {
+        vec2 uv = texCoord;
+
+        float alpha = 0.0;
+
+        // TOP LEFT
+        if (uv.x < 0.5 && uv.y < 0.5) {
+            float st_x = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+            float st_y = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+
+            vec2 st = vec2(st_x, st_y);
+            alpha = texture2D(uMaskTextureTL, st).r;
+        }
+        // TOP RIGHT
+        if (uv.x > 0.5 && uv.y < 0.5) {
+            float st_x = map(texCoord.x, 0.5, 1.0, 0.0, 1.0);
+            float st_y = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+
+            vec2 st = vec2(st_x, st_y);
+            alpha = texture2D(uMaskTextureTR, st).r;
+        }
+
         vec3 col = uColor.rgb;
         gl_FragColor = vec4(col, alpha);
     }

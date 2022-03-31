@@ -607,7 +607,7 @@ export class World {
         };
         
         const [x, y] = getWorldPosForScreenPos(game_state.mouse.screen_coord);
-        renderer.pushCursorQuad("white", [x, y, -1.0], game_state.selected_move_dir, 1.9);
+        renderer.pushCursorQuad("white", [x, y, -1.0], game_state.selected_move_dir, 2.2);
     }
 
 
@@ -747,6 +747,7 @@ export class World {
                 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     renderer.pushRoundedColorTile( tile.color, tile.opengl_visual_pos, neighbours );
+                    //renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours );
                 }
                 else if (tile.color !== "gray") {
                     renderer.pushFullRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
