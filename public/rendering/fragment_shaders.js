@@ -52,12 +52,9 @@ export const FS_ROUNDED_SOURCE = `
     }
 `;
 
-export const FS_TEXTURED_SOURCE = `
+export const FS_MASKED_SOURCE = `
     precision highp float;
     uniform vec4 uColor;
-    
-    uniform sampler2D uColorTexture;
-    uniform bool uUseColorTexture;
 
     uniform sampler2D uEdgeMaskTexture;
    
@@ -65,10 +62,35 @@ export const FS_TEXTURED_SOURCE = `
     
     void main() {
         float alpha = texture2D(uEdgeMaskTexture, texCoord).r;
-        vec3 col = uUseColorTexture ? texture2D(uColorTexture, texCoord).rgb : uColor.rgb;
-        gl_FragColor = vec4(col.rgb, alpha);
+        vec3 col = uColor.rgb;
+        gl_FragColor = vec4(col, alpha);
     }
 `;
+
+
+export const FS_CIRCLE_SOURCE = `
+    precision highp float;
+
+    uniform vec4 uColor;
+    uniform float uRadius;
+
+    varying vec2 texCoord;
+
+    float circle(in vec2 _st, in float _radius){
+        vec2 dist = _st-vec2(0.5);
+        return 1.-smoothstep(_radius-(_radius*0.1),
+                            _radius+(_radius*0.1),
+                            dot(dist,dist)*4.0);
+    }
+
+    void main() {
+        vec2 st = texCoord;
+
+        float alpha = circle(st, uRadius) * 0.8;
+        gl_FragColor = vec4(uColor.rgb, alpha);
+    }
+`;
+
 
 export const FS_MATTE_SOURCE = `
     precision highp float;
@@ -87,35 +109,18 @@ export const FS_CURSOR_SOURCE = `
     precision highp float;
 
     #define PI 3.14159265359
-    #define TWO_PI 6.28318530718
 
 
     uniform vec4 uColor;
     uniform float uTime;
+    uniform bool uShowLeft;
+    uniform bool uShowRight;
 
     varying vec2 texCoord;
 
     mat2 rotate2d(float _angle){
         return mat2(cos(_angle),-sin(_angle),
                     sin(_angle),cos(_angle));
-    }
-
-    float triangle (vec2 st, float rrr) {
-
-        // Remap the space to -1. to 1.
-        st = st * 2. - 1.;
-      
-        // Number of sides of your shape
-        int N = 3;
-      
-        // Angle and radius from the current pixel
-        float a = atan(st.x,st.y)+PI;
-        float r = TWO_PI/float(N);
-      
-        // Shaping function that modulate the distance
-        float dist = cos(floor(.5+a/r)*r-a)*length(st);
-      
-        return 1.0 - smoothstep(.4, .401, dist);
     }
 
 
@@ -129,6 +134,35 @@ export const FS_CURSOR_SOURCE = `
                         vec2(1.0)-_st);
         return uv.x*uv.y;
     }
+
+
+    float chevron (in vec2 _st, float _size) {
+        float thickness =_size/4.;
+        return box(_st + vec2(-_size/2.0, thickness/2.0), vec2(_size,thickness)) +
+               box(_st - vec2(thickness/2.0, -_size/2.0), vec2(thickness,_size));
+    }
+    
+    float chevronLeft(in vec2 _st, float _size) {
+        _st -= vec2(0.5);
+        _st.x += (_size/8.);
+        _st = rotate2d(0.25 * PI) * _st;
+        _st += vec2(0.5);
+        
+        return chevron(_st, _size);
+    }
+    
+    float chevronRight(in vec2 _st, float _size) {
+        _st -= vec2(0.5);
+        _st.x -= (_size/8.);
+        _st = rotate2d(1.25 * PI) * _st;
+        _st += vec2(0.5);
+       
+       return chevron(_st, _size);
+    }
+    
+
+
+  
     
     float cross(in vec2 _st, float _size){
         return  box(_st, vec2(_size,_size/4.)) +
@@ -145,11 +179,22 @@ export const FS_CURSOR_SOURCE = `
     void main() {
         vec2 st = texCoord;
 
-        st -= vec2(0.5)  ;
-        st = rotate2d(uTime * PI) * st;
-        st += vec2(0.5);
+        if (uShowLeft && uShowRight) {
+            st -= vec2(0.5);
+            st = rotate2d( uTime * PI ) * st;
+            st += vec2(0.5);
+        }
 
-        float alpha = cross(st, 0.2);
-        gl_FragColor = vec4(vec3(0.1), alpha);
+        float size = (uShowLeft && uShowRight) ? 0.10 : 0.15;
+        float right = uShowRight    ? chevronRight(st, size) : 0.0;
+        float left  = uShowLeft     ? chevronLeft(st, size) : 0.0;
+
+        float alpha = left + right;
+
+        float circle = circle(st, 0.16) * 0.4;
+
+        vec3 col = vec3( (uShowLeft && uShowRight) ? 0.15 : 0.95 );
+        
+        gl_FragColor = vec4(col, alpha);
     }
 `;

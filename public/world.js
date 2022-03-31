@@ -607,12 +607,22 @@ export class World {
         };
         
         const [x, y] = getWorldPosForScreenPos(game_state.mouse.screen_coord);
-        renderer.pushCursorQuad("white", [x, y, -1.0], game_state.selected_move_dir);
+        renderer.pushCursorQuad("white", [x, y, -1.0], game_state.selected_move_dir, 1.9);
     }
 
+
+    drawSelectedTileOverlays(game_state, renderer) {
+        const tiles = game_state.selected_tiles;
+        for (let tile of tiles) {
+            const position = tile.opengl_visual_pos;
+            renderer.pushCircleQuad("white", [...position, -1.0], 0.15);
+        }
+    }
+
+
+
     update(command_buffer, dt, game_state, undo_recorder, renderer) {
-        // NOTE: we push it first since it will be the LAST item to be rendered.
-        this.drawMouseCursor(game_state, renderer);
+        
 
         
         this.handleInput(game_state);
@@ -667,54 +677,6 @@ export class World {
 
     }
 
-
-    debugRenderPieces(pieces) {
-        let index = 0;
-        for (let piece of pieces) {
-            const text = index;
-
-            for (let tile of piece.tiles) {
-                const {row, col} = tile.world_pos;
-                drawTileText(row, col, text, "lightgray");
-            }
-
-            index++;
-        }
-    }
-
-
-    debugRenderTileIDs() {
-        this.forEachCell( (row, col) => {
-            const t = this.getTile(row, col);
-            const id = t.id;
-            drawBlockText(row, col, id, t.color)
-        })
-    }
-
-
-    debugRender() {
-
-        const getText = (flags, tile = null) => {
-            let text = " ";
-            
-            if (flags & GameplayFlags.MOVABLE) {
-                text = "o";
-            }
-            if (flags & GameplayFlags.STATIC) {
-                text ="#";
-            }
-           
-            return text
-        }
-        
-        
-        this.forEachCell((row, col) => {
-            const tile = this.getTile(row, col)
-            let text = getText(tile.gameplay_flags, tile)
-            drawBlockText( row, col, text , tile.color);
-            
-        });
-    }
 
 
     drawAnchors(renderer) {
@@ -797,7 +759,9 @@ export class World {
  
 
     render(renderer, game_state) {
-       
+        // NOTE: we push it first since it will be the LAST item to be rendered.
+        this.drawMouseCursor(game_state, renderer);
+        this.drawSelectedTileOverlays(game_state, renderer);
 
         // DRAW ANCHORS
         {

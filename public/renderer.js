@@ -6,8 +6,9 @@ import {
     FS_WHITE_SOURCE, 
     FS_COLOR_SOURCE, 
     FS_CURSOR_SOURCE,
-    FS_TEXTURED_SOURCE,
-    FS_MATTE_SOURCE
+    FS_MASKED_SOURCE,
+    FS_MATTE_SOURCE,
+    FS_CIRCLE_SOURCE
 } from './rendering/fragment_shaders.js';
 
 import {Neighbours} from './world.js'
@@ -273,7 +274,10 @@ export class Renderer {
     fullscreen_shader;
     default_white_shader;
     single_color_shader;
+
+    circle_color_shader;
     rounded_color_shader;
+
     texture_shader;
     cursor_shader;
 
@@ -337,8 +341,15 @@ export class Renderer {
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
 
+        this.circle_color_shader = createGLShader(gl, VS_MVP_SOURCE, FS_CIRCLE_SOURCE);
+        this.circle_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.circle_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+        this.circle_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+        this.circle_color_shader.addUniform(gl, 'color', 'uColor');
+        this.circle_color_shader.addUniform(gl, 'radius', 'uRadius');
 
-        this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_TEXTURED_SOURCE);
+
+        this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_MASKED_SOURCE);
         this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
         this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
@@ -352,9 +363,11 @@ export class Renderer {
         this.cursor_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.cursor_shader.addUniform(gl, 'color', 'uColor');
         this.cursor_shader.addUniform(gl, 'time', 'uTime');
+        this.cursor_shader.addUniform(gl, 'show_left', 'uShowLeft');
+        this.cursor_shader.addUniform(gl, 'show_right', 'uShowRight');
       
-        this.texture_cursor_arrow_mask_left  = loadTexture(gl, '/assets/textures/cursor_arrow_left.png');
-        this.texture_cursor_arrow_mask_right = loadTexture(gl, '/assets/textures/cursor_arrow_right.png');
+        this.texture_cursor_arrow_mask_left  = loadTexture(gl, '/assets/textures/cursor_mask_arrow_left.png');
+        this.texture_cursor_arrow_mask_right = loadTexture(gl, '/assets/textures/cursor_mask_arrow_right.png');
 
         this.texture_full_mask_none         = loadTexture(gl, '/assets/textures/rounded_tile_mask_none.png');
         this.texture_full_mask_tl           = loadTexture(gl, '/assets/textures/rounded_tile_mask_tl_bw_sm.png');
@@ -421,17 +434,22 @@ export class Renderer {
 
   
 
-    pushCursorQuad(named_color, position, push_dir) {
+    pushCursorQuad(named_color, position, push_dir, scale = 1.0) {
         const color = [...getRGBForNamedColor(named_color), 1];
         const renderable = this.getRenderableQuad(color, position);
+        renderable.scale = scale;
         renderable.shader = this.cursor_shader;
+        renderable.show_left = true;
+        renderable.show_right = true;
+        
 
         if (push_dir) {
-            renderable.shader = this.texture_shader;
-            renderable.edge_mask_texture = push_dir === MoveDirections.LEFT ? this.texture_cursor_arrow_mask_left : this.texture_cursor_arrow_mask_right;
+            //renderable.shader = this.texture_shader;
+            //renderable.edge_mask_texture = push_dir === MoveDirections.LEFT ? this.texture_cursor_arrow_mask_left : this.texture_cursor_arrow_mask_right;
+            renderable.show_left =  (push_dir === MoveDirections.LEFT);
+            renderable.show_right = (push_dir === MoveDirections.RIGHT);
         }
 
-        renderable.scale = 2.0;
 
         this.render_list.push(renderable);
     }
@@ -452,6 +470,13 @@ export class Renderer {
         this.environment_list.push(renderable);
     }
   
+    pushCircleQuad(named_color, position, radius) {
+        const renderable = this.getSingleColoredQuad(named_color, position, 1.0);
+        renderable.shader = this.circle_color_shader;
+        renderable.radius = radius;
+
+        this.render_list.push(renderable);
+    }
 
     pushColoredQuad(named_color, position, scale = 1.0) {
         const renderable = this.getSingleColoredQuad(named_color, position, scale);
@@ -675,8 +700,24 @@ export class Renderer {
                 time || 1.0
             );  
         }
+
+        if (info.uniforms.radius) {
+            gl.uniform1f(
+                info.uniforms.radius.location,
+                renderable.radius || 0.1
+            );
+        }
  
-        
+        if (info.uniforms.show_left || info.uniforms.show_right ) {
+            gl.uniform1i(
+                info.uniforms.show_left.location,
+                renderable.show_left
+            );
+            gl.uniform1i(
+                info.uniforms.show_right.location,
+                renderable.show_right
+            );
+        }        
         // Draw call
         {
             // VERTEX
@@ -750,6 +791,8 @@ export class Renderer {
             gl.drawElements(gl.TRIANGLES, quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
         }
     }
+
+
 
     getCameraProjection() {
         return this.camera_projection;
@@ -835,7 +878,7 @@ export class Renderer {
             
             while (this.render_list.length) {
                 const renderable = this.render_list.pop();
-                this.drawColoredQuad(renderable);
+                this.drawColoredQuad(renderable, time);
             }
         }
     }
