@@ -607,11 +607,14 @@ export class World {
         };
         
         const [x, y] = getWorldPosForScreenPos(game_state.mouse.screen_coord);
-        renderer.pushCursorQuad("white", [x, y, -1.0], game_state.selected_move_dir, 2.2);
+        const dir = ( game_state.has_won || input_mode === InputModes.CLASSIC) ? false : game_state.selected_move_dir;
+        renderer.pushCursorQuad("white", [x, y, -1.0], dir, 2.2);
     }
 
 
     drawSelectedTileOverlays(game_state, renderer) {
+        if (game_state.has_won || input_mode === InputModes.CLASSIC) return ;
+
         const tiles = game_state.selected_tiles;
         for (let tile of tiles) {
             const position = tile.opengl_visual_pos;

@@ -31,9 +31,23 @@ ul {
 }
 
 #canvas_wrapper {
-    margin:0 auto;
+    margin:auto;
     width: fit-content;
     position: relative;
+    display: flex;
+    align-items: center;
+    align-content: center;
+   
+}
+#canvas_container.full_screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-content: center;
+    background-color: black;
 }
 
 #grid_canvas {

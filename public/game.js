@@ -118,6 +118,7 @@ const DEBUG_RENDERS = [
 
 
 let DISPLAY_RASTER = false;
+let FULLSCREEN_MODE = false;
 
 
 let world = new World();
@@ -194,7 +195,7 @@ const isEven = (n) => n % 2 === 0
 
 function resizeCanvas(canvas) {
     const getCellSize = (prefer_width, world_dim) => {
-        const div = document.getElementById("canvas-container");
+        const div = document.getElementById("canvas_container");
         const window_dim = prefer_width ? div.clientWidth : window.innerHeight - 20;
         const window_w = Math.min(window_dim);
         return Math.floor(window_w / world_dim);
@@ -271,6 +272,23 @@ function main() {
         if (e.key === 'g') {
             DISPLAY_RASTER = !DISPLAY_RASTER;
         }
+
+        if (e.key === 'f') {
+
+            const updateContainer = (mode) => {
+                const container = document.getElementById("canvas_container");
+                if (FULLSCREEN_MODE) {
+                    container.classList.add("full_screen");
+                }
+                else {
+                    container.classList.remove("full_screen");
+                }
+                resizeCanvas(canvas);
+            }
+            FULLSCREEN_MODE = !FULLSCREEN_MODE;
+            updateContainer(FULLSCREEN_MODE);
+        }
+
 
 
 
@@ -660,7 +678,6 @@ function loadLevel(index, levels, world) {
     };
 
     for (let line of level) {
-
         for (let index = 0; index < line.length; index++) {
             let c = line[index];
             let tile = getTileFromChar(c);
@@ -669,7 +686,6 @@ function loadLevel(index, levels, world) {
             if (tile.id < 0 && (tile.gameplay_flags) ) {
                 tile.id = colored_tile_id++;
             }
-
 
             if (c === 'a') {
                 let anchor_positions = 0;
@@ -786,7 +802,8 @@ function render(world) {
     
 
     if (game_state.has_won) {
-        //drawWinText();
+       
+
         canvas.classList.add("add_victory_animation");
         document.body.classList.add("animated-bgcolors");
         const button = document.getElementById("next_button");
@@ -794,6 +811,14 @@ function render(world) {
         if (game_state.running) {
             game_state.running = false;
             audio_player.trigger(sound_bank.get("victory_flute_sound"));
+
+            /*
+            const div_element = document.createElement("div");
+            document.getElementById("canvas_wrapper").appendChild(div_element);
+            const text_element = document.createElement("h1");
+            div_element.appendChild( text_element )
+            text_element.innerHTML= ("You won!")
+            */
         }
     }
     
