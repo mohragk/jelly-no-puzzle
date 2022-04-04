@@ -787,12 +787,12 @@ export class World {
                 if ((tile.gameplay_flags > 0 ) && tile.color === "gray" ) {
                     const {row, col} = tile.world_pos;
                     
-                    if (0) {
+                    if (1) {
 
                         const addNeigbour = (row, col, placement) => {
                             let t = this.getTile(row, col);
                             if (t) {
-                                if (t.id !== tile.id) {
+                                if (t.color !== "gray") {
                                         neighbours |= placement;
                                 }
                             }
@@ -808,10 +808,11 @@ export class World {
                         addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
                         addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
                         addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                        renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
                     }
                     
                     
-                    renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0);
+                    //renderer.pushCircleQuad(tile.color, tile.opengl_visual_pos, 0.4)
                   
                 }
             });

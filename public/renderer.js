@@ -145,7 +145,7 @@ function getQuadForVerts(gl, verts) {
     return result;
 }
 
-function createGLShader(gl, vs, fs) {
+function createGLShader(gl, vs, fs, name = "") {
     const loadShader = (gl, type, src) => {
         const shader = gl.createShader(type);
         gl.shaderSource(shader, src);
@@ -173,7 +173,7 @@ function createGLShader(gl, vs, fs) {
         return null;
     }
 
-    const result = new ShaderProgram(shader_program);
+    const result = new ShaderProgram(shader_program, name);
     return result; 
 }
 
@@ -226,9 +226,11 @@ class ShaderProgram {
     program;
     uniforms = {};
     attributes = {};
+    name = "";
 
-    constructor(program) {
+    constructor(program, name) {
         this.program = program;
+        this.name = name;
     }
 
     addUniform(gl, key, name) {
@@ -274,11 +276,9 @@ export class Renderer {
     fullscreen_shader;
     default_white_shader;
     single_color_shader;
+    texture_shader;
 
     circle_color_shader;
-    rounded_color_shader;
-
-    texture_shader;
     cursor_shader;
 
 
@@ -332,17 +332,20 @@ export class Renderer {
 
         this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
         this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.default_white_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
         this.default_white_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
 
         this.single_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_COLOR_SOURCE);
         this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.single_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
         this.single_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.single_color_shader.addUniform(gl, 'color', 'uColor');
 
-        this.circle_color_shader = createGLShader(gl, VS_MVP_SOURCE, FS_CIRCLE_SOURCE);
+        this.circle_color_shader = createGLShader(gl, VS_MVP_SOURCE, FS_CIRCLE_SOURCE, "circle_color_shader");
         this.circle_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.circle_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
         this.circle_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.circle_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.circle_color_shader.addUniform(gl, 'color', 'uColor');
@@ -351,14 +354,16 @@ export class Renderer {
 
         this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_MASKED_SOURCE);
         this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.texture_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
         this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uEdgeMaskTexture');
+        this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uMaskTexture');
         this.texture_shader.addUniform(gl, 'color', 'uColor');
 
 
         this.cursor_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_CURSOR_SOURCE);
         this.cursor_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+        this.cursor_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
         this.cursor_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
         this.cursor_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
         this.cursor_shader.addUniform(gl, 'color', 'uColor');
@@ -394,10 +399,16 @@ export class Renderer {
         this.texture_edge_mask_br_full      = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_br_outer.png');
         this.texture_edge_mask_br_inner     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_br_inner.png');
         this.texture_edge_mask_br_right     = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_right.png');
-        this.texture_edge_mask_br_bottom    = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png');    
-
-
-
+        this.texture_edge_mask_br_bottom    = loadTexture(gl, '/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png');   
+        
+        
+        // INITIAL SETTINGS
+        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
+        gl.clearDepth(1.0);                 // Clear everything
+        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+        gl.enable(gl.BLEND)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
 
     getContext() {
@@ -444,8 +455,6 @@ export class Renderer {
         
 
         if (push_dir) {
-            //renderable.shader = this.texture_shader;
-            //renderable.edge_mask_texture = push_dir === MoveDirections.LEFT ? this.texture_cursor_arrow_mask_left : this.texture_cursor_arrow_mask_right;
             renderable.show_left =  (push_dir === MoveDirections.LEFT);
             renderable.show_right = (push_dir === MoveDirections.RIGHT);
         }
@@ -464,10 +473,19 @@ export class Renderer {
         return renderable;
     }
     
-    pushEnvironmentQuad(named_color, position, scale) {
+    pushEnvironmentQuad(named_color, position, scale, neighbours) {
         const renderable = this.getSingleColoredQuad(named_color, position, scale);
-
+       // renderable.shader = this.circle_color_shader;
+       // renderable.radius = 0.9;
         this.environment_list.push(renderable);
+
+        const is_full = true;
+        const color = [...getRGBForNamedColor("white"), 1.0];
+        const a = this.getSubTile(color, position, "TOP_LEFT", neighbours, is_full)
+        const b = this.getSubTile(color, position, "TOP_RIGHT", neighbours, is_full)
+        const c = this.getSubTile(color, position, "BOTTOM_LEFT", neighbours, is_full)
+        const d = this.getSubTile(color, position, "BOTTOM_RIGHT", neighbours, is_full)
+        //this.environment_list.push(a, b, c, d);
     }
   
     pushCircleQuad(named_color, position, radius) {
@@ -484,12 +502,19 @@ export class Renderer {
         this.render_list.push(renderable);
     }
 
-    pushSubTile(color, tile_position, corner, neighbours, is_full) {
+
+    getSubTile(color, tile_position, corner, neighbours, is_full) {
         const renderable = this.getRenderableQuad(color, this.getSubPosition(tile_position, corner));
         renderable.shader = this.texture_shader;
         renderable.scale = 0.5;
         const mask_type = this.getEdgeMaskType(corner, neighbours);
         renderable.edge_mask_texture = this.getMaskForType(mask_type, is_full);
+
+        return renderable;
+    }
+
+    pushSubTile(color, tile_position, corner, neighbours, is_full) {
+        const renderable = this.getSubTile(color, tile_position, corner, neighbours, is_full);
         
         this.render_list.push(renderable);
     }
@@ -633,6 +658,34 @@ export class Renderer {
 
         const {position, color} = renderable;
 
+        // ATTRIBUTES
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+        gl.vertexAttribPointer(
+            info.attributes.vertex_position.location,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
+        gl.vertexAttribPointer(
+            info.attributes.texcoord.location,
+            2,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            info.attributes.texcoord.location
+        );
         
 
         // FRAGMENT
@@ -662,31 +715,14 @@ export class Renderer {
         );
 
         // MASK TEXTURE
+        
         if (renderable.edge_mask_texture) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
-            gl.vertexAttribPointer(
-                1,
-                2,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(
-                1
-            );
+            let offset = 0;
+            gl.activeTexture(gl.TEXTURE0 + offset);
 
-            
-            
-            // Bind the texture to texture unit 0
             gl.bindTexture(gl.TEXTURE_2D, renderable.edge_mask_texture);
 
-            // Tell WebGL we want to affect texture unit 0
-            gl.activeTexture(gl.TEXTURE0);
-            
-            // Tell the shader we bound the texture to texture unit 0
-            gl.uniform1i(info.uniforms.edge_mask_texture.location, 0);
+            gl.uniform1i(info.uniforms.edge_mask_texture.location, offset);
         }
        
 
@@ -720,20 +756,7 @@ export class Renderer {
         }        
         // Draw call
         {
-            // VERTEX
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
-            gl.vertexAttribPointer(
-                0,
-                3,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(
-                0
-            );
+            
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
 
         }
@@ -746,49 +769,57 @@ export class Renderer {
         const info = this.fullscreen_shader;
         gl.useProgram(info.program);
 
+        // 
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad.texcoord);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.texcoord_indices);
+        gl.vertexAttribPointer(
+            1,
+            2,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            1
+        );
+
+
         // TEXTURE
         {
-            gl.bindBuffer(gl.ARRAY_BUFFER, quad.texcoord);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.texcoord_indices);
-            gl.vertexAttribPointer(
-                1,
-                2,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(
-                1
-            );
-            
-            // Bind the texture to texture unit 0
-            gl.bindTexture(gl.TEXTURE_2D, texture);
 
+            
             // Tell WebGL we want to affect texture unit 0
             gl.activeTexture(gl.TEXTURE0);
             
+            // Bind the texture to texture unit 0
+            gl.bindTexture(gl.TEXTURE_2D, texture);
             // Tell the shader we bound the texture to texture unit 0
             gl.uniform1i(info.uniforms.color_texture.location, 0);
+
+            //gl.bindTexture(gl.TEXTURE_2D, null);
         }
 
         // Draw call
         {
-            // VERTEX
-            gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
-            gl.vertexAttribPointer(
-                0,
-                3,
-                gl.FLOAT,
-                false,
-                0,
-                0
-            );
-            gl.enableVertexAttribArray(
-                0
-            );
+            
             gl.drawElements(gl.TRIANGLES, quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+           // gl.bindTexture(gl.TEXTURE_2D, null);
+           // gl.activeTexture(null);
         }
     }
 
@@ -834,15 +865,11 @@ export class Renderer {
             gl.bindFramebuffer(gl.FRAMEBUFFER, frame_buffer.buffer);
             gl.viewport(0, 0, frame_buffer.width, frame_buffer.height);
             
-            gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
-            gl.clearDepth(1.0);                 // Clear everything
-            gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-            gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-            gl.enable(gl.BLEND)
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+           
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             
-            gl.bindTexture(gl.TEXTURE_2D, frame_buffer.texture);
+           // gl.activeTexture(gl.TEXTURE0);
+           // gl.bindTexture(gl.TEXTURE_2D, frame_buffer.texture);
 
     
             while (renderables.length) {
@@ -853,17 +880,11 @@ export class Renderer {
         }
 
         this.texture_environment_background = frame_buffer.texture;
-        this.environment_list.lenght = 0;
     }
 
     drawAll(time) {
         const gl = this.#context;
-        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
-        gl.clearDepth(1.0);                 // Clear everything
-        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-        gl.enable(gl.BLEND)
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+       
 
         // NOTE: should only be filled at first loop and zero'd in subsequent loops.
         if (this.environment_list.length) {
@@ -876,6 +897,7 @@ export class Renderer {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
             if (this.texture_environment_background) {
+                 
                 this.drawFullScreenQuad(this.texture_environment_background);
             }
 
