@@ -3,6 +3,15 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 
 
+function unlockAudioContext(audioCtx) {
+    if (audioCtx.state !== 'suspended') return;
+    const b = document.body;
+    const events = ['touchstart','touchend', 'mousedown','keydown'];
+    events.forEach(e => b.addEventListener(e, unlock, false));
+    function unlock() { audioCtx.resume().then(clean); }
+    function clean() { events.forEach(e => b.removeEventListener(e, unlock)); }
+}
+
 export class SoundBank {
     sounds = new Map();
     available_sounds = [];
@@ -32,12 +41,18 @@ export class SoundBank {
 };
 
 
+
 export class AudioPlayer {
-    audio_context = new AudioContext();
+    audio_context;
     #is_on = true;
 
     toggle_button;
+
+   
     constructor () {
+
+        this.initialize();
+
         this.toggle_button = document.getElementById('audio_toggle_button');
         if (this.toggle_button) {
             this.toggle_button.onclick = (e) => {
@@ -46,6 +61,11 @@ export class AudioPlayer {
                 this.toggle_button.innerHTML = this.#is_on ? "turn off" : "turn on";
             }
         }
+    }
+
+    initialize() {
+        this.audio_context = new AudioContext();
+        unlockAudioContext(this.audio_context);
 
     }
 
@@ -60,8 +80,19 @@ export class AudioPlayer {
         } 
 
         if (this.#is_on) {
+            unlockAudioContext(this.audio_context);
+
             this.reset(clip);
-            clip.play();
+
+            let prom = clip.play();
+            if (prom !== 'undefined') {
+                prom.then( () => {
+                    console.log("Playing audio!")
+                })
+                .catch( err => {   
+                    console.error(err)
+                })
+            }
         }
     }
 

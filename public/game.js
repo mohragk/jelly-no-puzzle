@@ -86,9 +86,9 @@ const DEFAULT_GAMESTATE = {
     running: false,
     has_won: false,
     halt_input: false,
+    show_cursor: true,
     
     level_index : 0,
-    level_colors: new Set(),
     selected_tiles: [],
     selected_move_dir: null,
     mouse: {
@@ -433,8 +433,9 @@ function main() {
     function onTouchStart(e) {
         e.preventDefault();
         
-        // DETECTED TOUCH INPUT, CHANGE MOVE_SPEED
+        // DETECTED TOUCH INPUT, CHANGE MOVE_SPEED and HIDE CURSOR
         game_state.move_speed = game_state.default_move_speed * 1.5;
+        game_state.show_cursor = false;
 
         const {offsetX, offsetY} = getTouchCoord(canvas, e);
         

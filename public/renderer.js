@@ -818,7 +818,8 @@ export class Renderer {
         this.camera_projection = proj_matrix;
     }
 
-
+    // NOTE: for performance reasons, at first loop we draw all environmental tiles 
+    // to a texture and simply use that to draw the background in subsequent render loops.
     updateEnvironmentTexture(frame_buffer) {
 
         if (!this.environment_list.length) return;
@@ -864,7 +865,10 @@ export class Renderer {
         gl.enable(gl.BLEND)
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        this.updateEnvironmentTexture(this.frame_buffer);
+        // NOTE: should only be filled at first loop and zero'd in subsequent loops.
+        if (this.environment_list.length) {
+            this.updateEnvironmentTexture(this.frame_buffer);
+        }
         
         {
             gl.viewport(0, 0, this.canvas.width, this.canvas.height);

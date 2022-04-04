@@ -599,6 +599,8 @@ export class World {
     }
 
     drawMouseCursor(game_state, renderer) {
+        if (!game_state.show_cursor) return;
+
         const getWorldPosForScreenPos = (screen_coord) => {
             const tile_size_pixels = renderer.canvas.width / this.dimensions.w;
             const col = screen_coord.x / tile_size_pixels;
@@ -613,7 +615,7 @@ export class World {
 
 
     drawSelectedTileOverlays(game_state, renderer) {
-        if (game_state.has_won || input_mode === InputModes.CLASSIC) return ;
+        if (game_state.has_won || input_mode === InputModes.CLASSIC) return;
 
         const tiles = game_state.selected_tiles;
         for (let tile of tiles) {
