@@ -1,3 +1,4 @@
+import { TextureCatalog } from './textureCatalog.js';
 import { Renderer, FrameBuffer } from './renderer.js';
 
 
@@ -14,6 +15,7 @@ import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
 
 import { AudioPlayer, SoundBank } from './audio.js';
+import { LoadManager } from './loadManager.js';
 
 
 
@@ -49,6 +51,7 @@ const triggers = [
 ];
 
 let canvas, ctx;
+let texture_catalog;
 let renderer;
 let game_state; 
 let command_buffer;
@@ -232,24 +235,71 @@ window.addEventListener("load", main);
 window.addEventListener("orientationchange", () => { resizeCanvas(canvas) });
 window.addEventListener("resize", () => { resizeCanvas(canvas) });
 
+
+function loadTextures(catalog) {
+
+
+    catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none");
+    catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl");
+    catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr");
+    catalog.add('/assets/textures/rounded_tile_mask_bl_bw_sm.png',      "texture_full_mask_bl");
+    catalog.add('/assets/textures/rounded_tile_mask_br_bw_sm.png',      "texture_full_mask_br");
+        
+
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png',    "tile_mask_tl_outer"    );
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png',    "tile_mask_tl_inner"    );
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left"  );
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top"   );
+
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png',    "tile_mask_tr_outer");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png',    "tile_mask_tr_inner");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
+    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top");
+
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png',    "tile_mask_bl_outer");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png',    "tile_mask_bl_inner");
+    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");  
+
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_outer.png',    "tile_mask_br_outer");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_inner.png',    "tile_mask_br_inner");
+    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
+    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");   
+}
+
 function main() {
+    
     
     renderer = new Renderer();
     canvas = getCanvas(renderer);
-    //ctx = 
+    
+    // NOTE: to make we only start the game when we fully loaded
+    // every asset, we use a LoadManager that runs a callback when all items are loaded.
+    const texture_load_manager = new LoadManager( () => {mainLoop()} )
+    texture_catalog = new TextureCatalog(renderer.getContext(), texture_load_manager);
+    renderer.setTextureCatalog(texture_catalog);
 
-    const input_canvas = document.getElementById("opengl_canvas")
+    loadTextures(texture_catalog);
 
-    input_canvas.oncontextmenu = function (e) {
+
+    // AUDIO CLIPS
+    sound_bank.add("thump01_sound");
+    sound_bank.add("tap01_sound");
+    sound_bank.add("victory_flute_sound");
+    sound_bank.add("glup01_sound");
+    sound_bank.add("move01_sound");
+    
+    
+
+    canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
 
-
-    input_canvas.addEventListener("touchstart", onTouchStart);
-    input_canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchstart", onTouchStart);
+    canvas.addEventListener("touchend", onTouchEnd);
     
-    input_canvas.addEventListener("mousedown", onMouseDown);
-    input_canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("mousemove", onMouseMove);
     
     document.addEventListener("keypress", e => {
         e.preventDefault();
@@ -526,19 +576,15 @@ function main() {
 
 
     
-    sound_bank.add("thump01_sound");
-    sound_bank.add("tap01_sound");
-    sound_bank.add("victory_flute_sound");
-    sound_bank.add("glup01_sound");
-    sound_bank.add("move01_sound");
-    
+   
 
     // Reset to last_saved level
     let level_index = parseInt(localStorage.getItem('last_level')) || 0;
     select.value = `${level_index + 1}`;
     reset(level_index);
+    
 
-    mainLoop();
+  //  mainLoop();
 }
 
 
