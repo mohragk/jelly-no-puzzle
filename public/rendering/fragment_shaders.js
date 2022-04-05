@@ -186,7 +186,7 @@ export const FS_CURSOR_SOURCE = `
     
     float chevronLeft(in vec2 _st, float _size) {
         _st -= vec2(0.5);
-        _st.x += (_size/8.);
+        _st.x += (_size/6.);
         _st = rotate2d(0.25 * PI) * _st;
         _st += vec2(0.5);
         
@@ -195,7 +195,7 @@ export const FS_CURSOR_SOURCE = `
     
     float chevronRight(in vec2 _st, float _size) {
         _st -= vec2(0.5);
-        _st.x -= (_size/8.);
+        _st.x -= (_size/6.);
         _st = rotate2d(1.25 * PI) * _st;
         _st += vec2(0.5);
        
@@ -221,13 +221,13 @@ export const FS_CURSOR_SOURCE = `
     void main() {
         vec2 st = texCoord;
 
+        
+        float size = (uShowLeft && uShowRight) ? 0.10 : 0.15;
         if (uShowLeft && uShowRight) {
             st -= vec2(0.5);
             st = rotate2d( uTime * PI ) * st;
             st += vec2(0.5);
         }
-
-        float size = (uShowLeft && uShowRight) ? 0.10 : 0.15;
         float right = uShowRight    ? chevronRight(st, size) : 0.0;
         float left  = uShowLeft     ? chevronLeft(st, size) : 0.0;
 

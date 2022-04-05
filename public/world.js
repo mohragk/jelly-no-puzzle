@@ -813,10 +813,6 @@ export class World {
                         addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
                         renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
                     }
-                    
-                    
-                    //renderer.pushCircleQuad(tile.color, tile.opengl_visual_pos, 0.4)
-                  
                 }
             });
         }
