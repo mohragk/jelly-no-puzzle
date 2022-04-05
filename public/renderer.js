@@ -2,7 +2,6 @@
 import * as mat4 from './vendor/glmatrix/esm/mat4.js';
 
 
-import { loadTexture } from './textureCatalog.js';
 
 import { VS_FULLSCREEN_SOURCE, VS_MVP_SOURCE } from './rendering/vertex_shaders.js'
 import { 
@@ -11,12 +10,12 @@ import {
     FS_CURSOR_SOURCE,
     FS_MASKED_SOURCE,
     FS_MATTE_SOURCE,
-    FS_CIRCLE_SOURCE
+    FS_CIRCLE_SOURCE,
+    FS_GRID_SOURCE
 } from './rendering/fragment_shaders.js';
 
 import {Neighbours} from './world.js'
 import { MoveDirections } from './command.js';
-import { LoadManager } from './loadManager.js';
 
 
 
@@ -232,9 +231,10 @@ export class Renderer {
     quad;
     fs_quad;
 
-    fullscreen_shader;
     default_white_shader;
     single_color_shader;
+    fullscreen_shader;
+    grid_shader;
     texture_shader;
 
     circle_color_shader;
@@ -260,6 +260,11 @@ export class Renderer {
         
         this.fullscreen_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_MATTE_SOURCE);
         this.fullscreen_shader.addUniform(gl, 'color_texture', 'uColorTexture');
+
+        this.grid_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_GRID_SOURCE);
+        this.grid_shader.addUniform(gl, 'color', 'uColor');
+        this.grid_shader.addUniform(gl, 'resolution', 'uResolution');
+        this.grid_shader.addUniform(gl, 'world_dimensions', 'uWorldDimensions');
 
         this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
         this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
@@ -311,6 +316,7 @@ export class Renderer {
         gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
         gl.enable(gl.BLEND)
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+       // gl.blendFunc(gl.DST_ALPHA, gl.ONE_MINUS_DST_ALPHA);
     }
 
     setTextureCatalog(catalog) {
@@ -378,10 +384,10 @@ export class Renderer {
     }
     
     pushEnvironmentQuad(named_color, position, scale, neighbours) {
-        const renderable = this.getSingleColoredQuad(named_color, position, scale);
-       // renderable.shader = this.circle_color_shader;
-       // renderable.radius = 0.9;
-        //this.environment_list.push(renderable);
+        // const renderable = this.getSingleColoredQuad(named_color, position, scale);
+        // renderable.shader = this.circle_color_shader;
+        // renderable.radius = 0.9;
+        // this.environment_list.push(renderable);
 
         const is_full = true;
         const color = [...getRGBForNamedColor(named_color), 1.0];
@@ -669,6 +675,69 @@ export class Renderer {
     }
 
 
+    drawGrid() {
+        const gl = this.#context;
+        const quad = this.fs_quad;
+        const info = this.grid_shader;
+        gl.useProgram(info.program);
+
+        gl.depthMask(false);
+
+    
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad.texcoord);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.texcoord_indices);
+        gl.vertexAttribPointer(
+            1,
+            2,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            1
+        );
+
+
+        
+        gl.uniform4fv(
+            info.uniforms.color.location,
+            [...getRGBForNamedColor("white"), 1]
+        );
+
+        gl.uniform2fv(
+            info.uniforms.resolution.location,
+            [this.canvas.width, this.canvas.height]
+        );
+
+        gl.uniform2fv(
+            info.uniforms.world_dimensions.location,
+            [13, 7]
+        );
+
+    
+
+        
+        // Draw call
+        {
+            gl.drawElements(gl.TRIANGLES, quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+        }
+    }
+
     drawFullScreenQuad(texture) {
         const gl = this.#context;
         const quad = this.fs_quad;
@@ -788,7 +857,7 @@ export class Renderer {
         this.texture_environment_background = frame_buffer.texture;
     }
 
-    drawAll(time) {
+    drawAll(time, game_state) {
         const gl = this.#context;
        
 
@@ -803,7 +872,6 @@ export class Renderer {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
             if (this.texture_environment_background) {
-                 
                 this.drawFullScreenQuad(this.texture_environment_background);
             }
 
@@ -811,6 +879,10 @@ export class Renderer {
             while (this.render_list.length) {
                 const renderable = this.render_list.pop();
                 this.drawColoredQuad(renderable, time);
+            }
+
+            if (game_state.enable_grid) {
+                this.drawGrid();
             }
         }
     }

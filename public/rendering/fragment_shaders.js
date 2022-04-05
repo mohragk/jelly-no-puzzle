@@ -240,3 +240,38 @@ export const FS_CURSOR_SOURCE = `
         gl_FragColor = vec4(col, alpha);
     }
 `;
+
+
+
+export const FS_GRID_SOURCE = `
+    precision highp float;
+
+    uniform vec4 uColor;
+    uniform vec2 uResolution;
+    uniform vec2 uWorldDimensions;
+
+    varying vec2 texCoord;
+
+    float grid (vec2 st, float tile_width, float thickness) {
+       
+        vec2 size = vec2(thickness);
+
+        vec2 a1 = mod(st - size, tile_width);
+        vec2 a2 = mod(st + size, tile_width);
+        vec2 a = a2 - a1;
+
+        float g = min(a.x, a.y);
+
+        return clamp(g, 0.0, 1.0);
+    }
+
+
+    void main() {
+        float thickness = 1.5;
+        float tile_size =  uResolution.x / uWorldDimensions.x;
+
+        float a = clamp(grid(gl_FragCoord.xy, tile_size, 1.0), 0.7, 1.0);
+        gl_FragColor = vec4(uColor.rgb, 1.0-a);
+    }
+
+`;

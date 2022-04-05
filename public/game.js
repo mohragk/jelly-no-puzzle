@@ -90,6 +90,7 @@ const DEFAULT_GAMESTATE = {
     has_won: false,
     halt_input: false,
     show_cursor: true,
+    enable_grid: false,
     
     level_index : 0,
     selected_tiles: [],
@@ -215,6 +216,7 @@ function resizeCanvas(canvas) {
         cell_size -= 1;
     }
     let new_w = cell_size * world.dimensions.w;
+    new_h = cell_size * world.dimensions.h;
 
 
 
@@ -320,6 +322,7 @@ function main() {
         
         if (e.key === 'g') {
             DISPLAY_RASTER = !DISPLAY_RASTER;
+            game_state.enable_grid = DISPLAY_RASTER;
         }
 
         if (e.key === 'f') {
@@ -840,7 +843,7 @@ function render(world) {
     
     // OPENGL
     world.render(renderer, game_state);
-    renderer.drawAll(timestamp()/1000.0);
+    renderer.drawAll(timestamp()/1000.0, game_state);
     
     if (DISPLAY_RASTER) {
         //drawRaster(world, 0.4);
