@@ -675,7 +675,7 @@ export class Renderer {
     }
 
 
-    drawGrid() {
+    drawGrid(world_dimensions) {
         const gl = this.#context;
         const quad = this.fs_quad;
         const info = this.grid_shader;
@@ -716,7 +716,7 @@ export class Renderer {
         
         gl.uniform4fv(
             info.uniforms.color.location,
-            [...getRGBForNamedColor("white"), 1]
+            [...getRGBForNamedColor("black"), 1]
         );
 
         gl.uniform2fv(
@@ -726,7 +726,7 @@ export class Renderer {
 
         gl.uniform2fv(
             info.uniforms.world_dimensions.location,
-            [13, 7]
+            world_dimensions
         );
 
     
@@ -857,7 +857,7 @@ export class Renderer {
         this.texture_environment_background = frame_buffer.texture;
     }
 
-    drawAll(time, game_state) {
+    drawAll(time, enable_grid, game_state) {
         const gl = this.#context;
        
 
@@ -881,8 +881,8 @@ export class Renderer {
                 this.drawColoredQuad(renderable, time);
             }
 
-            if (game_state.enable_grid) {
-                this.drawGrid();
+            if (enable_grid) {
+                this.drawGrid(game_state.world_dimensions);
             }
         }
     }

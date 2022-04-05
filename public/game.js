@@ -90,7 +90,6 @@ const DEFAULT_GAMESTATE = {
     has_won: false,
     halt_input: false,
     show_cursor: true,
-    enable_grid: false,
     
     level_index : 0,
     selected_tiles: [],
@@ -109,6 +108,8 @@ const DEFAULT_GAMESTATE = {
     frame_count: 0,
 
     debug_time_enabled: false,
+
+    world_dimensions: [0,0]
     
 };
 
@@ -169,7 +170,6 @@ function reset(level_index) {
         game_state.level_index = level_index;
         
         game_state.running = true;
-    
         //mainLoop();
     }
 }
@@ -321,8 +321,8 @@ function main() {
         }
         
         if (e.key === 'g') {
-            DISPLAY_RASTER = !DISPLAY_RASTER;
-            game_state.enable_grid = DISPLAY_RASTER;
+            //DISPLAY_RASTER = !DISPLAY_RASTER;
+            enable_grid = !enable_grid;
         }
 
         if (e.key === 'f') {
@@ -378,6 +378,8 @@ function main() {
         resetWorld(levels);
         game_state.has_won = false;
         game_state.running = true;
+
+
         fallen_trigger.cancel();
     }
 
@@ -687,7 +689,7 @@ function loadLevel(index, levels, world) {
     const h = level.length;
     const w = level[0].length;
     world.setDimensions(w, h);
-
+    game_state.world_dimensions = [w, h];
 
     let row = 0;
     let col = 0;
@@ -843,7 +845,7 @@ function render(world) {
     
     // OPENGL
     world.render(renderer, game_state);
-    renderer.drawAll(timestamp()/1000.0, game_state);
+    renderer.drawAll(timestamp()/1000.0, enable_grid, game_state);
     
     if (DISPLAY_RASTER) {
         //drawRaster(world, 0.4);

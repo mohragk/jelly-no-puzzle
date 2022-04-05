@@ -6,4 +6,5 @@ const InputModes = {
 };
 
 let input_mode = InputModes.DIRECT;
+let enable_grid = false;
 let bart_mode = false;

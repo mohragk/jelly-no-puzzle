@@ -270,7 +270,7 @@ export const FS_GRID_SOURCE = `
         float thickness = 1.5;
         float tile_size =  uResolution.x / uWorldDimensions.x;
 
-        float a = clamp(grid(gl_FragCoord.xy, tile_size, 1.0), 0.7, 1.0);
+        float a = clamp(grid(gl_FragCoord.xy, tile_size, 1.0), 0.65, 1.0);
         gl_FragColor = vec4(uColor.rgb, 1.0-a);
     }
 
