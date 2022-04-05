@@ -302,11 +302,7 @@ export class Renderer {
         this.cursor_shader.addUniform(gl, 'show_left', 'uShowLeft');
         this.cursor_shader.addUniform(gl, 'show_right', 'uShowRight');
         
-       
-
-       
-       
-        
+               
         
         // INITIAL SETTINGS
         gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
@@ -362,13 +358,11 @@ export class Renderer {
         renderable.shader = this.cursor_shader;
         renderable.show_left = true;
         renderable.show_right = true;
-        
 
         if (push_dir) {
             renderable.show_left =  (push_dir === MoveDirections.LEFT);
             renderable.show_right = (push_dir === MoveDirections.RIGHT);
         }
-
 
         this.render_list.push(renderable);
     }
@@ -387,15 +381,15 @@ export class Renderer {
         const renderable = this.getSingleColoredQuad(named_color, position, scale);
        // renderable.shader = this.circle_color_shader;
        // renderable.radius = 0.9;
-        this.environment_list.push(renderable);
+        //this.environment_list.push(renderable);
 
         const is_full = true;
-        const color = [...getRGBForNamedColor("white"), 1.0];
+        const color = [...getRGBForNamedColor(named_color), 1.0];
         const a = this.getSubTile(color, position, "TOP_LEFT", neighbours, is_full)
         const b = this.getSubTile(color, position, "TOP_RIGHT", neighbours, is_full)
         const c = this.getSubTile(color, position, "BOTTOM_LEFT", neighbours, is_full)
         const d = this.getSubTile(color, position, "BOTTOM_RIGHT", neighbours, is_full)
-        //this.environment_list.push(a, b, c, d);
+        this.environment_list.push(a, b, c, d);
     }
   
     pushCircleQuad(named_color, position, radius) {
@@ -408,7 +402,7 @@ export class Renderer {
 
     pushColoredQuad(named_color, position, scale = 1.0) {
         const renderable = this.getSingleColoredQuad(named_color, position, scale);
-        
+
         this.render_list.push(renderable);
     }
 
@@ -425,7 +419,7 @@ export class Renderer {
 
     pushSubTile(color, tile_position, corner, neighbours, is_full) {
         const renderable = this.getSubTile(color, tile_position, corner, neighbours, is_full);
-        
+
         this.render_list.push(renderable);
     }
 
@@ -452,6 +446,10 @@ export class Renderer {
     }
 
     getMaskForType(type, is_full) {
+        if (!this.texture_catalog) {
+            console.error("No texture catalog found!")
+            return;
+        }
         switch(type) {
             case EdgeMaskTypes.TOP_LEFT_OUTER:      return is_full ? this.texture_catalog.get("texture_full_mask_tl")      : this.texture_catalog.get("tile_mask_tl_outer");
             case EdgeMaskTypes.TOP_LEFT_INNER:      return is_full ? this.texture_catalog.get("texture_full_mask_none")    : this.texture_catalog.get("tile_mask_tl_inner");
@@ -666,9 +664,7 @@ export class Renderer {
         }        
         // Draw call
         {
-            
             gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
-
         }
     }
 

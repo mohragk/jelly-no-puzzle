@@ -219,8 +219,7 @@ function resizeCanvas(canvas) {
 
 
     // OPENGL
-    if (1) {
-        const cv = document.getElementById("opengl_canvas");
+    {
         canvas.style.width  = `${new_w}px`;
         canvas.style.height = `${new_h}px`;;
         renderer.canvas.width = new_w;
@@ -236,33 +235,33 @@ window.addEventListener("orientationchange", () => { resizeCanvas(canvas) });
 window.addEventListener("resize", () => { resizeCanvas(canvas) });
 
 
-function loadTextures(catalog) {
+function loadTextures(catalog, load_manager) {
 
 
-    catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none");
-    catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl");
-    catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr");
-    catalog.add('/assets/textures/rounded_tile_mask_bl_bw_sm.png',      "texture_full_mask_bl");
-    catalog.add('/assets/textures/rounded_tile_mask_br_bw_sm.png',      "texture_full_mask_br");
+    catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none", load_manager);
+    catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl", load_manager);
+    catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr", load_manager);
+    catalog.add('/assets/textures/rounded_tile_mask_bl_bw_sm.png',      "texture_full_mask_bl", load_manager);
+    catalog.add('/assets/textures/rounded_tile_mask_br_bw_sm.png',      "texture_full_mask_br", load_manager);
         
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png',    "tile_mask_tl_outer"    );
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png',    "tile_mask_tl_inner"    );
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left"  );
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top"   );
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png',    "tile_mask_tl_outer",   load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png',    "tile_mask_tl_inner",   load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left",    load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top",     load_manager);
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png',    "tile_mask_tr_outer");
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png',    "tile_mask_tr_inner");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png',    "tile_mask_tr_outer", load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png',    "tile_mask_tr_inner", load_manager);
     catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
     //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top");
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png',    "tile_mask_bl_outer");
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png',    "tile_mask_bl_inner");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png',    "tile_mask_bl_outer", load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png',    "tile_mask_bl_inner", load_manager);
     //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left");
     catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");  
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_outer.png',    "tile_mask_br_outer");
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_inner.png',    "tile_mask_br_inner");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_outer.png',    "tile_mask_br_outer", load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_inner.png',    "tile_mask_br_inner", load_manager);
     //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
     //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");   
 }
@@ -275,11 +274,11 @@ function main() {
     
     // NOTE: to make we only start the game when we fully loaded
     // every asset, we use a LoadManager that runs a callback when all items are loaded.
-    const texture_load_manager = new LoadManager( () => {mainLoop()} )
-    texture_catalog = new TextureCatalog(renderer.getContext(), texture_load_manager);
+    const load_manager = new LoadManager( () => {mainLoop()} )
+    texture_catalog = new TextureCatalog(renderer.getContext(), load_manager);
     renderer.setTextureCatalog(texture_catalog);
 
-    loadTextures(texture_catalog);
+    loadTextures(texture_catalog, load_manager);
 
 
     // AUDIO CLIPS

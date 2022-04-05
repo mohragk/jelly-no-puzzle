@@ -734,7 +734,7 @@ export class World {
                     let t = this.getTile(row, col);
                     if (t) {
                         if (t.id !== tile.id) {
-                                neighbours |= placement;
+                            neighbours |= placement;
                         }
                     }
                 };
@@ -792,8 +792,11 @@ export class World {
                         const addNeigbour = (row, col, placement) => {
                             let t = this.getTile(row, col);
                             if (t) {
-                                if (t.color !== "gray") {
-                                        neighbours |= placement;
+                                if (t.color !== "gray" ) {
+                                    neighbours |= placement;
+                                }
+                                if (t.id === tile.id) {
+                                    neighbours &= ~(placement);
                                 }
                             }
                         };

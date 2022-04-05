@@ -1,11 +1,8 @@
-import { LoadManager } from "./loadManager.js";
-
-
 
 export function loadTexture(gl, url, manager) { 
     const isPowerOf2 = (n) => (n & (n - 1)) === 0;
 
-    manager.itemStart();
+    if (manager) manager.itemStart();
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -44,7 +41,7 @@ export function loadTexture(gl, url, manager) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
-        manager.itemEnd();
+        if (manager) manager.itemEnd();
     };
     image.src = url;
     
@@ -55,19 +52,15 @@ export function loadTexture(gl, url, manager) {
 // NOTE: this is dependant on the WebGL context, so we might want
 // to abstract this out later.
 export class TextureCatalog {
-    load_manager;
-    loaded = false;
     textures = new Map();
     gl;
 
-    constructor(gl, load_manager) {
+    constructor(gl) {
         this.gl = gl;
-        const self = this;
-        this.load_manager = load_manager;
     }
 
-    add(url, name) {
-        const texture = loadTexture(this.gl, url, this.load_manager);
+    add(url, name, load_manager) {
+        const texture = loadTexture(this.gl, url, load_manager);
         this.textures.set(name, texture);
     }
 
