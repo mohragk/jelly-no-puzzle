@@ -53,14 +53,9 @@ export function loadTexture(gl, url, manager) {
 // to abstract this out later.
 export class TextureCatalog {
     textures = new Map();
-    gl;
 
-    constructor(gl) {
-        this.gl = gl;
-    }
-
-    add(url, name, load_manager) {
-        const texture = loadTexture(this.gl, url, load_manager);
+    add(url, name, load_manager, gl) {
+        const texture = loadTexture(gl, url, load_manager);
         this.textures.set(name, texture);
     }
 

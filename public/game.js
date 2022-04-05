@@ -237,35 +237,31 @@ window.addEventListener("orientationchange", () => { resizeCanvas(canvas) });
 window.addEventListener("resize", () => { resizeCanvas(canvas) });
 
 
-function loadTextures(catalog, load_manager) {
+function loadTextures(catalog, load_manager, gl) {
 
 
-    catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none", load_manager);
-    catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl", load_manager);
-    catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr", load_manager);
-    catalog.add('/assets/textures/rounded_tile_mask_bl_bw_sm.png',      "texture_full_mask_bl", load_manager);
-    catalog.add('/assets/textures/rounded_tile_mask_br_bw_sm.png',      "texture_full_mask_br", load_manager);
+    catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none", load_manager, gl);
+    catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl", load_manager, gl);
+    catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr", load_manager, gl);
+    catalog.add('/assets/textures/rounded_tile_mask_bl_bw_sm.png',      "texture_full_mask_bl", load_manager, gl);
+    catalog.add('/assets/textures/rounded_tile_mask_br_bw_sm.png',      "texture_full_mask_br", load_manager, gl);
         
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png',    "tile_mask_tl_outer",   load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png',    "tile_mask_tl_inner",   load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left",    load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top",     load_manager);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_outer.png',    "tile_mask_tl_outer",   load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_inner.png',    "tile_mask_tl_inner",   load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left",    load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top",     load_manager, gl);
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png',    "tile_mask_tr_outer", load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png',    "tile_mask_tr_inner", load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
-    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_top.png',      "tile_mask_tl_top");
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_outer.png',    "tile_mask_tr_outer", load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tr_inner.png',    "tile_mask_tr_inner", load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right", load_manager, gl);
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png',    "tile_mask_bl_outer", load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png',    "tile_mask_bl_inner", load_manager);
-    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_left.png',     "tile_mask_tl_left");
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");  
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_outer.png',    "tile_mask_bl_outer", load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_bl_inner.png',    "tile_mask_bl_inner", load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom", load_manager, gl);  
 
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_outer.png',    "tile_mask_br_outer", load_manager);
-    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_inner.png',    "tile_mask_br_inner", load_manager);
-    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_right.png',    "tile_mask_tl_right");
-    //catalog.add('/assets/textures/dual_mask/rounded_tile_mask_tl_bottom.png',   "tile_mask_tl_bottom");   
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_outer.png',    "tile_mask_br_outer", load_manager, gl);
+    catalog.add('/assets/textures/dual_mask/rounded_tile_mask_br_inner.png',    "tile_mask_br_inner", load_manager, gl);
 }
 
 function main() {
@@ -277,10 +273,10 @@ function main() {
     // NOTE: to make we only start the game when we fully loaded
     // every asset, we use a LoadManager that runs a callback when all items are loaded.
     const load_manager = new LoadManager( () => {mainLoop()} )
-    texture_catalog = new TextureCatalog(renderer.getContext(), load_manager);
+    texture_catalog = new TextureCatalog();
     renderer.setTextureCatalog(texture_catalog);
 
-    loadTextures(texture_catalog, load_manager);
+    loadTextures(texture_catalog, load_manager, renderer.getContext());
 
 
     // AUDIO CLIPS
@@ -847,14 +843,7 @@ function render(world) {
     world.render(renderer, game_state);
     renderer.drawAll(timestamp()/1000.0, enable_grid, game_state);
     
-    if (DISPLAY_RASTER) {
-        //drawRaster(world, 0.4);
-    }
-    
-
     if (game_state.has_won) {
-       
-
         canvas.classList.add("add_victory_animation");
         document.body.classList.add("animated-bgcolors");
         const button = document.getElementById("next_button");
@@ -862,14 +851,6 @@ function render(world) {
         if (game_state.running) {
             game_state.running = false;
             audio_player.trigger(sound_bank.get("victory_flute_sound"));
-
-            /*
-            const div_element = document.createElement("div");
-            document.getElementById("canvas_wrapper").appendChild(div_element);
-            const text_element = document.createElement("h1");
-            div_element.appendChild( text_element )
-            text_element.innerHTML= ("You won!")
-            */
         }
     }
     
