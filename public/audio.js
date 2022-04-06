@@ -12,22 +12,33 @@ function unlockAudioContext(audioCtx) {
     function clean() { events.forEach(e => b.removeEventListener(e, unlock)); }
 }
 
+
+async function getAudioFile(audio_context, filepath) {
+    const res = await fetch(filepath);
+    if (res.status === 200) {
+
+        const buffer = await res.arrayBuffer();
+        const audio_buffer = await audio_context.decodeAudioData(buffer);
+        return audio_buffer;
+    }
+
+    return null;
+}
+
+
+
 export class SoundBank {
     sounds = new Map();
     available_sounds = [];
+    base_path;
 
     // NOTE: sound clips are loaded via the DOM, maybe move that
     // to actual JS?
-    add(name) {
-        const element = document.getElementById(name);
-        if (!element) {
-            console.error(`No DOM sound element found for name: ${name}!`)
-            return false;
-        }
-        
-        this.sounds.set(name, element);
-        this.available_sounds.push(name);
-        return true;
+    async add(file_name, audio_context) {
+        const audio_buffer = await getAudioFile(audio_context, this.base_path+file_name);
+
+        this.sounds.set(file_name, audio_buffer);
+        this.available_sounds.push(file_name);
     }
 
     get(name) {
@@ -48,6 +59,8 @@ export class AudioPlayer {
 
     toggle_button;
 
+    global_gain;
+    mixer;
    
     constructor () {
 
@@ -61,20 +74,23 @@ export class AudioPlayer {
                 this.toggle_button.innerHTML = this.#is_on ? "turn off" : "turn on";
             }
         }
+
+        this.global_gain = this.audio_context.createGain();
+        this.global_gain.gain.value = 2.5;
+        this.global_gain.connect(this.audio_context.destination);
     }
 
     initialize() {
         this.audio_context = new AudioContext();
         unlockAudioContext(this.audio_context);
-
     }
 
     notFound() {
         console.error(`AudioPlayer -- Audio clip not found!`)
     }
 
-    trigger(clip) {
-        if (!clip) {
+    trigger(buffer) {
+        if (!buffer) {
             this.notFound();
             return;
         } 
@@ -82,29 +98,15 @@ export class AudioPlayer {
         if (this.#is_on) {
             unlockAudioContext(this.audio_context);
 
-            this.reset(clip);
-
-            let prom = clip.play();
-            if (prom !== 'undefined') {
-                prom.then( () => {
-                    console.log("Playing audio!")
-                })
-                .catch( err => {   
-                    console.error(err)
-                })
-            }
+            const sample_source = this.audio_context.createBufferSource();
+            sample_source.buffer = buffer;
+            sample_source.connect(this.global_gain)
+            sample_source.start();
+            
         }
     }
 
-    reset (clip) {
-        if (!clip)  {
-            this.notFound();
-            return;
-        }
-
-        clip.pause();
-        clip.currentTime = 0;
-    }
+  
 
     toggle() {
         this.#is_on = !this.#is_on;

@@ -608,7 +608,7 @@ export class World {
             return [col-0.5 , row-0.5];
         };
         
-        const [x, y] = getWorldPosForScreenPos(game_state.mouse.screen_coord);
+        const [x, y] = getWorldPosForScreenPos(global_mouse_pos);
         const dir = ( game_state.has_won || input_mode === InputModes.CLASSIC) ? false : game_state.selected_move_dir;
         renderer.pushCursorQuad("white", [x, y, -1.0], dir, 2.2);
     }
@@ -637,7 +637,6 @@ export class World {
             const pieces_grid = [];
             const movable_pieces = [];
             this.createPieces(movable_pieces, pieces_grid);
-            //this.debug_pieces = movable_pieces;
             
             const cancel_merge = this.applyGravity(movable_pieces);
             if (!cancel_merge) {

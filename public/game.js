@@ -1,5 +1,5 @@
 import { TextureCatalog } from './textureCatalog.js';
-import { Renderer, FrameBuffer } from './renderer.js';
+import { Renderer } from './renderer.js';
 
 
 import { levels }  from './levels2.js';
@@ -21,25 +21,13 @@ import { LoadManager } from './loadManager.js';
 
 const DEV_MODE = false;
 
-
-let audio_player = new AudioPlayer();
-let sound_bank = new SoundBank();
-
-
-function shakeCanvas() {
-    canvas.classList.add("add_shake")
-    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-}
-
-
-
 const halt_input_trigger = new DelayedTrigger(
     0.2, 
     () => game_state.halt_input = false,          // Arm Callback
     () => game_state.halt_input = true            // Finished Callback
 );          
 const fallen_trigger = new DelayedTrigger(0.1, () => {
-    audio_player.trigger(sound_bank.get("thump01_sound"));
+    audio_player.trigger(sound_bank.get("thump01.ogg"));
 
     canvas.classList.add("add_gravity_shake_mild")
     window.setTimeout(() => canvas.classList.remove("add_gravity_shake_mild"), 250)
@@ -50,23 +38,27 @@ const triggers = [
     fallen_trigger
 ];
 
-let canvas, ctx;
+let canvas;
 let texture_catalog;
 let renderer;
 let game_state; 
 let command_buffer;
 let recorder;
+
+let audio_player;
+let sound_bank;
+
 let event_listener = {
     handleEvent: (e) => {
 
         if (e === Events.MOVE) {
-            audio_player.trigger(sound_bank.get("move01_sound"));
+            audio_player.trigger(sound_bank.get("move02.ogg"));
             halt_input_trigger.armAndReset();
         }
         
         if (e === Events.IMPOSSIBLE) {
             shakeCanvas();
-            audio_player.trigger(sound_bank.get("tap01_sound"));
+            audio_player.trigger(sound_bank.get("tap01.ogg"));
         }
         
         if (e === Events.BEGIN_FALL) {
@@ -75,10 +67,21 @@ let event_listener = {
         }
 
         if (e === Events.BEGIN_MERGE) {
-            audio_player.trigger(sound_bank.get("glup01_sound"));
+            audio_player.trigger(sound_bank.get("glup01.ogg"));
         }
     }
 }
+
+
+
+
+function shakeCanvas() {
+    canvas.classList.add("add_shake")
+    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+}
+
+
+
 
 
 
@@ -89,7 +92,7 @@ const DEFAULT_GAMESTATE = {
     running: false,
     has_won: false,
     halt_input: false,
-    show_cursor: true,
+    show_cursor: false,
     
     level_index : 0,
     selected_tiles: [],
@@ -170,7 +173,6 @@ function reset(level_index) {
         game_state.level_index = level_index;
         
         game_state.running = true;
-        //mainLoop();
     }
 }
 
@@ -211,7 +213,7 @@ function resizeCanvas(canvas) {
         cell_size = getCellSize(false, world.dimensions.h);
         new_h = cell_size * world.dimensions.h;
     }
-    // NOTE: Introdces small error for better tile rendering
+    // NOTE: Make tiles an even numbered size for crisper rendering.
     if (!isEven(cell_size)) {
         cell_size -= 1;
     }
@@ -266,7 +268,7 @@ function loadTextures(catalog, load_manager, gl) {
 
 function main() {
     
-    
+    // RENDERING
     renderer = new Renderer();
     canvas = getCanvas(renderer);
     
@@ -278,16 +280,20 @@ function main() {
 
     loadTextures(texture_catalog, load_manager, renderer.getContext());
 
+    
+    // AUDIO
+    audio_player = new AudioPlayer();
+    sound_bank = new SoundBank();
+    sound_bank.base_path = "/assets/audio/";
 
-    // AUDIO CLIPS
-    sound_bank.add("thump01_sound");
-    sound_bank.add("tap01_sound");
-    sound_bank.add("victory_flute_sound");
-    sound_bank.add("glup01_sound");
-    sound_bank.add("move01_sound");
+    sound_bank.add("thump01.ogg", audio_player.audio_context);
+    sound_bank.add("tap01.ogg", audio_player.audio_context);
+    sound_bank.add("victory_flute.ogg", audio_player.audio_context);
+    sound_bank.add("glup01.ogg", audio_player.audio_context);
+    sound_bank.add("move02.ogg", audio_player.audio_context);
     
     
-
+    // INPUT
     canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
@@ -462,12 +468,14 @@ function main() {
         const {offsetX, offsetY} = e;
         game_state.mouse.screen_coord.x = offsetX;
         game_state.mouse.screen_coord.y = offsetY;
+        global_mouse_pos.x = offsetX;
+        global_mouse_pos.y = offsetY;
 
         const {row, col} = getTileCoordFromScreenCoord(offsetX, offsetY);
         game_state.mouse.over_tile.row = row;
         game_state.mouse.over_tile.col = col;
 
-    
+        game_state.show_cursor = true;
     }
 
     function getTouchCoord(canvas, e) {
@@ -775,7 +783,7 @@ function timestamp() {
     return window.performance && window.performance.now ? window.performance.now() : new Date().getTime();
 }
 
-let time_step = 1/240;
+let time_step = 1.0/240.0;
 let time_step_f = 1.0;
 let delta_time = 0;
 let last_time = timestamp();
@@ -783,7 +791,7 @@ function mainLoop() {
     const now = timestamp();
     const slow_time_step = time_step * time_step_f;
     const frame_delta = (now - last_time) / 1000.0;
-    delta_time += Math.min(1, frame_delta);
+    delta_time += Math.min(1.0, frame_delta);
     last_time = now;
     {
         while (delta_time > slow_time_step) {
@@ -826,6 +834,7 @@ export function getTileCoordFromScreenCoord(x, y) {
 
 
 function update(world, command_buffer, dt) {
+    
     world.update(command_buffer, dt, game_state, recorder, renderer);
     for (let trigger of triggers) {
         trigger.update(dt);
@@ -850,7 +859,7 @@ function render(world) {
         button.style.visibility = "visible";
         if (game_state.running) {
             game_state.running = false;
-            audio_player.trigger(sound_bank.get("victory_flute_sound"));
+            audio_player.trigger(sound_bank.get("victory_flute.ogg"));
         }
     }
     
