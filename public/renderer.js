@@ -11,7 +11,8 @@ import {
     FS_MASKED_SOURCE,
     FS_MATTE_SOURCE,
     FS_CIRCLE_SOURCE,
-    FS_GRID_SOURCE
+    FS_GRID_SOURCE,
+    FS_TILE_SOURCE
 } from './rendering/fragment_shaders.js';
 
 import {Neighbours} from './world.js'
@@ -236,9 +237,9 @@ export class Renderer {
     fullscreen_shader;
     grid_shader;
     texture_shader;
-
     circle_color_shader;
     cursor_shader;
+    tile_shader;
 
 
     texture_catalog;
@@ -252,71 +253,87 @@ export class Renderer {
     constructor() {
         this.reset();
         const gl = this.#context;
-        this.quad = createGlQuad(gl);
 
-        this.fs_quad = createFullscreenQuad(gl);
+        // QUADS
+        {
+            this.quad = createGlQuad(gl);
+            this.fs_quad = createFullscreenQuad(gl);
+        }
 
+        // SHADERS
+        {
+            this.fullscreen_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_MATTE_SOURCE);
+            this.fullscreen_shader.addUniform(gl, 'color_texture', 'uColorTexture');
+    
+            this.grid_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_GRID_SOURCE);
+            this.grid_shader.addUniform(gl, 'color', 'uColor');
+            this.grid_shader.addUniform(gl, 'resolution', 'uResolution');
+            this.grid_shader.addUniform(gl, 'world_dimensions', 'uWorldDimensions');
+    
+            this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
+            this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.default_white_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.default_white_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            
+            this.single_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_COLOR_SOURCE);
+            this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.single_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.single_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            this.single_color_shader.addUniform(gl, 'color', 'uColor');
+            
+            this.circle_color_shader = createGLShader(gl, VS_MVP_SOURCE, FS_CIRCLE_SOURCE, "circle_color_shader");
+            this.circle_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.circle_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.circle_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.circle_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            this.circle_color_shader.addUniform(gl, 'color', 'uColor');
+            this.circle_color_shader.addUniform(gl, 'radius', 'uRadius');
+            
+            
+            this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_MASKED_SOURCE);
+            this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.texture_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uMaskTexture');
+            this.texture_shader.addUniform(gl, 'color', 'uColor');
+            
+            
+            this.cursor_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_CURSOR_SOURCE);
+            this.cursor_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.cursor_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.cursor_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.cursor_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            this.cursor_shader.addUniform(gl, 'color', 'uColor');
+            this.cursor_shader.addUniform(gl, 'time', 'uTime');
+            this.cursor_shader.addUniform(gl, 'show_left', 'uShowLeft');
+            this.cursor_shader.addUniform(gl, 'show_right', 'uShowRight');
 
-        
-        this.fullscreen_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_MATTE_SOURCE);
-        this.fullscreen_shader.addUniform(gl, 'color_texture', 'uColorTexture');
-
-        this.grid_shader = createGLShader(gl, VS_FULLSCREEN_SOURCE, FS_GRID_SOURCE);
-        this.grid_shader.addUniform(gl, 'color', 'uColor');
-        this.grid_shader.addUniform(gl, 'resolution', 'uResolution');
-        this.grid_shader.addUniform(gl, 'world_dimensions', 'uWorldDimensions');
-
-        this.default_white_shader = createGLShader(gl, VS_MVP_SOURCE, FS_WHITE_SOURCE);
-        this.default_white_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.default_white_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
-        this.default_white_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
-        this.default_white_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        
-        this.single_color_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_COLOR_SOURCE);
-        this.single_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.single_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
-        this.single_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
-        this.single_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.single_color_shader.addUniform(gl, 'color', 'uColor');
-        
-        this.circle_color_shader = createGLShader(gl, VS_MVP_SOURCE, FS_CIRCLE_SOURCE, "circle_color_shader");
-        this.circle_color_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.circle_color_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
-        this.circle_color_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
-        this.circle_color_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.circle_color_shader.addUniform(gl, 'color', 'uColor');
-        this.circle_color_shader.addUniform(gl, 'radius', 'uRadius');
-        
-        
-        this.texture_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_MASKED_SOURCE);
-        this.texture_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.texture_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
-        this.texture_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
-        this.texture_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.texture_shader.addUniform(gl, 'edge_mask_texture', 'uMaskTexture');
-        this.texture_shader.addUniform(gl, 'color', 'uColor');
-        
-        
-        this.cursor_shader  = createGLShader(gl, VS_MVP_SOURCE, FS_CURSOR_SOURCE);
-        this.cursor_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
-        this.cursor_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
-        this.cursor_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
-        this.cursor_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
-        this.cursor_shader.addUniform(gl, 'color', 'uColor');
-        this.cursor_shader.addUniform(gl, 'time', 'uTime');
-        this.cursor_shader.addUniform(gl, 'show_left', 'uShowLeft');
-        this.cursor_shader.addUniform(gl, 'show_right', 'uShowRight');
-        
-               
+            this.tile_shader = createGLShader(gl, VS_MVP_SOURCE, FS_TILE_SOURCE);
+            this.tile_shader.addAttribute(gl, 'vertex_position', 'aVertexPosition');
+            this.tile_shader.addAttribute(gl, 'texcoord', 'aTexCoord');
+            this.tile_shader.addUniform(gl, 'modelview_matrix', 'uModelViewMatrix');
+            this.tile_shader.addUniform(gl, 'projection_matrix', 'uProjectionMatrix');
+            this.tile_shader.addUniform(gl, 'color', 'uColor');
+            this.tile_shader.addUniform(gl, 'mask_texture_tl', 'uMaskTextureTL');
+            this.tile_shader.addUniform(gl, 'mask_texture_tr', 'uMaskTextureTR');
+            this.tile_shader.addUniform(gl, 'mask_texture_bl', 'uMaskTextureBL');
+            this.tile_shader.addUniform(gl, 'mask_texture_br', 'uMaskTextureBR');
+            
+        }
         
         // INITIAL SETTINGS
-        gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
-        gl.clearDepth(1.0);                 // Clear everything
-        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-        gl.enable(gl.BLEND)
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-       // gl.blendFunc(gl.DST_ALPHA, gl.ONE_MINUS_DST_ALPHA);
+        {
+            gl.clearColor(0.1, 0.1, 0.1, 0.0);  // Clear to color fully transparent
+            gl.clearDepth(1.0);                 // Clear everything
+            gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+            gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+            gl.enable(gl.BLEND)
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        }
+      
     }
 
     setTextureCatalog(catalog) {
@@ -426,6 +443,18 @@ export class Renderer {
     pushSubTile(color, tile_position, corner, neighbours, is_full) {
         const renderable = this.getSubTile(color, tile_position, corner, neighbours, is_full);
 
+        this.render_list.push(renderable);
+    }
+
+    pushTile(named_color, position, neighbours, is_full) {
+        const color = [...getRGBForNamedColor(named_color), 1.0];
+        const renderable = this.getRenderableQuad(color, [...position, -1]);
+        renderable.mask_texture_tl = this.getMaskForType(this.getEdgeMaskType("TOP_LEFT", neighbours), is_full);
+        renderable.mask_texture_tr = this.getMaskForType(this.getEdgeMaskType("TOP_RIGHT", neighbours), is_full);
+        renderable.mask_texture_bl = this.getMaskForType(this.getEdgeMaskType("BOTTOM_LEFT", neighbours), is_full);
+        renderable.mask_texture_br = this.getMaskForType(this.getEdgeMaskType("BOTTOM_RIGHT", neighbours), is_full);
+        renderable.shader = this.tile_shader;
+        renderable.type = "SINGLE_QUAD_TILE"; // temporary
         this.render_list.push(renderable);
     }
 
@@ -558,25 +587,21 @@ export class Renderer {
     }
 
     
-  
 
-    drawColoredQuad(renderable, time) {
+    drawTile(renderable) {
         const gl = this.#context;
 
-        // @TODO: should this be hard coded?
         const info = renderable.shader;
-
         gl.useProgram(info.program);
 
-        
-
         const {position, color} = renderable;
-
+        
         // ATTRIBUTES
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.position);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.position_indices);
+        const mesh = this.quad;
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.position_indices);
         gl.vertexAttribPointer(
-            info.attributes.vertex_position.location,
+            0,
             3,
             gl.FLOAT,
             false,
@@ -587,10 +612,10 @@ export class Renderer {
             0
         );
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quad.texcoord);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quad.texcoord_indices);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.texcoord);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.texcoord_indices);
         gl.vertexAttribPointer(
-            info.attributes.texcoord.location,
+            1,
             2,
             gl.FLOAT,
             false,
@@ -598,7 +623,108 @@ export class Renderer {
             0
         );
         gl.enableVertexAttribArray(
-            info.attributes.texcoord.location
+            1
+        );
+        
+
+        // FRAGMENT
+        const projection_matrix = this.getCameraProjection();
+        const modelview_matrix = mat4.create();
+        mat4.translate(modelview_matrix, modelview_matrix, position);
+
+        if (renderable.scale) {
+            const {scale} = renderable;
+            mat4.scale(modelview_matrix, modelview_matrix, [scale, scale, scale])
+        }
+
+        gl.uniformMatrix4fv(
+            info.uniforms.projection_matrix.location,
+            false,
+            projection_matrix
+        );
+        gl.uniformMatrix4fv(
+            info.uniforms.modelview_matrix.location,
+            false,
+            modelview_matrix
+        );
+        
+        gl.uniform4fv(
+            info.uniforms.color.location,
+            color
+        );
+
+        // MASK TEXTURES
+        
+        let offset = 0;
+        {
+            gl.activeTexture(gl.TEXTURE0 + offset);
+            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_tl);
+            gl.uniform1i(info.uniforms.mask_texture_tl.location, offset++);
+        }
+
+        {
+            gl.activeTexture(gl.TEXTURE0 + offset);
+            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_tr);
+            gl.uniform1i(info.uniforms.mask_texture_tr.location, offset++);
+        }
+
+        {
+            gl.activeTexture(gl.TEXTURE0 + offset);
+            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_bl);
+            gl.uniform1i(info.uniforms.mask_texture_bl.location, offset++);
+        }
+
+        {
+            gl.activeTexture(gl.TEXTURE0 + offset);
+            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_br);
+            gl.uniform1i(info.uniforms.mask_texture_br.location, offset++); //inc unnecessary!
+        }
+
+        // Draw call
+        {
+            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
+        }
+    }
+  
+
+    drawColoredQuad(renderable, time) {
+        const gl = this.#context;
+
+        const info = renderable.shader;
+        gl.useProgram(info.program);
+
+        const {position, color} = renderable;
+
+        const mesh = this.quad;
+    
+
+        // ATTRIBUTES
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.position);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.position_indices);
+        gl.vertexAttribPointer(
+            0,
+            3,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            0
+        );
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.texcoord);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.texcoord_indices);
+        gl.vertexAttribPointer(
+            1,
+            2,
+            gl.FLOAT,
+            false,
+            0,
+            0
+        );
+        gl.enableVertexAttribArray(
+            1
         );
         
 
@@ -878,7 +1004,12 @@ export class Renderer {
             
             while (this.render_list.length) {
                 const renderable = this.render_list.pop();
-                this.drawColoredQuad(renderable, time);
+                if (renderable.type === "SINGLE_QUAD_TILE") {
+                    this.drawTile(renderable);   
+                }
+                else {
+                    this.drawColoredQuad(renderable, time);
+                }
             }
 
             if (enable_grid) {

@@ -90,7 +90,7 @@ export const FS_TILE_SOURCE = `
         // TOP LEFT
         if (uv.x < 0.5 && uv.y < 0.5) {
             float st_x = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
-            float st_y = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+            float st_y = map(texCoord.y, 0.0, 0.5, 0.0, 1.0);
 
             vec2 st = vec2(st_x, st_y);
             alpha = texture2D(uMaskTextureTL, st).r;
@@ -98,10 +98,28 @@ export const FS_TILE_SOURCE = `
         // TOP RIGHT
         if (uv.x > 0.5 && uv.y < 0.5) {
             float st_x = map(texCoord.x, 0.5, 1.0, 0.0, 1.0);
-            float st_y = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+            float st_y = map(texCoord.y, 0.0, 0.5, 0.0, 1.0);
 
             vec2 st = vec2(st_x, st_y);
             alpha = texture2D(uMaskTextureTR, st).r;
+        }
+
+        // BOTTOM LEFT
+        if (uv.x < 0.5 && uv.y > 0.5) {
+            float st_x = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
+            float st_y = map(texCoord.y, 0.5, 1.0, 0.0, 1.0);
+
+            vec2 st = vec2(st_x, st_y);
+            alpha = texture2D(uMaskTextureBL, st).r;
+        }
+
+        // BOTTOM RIGHT
+        if (uv.x > 0.5 && uv.y > 0.5) {
+            float st_x = map(texCoord.x, 0.5, 1.0, 0.0, 1.0);
+            float st_y = map(texCoord.y, 0.5, 1.0, 0.0, 1.0);
+
+            vec2 st = vec2(st_x, st_y);
+            alpha = texture2D(uMaskTextureBR, st).r;
         }
 
         vec3 col = uColor.rgb;

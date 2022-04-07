@@ -10,5 +10,5 @@ let enable_grid = false;
 let bart_mode = false;
 
 // NOTE: we use a global for tracking the mouse position to minimize
-// input lag.
+// input lag. Maybe.
 let global_mouse_pos = {x: 0, y: 0};

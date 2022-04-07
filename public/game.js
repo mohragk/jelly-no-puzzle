@@ -75,13 +75,6 @@ let event_listener = {
 
 
 
-function shakeCanvas() {
-    canvas.classList.add("add_shake")
-    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
-}
-
-
-
 
 
 
@@ -132,6 +125,15 @@ let FULLSCREEN_MODE = false;
 let world = new World();
 
 
+
+
+function shakeCanvas() {
+    canvas.classList.add("add_shake")
+    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+}
+
+
+
 function removeClassesFromHTML() {
     canvas.classList.remove("add_victory_animation");
     document.body.classList.remove("animated-bgcolors");
@@ -177,7 +179,6 @@ function reset(level_index) {
 }
 
 function resetWorld(levels) {
-    
     world = new World();
     const level_index = game_state.level_index;
     loadLevel(level_index, levels, world);
@@ -240,8 +241,6 @@ window.addEventListener("resize", () => { resizeCanvas(canvas) });
 
 
 function loadTextures(catalog, load_manager, gl) {
-
-
     catalog.add('/assets/textures/rounded_tile_mask_none.png',          "texture_full_mask_none", load_manager, gl);
     catalog.add('/assets/textures/rounded_tile_mask_tl_bw_sm.png',      "texture_full_mask_tl", load_manager, gl);
     catalog.add('/assets/textures/rounded_tile_mask_tr_bw_sm.png',      "texture_full_mask_tr", load_manager, gl);
@@ -591,8 +590,6 @@ function main() {
     select.value = `${level_index + 1}`;
     reset(level_index);
     
-
-  //  mainLoop();
 }
 
 
