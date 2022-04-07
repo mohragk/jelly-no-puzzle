@@ -398,11 +398,6 @@ export class Renderer {
     }
     
     pushEnvironmentQuad(named_color, position, scale, neighbours) {
-        // const renderable = this.getSingleColoredQuad(named_color, position, scale);
-        // renderable.shader = this.circle_color_shader;
-        // renderable.radius = 0.9;
-        // this.environment_list.push(renderable);
-
         const is_full = true;
         const color = [...getRGBForNamedColor(named_color), 1.0];
         const a = this.getSubTile(color, position, "TOP_LEFT", neighbours, is_full)
@@ -595,6 +590,7 @@ export class Renderer {
         
         // ATTRIBUTES
         const mesh = this.quad;
+
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.position);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.position_indices);
         gl.vertexAttribPointer(
@@ -609,6 +605,7 @@ export class Renderer {
             0
         );
 
+
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.texcoord);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.texcoord_indices);
         gl.vertexAttribPointer(
@@ -622,17 +619,14 @@ export class Renderer {
         gl.enableVertexAttribArray(
             1
         );
-        
+
+    
 
         // FRAGMENT
         const projection_matrix = this.getCameraProjection();
         const modelview_matrix = mat4.create();
         mat4.translate(modelview_matrix, modelview_matrix, position);
 
-        if (renderable.scale) {
-            const {scale} = renderable;
-            mat4.scale(modelview_matrix, modelview_matrix, [scale, scale, scale])
-        }
 
         gl.uniformMatrix4fv(
             info.uniforms.projection_matrix.location,
@@ -651,36 +645,21 @@ export class Renderer {
         );
 
         // MASK TEXTURES
+        const useTexture = (texture, location, offset) => {
+            gl.activeTexture(gl.TEXTURE0 + offset);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.uniform1i(location, offset);
+        };
         
         let offset = 0;
-        {
-            gl.activeTexture(gl.TEXTURE0 + offset);
-            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_tl);
-            gl.uniform1i(info.uniforms.mask_texture_tl.location, offset++);
-        }
-
-        {
-            gl.activeTexture(gl.TEXTURE0 + offset);
-            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_tr);
-            gl.uniform1i(info.uniforms.mask_texture_tr.location, offset++);
-        }
-
-        {
-            gl.activeTexture(gl.TEXTURE0 + offset);
-            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_bl);
-            gl.uniform1i(info.uniforms.mask_texture_bl.location, offset++);
-        }
-
-        {
-            gl.activeTexture(gl.TEXTURE0 + offset);
-            gl.bindTexture(gl.TEXTURE_2D, renderable.mask_texture_br);
-            gl.uniform1i(info.uniforms.mask_texture_br.location, offset++); //inc unnecessary!
-        }
+        useTexture(renderable.mask_texture_tl, info.uniforms.mask_texture_tl.location, offset++);
+        useTexture(renderable.mask_texture_tr, info.uniforms.mask_texture_tr.location, offset++);
+        useTexture(renderable.mask_texture_bl, info.uniforms.mask_texture_bl.location, offset++);
+        useTexture(renderable.mask_texture_br, info.uniforms.mask_texture_br.location, offset++);
+    
 
         // Draw call
-        {
-            gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
-        }
+        gl.drawElements(gl.TRIANGLES, this.quad.position_indices_count, gl.UNSIGNED_SHORT, 0);
     }
   
 
@@ -804,9 +783,6 @@ export class Renderer {
         const info = this.grid_shader;
         gl.useProgram(info.program);
 
-       // gl.depthMask(false);
-
-    
         gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
         gl.vertexAttribPointer(
@@ -867,7 +843,6 @@ export class Renderer {
         const info = this.fullscreen_shader;
         gl.useProgram(info.program);
 
-        // 
         gl.bindBuffer(gl.ARRAY_BUFFER, quad.position);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.position_indices);
         gl.vertexAttribPointer(
@@ -962,9 +937,8 @@ export class Renderer {
         {
             gl.bindFramebuffer(gl.FRAMEBUFFER, frame_buffer.buffer);
             gl.viewport(0, 0, frame_buffer.width, frame_buffer.height);
-            
            
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT);
     
             while (renderables.length) {
                 const renderable = renderables.pop();
@@ -978,25 +952,24 @@ export class Renderer {
 
     drawAll(time, enable_grid, game_state) {
         const gl = this.#context;
-       // gl.depthMask(false);
 
-        // NOTE: should only be filled at first loop and zero'd in subsequent loops.
+        // NOTE: should only be filled at first loop and not in subsequent loops.
         if (this.environment_list.length) {
+            // Pre-render background for better performance.
             this.updateEnvironmentTexture(this.frame_buffer);
         }
         
         {
             gl.viewport(0, 0, this.canvas.width, this.canvas.height);
             
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.clear(gl.COLOR_BUFFER_BIT);
 
             if (this.texture_environment_background) {
                 this.drawFullScreenQuad(this.texture_environment_background);
             }
 
-            
-            while (this.render_list.length) {
-                const renderable = this.render_list.pop();
+
+            for (const renderable of this.render_list) {
                 if (renderable.type === "SINGLE_QUAD_TILE") {
                     this.drawTile(renderable);   
                 }
@@ -1004,6 +977,7 @@ export class Renderer {
                     this.drawColoredQuad(renderable, time);
                 }
             }
+            this.render_list.length = 0;
 
             if (enable_grid) {
                 this.drawGrid(game_state.world_dimensions);

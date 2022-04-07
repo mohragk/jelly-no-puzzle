@@ -762,54 +762,52 @@ export class World {
  
 
     render(renderer, game_state) {
-        // NOTE: we push it first since it will be the LAST item to be rendered.
-        this.drawMouseCursor(game_state, renderer);
-        this.drawSelectedTileOverlays(game_state, renderer);
-
+        
+        
+        // DRAW MOVABLES
+        {
+            this.drawMovables(renderer);
+        }    
+        
         // DRAW ANCHORS
         {
             this.drawAnchors(renderer);
         }
 
-        // DRAW MOVABLES
-        {
-            this.drawMovables(renderer);
-        }    
+        this.drawSelectedTileOverlays(game_state, renderer);
+        this.drawMouseCursor(game_state, renderer);
 
-
+        // PRE-DRAW BACKGROUND ELEMENTS TO TEXTURE
         if (!this.initialized) {
             this.initialized = true;
-            this.forEachCell((row_, col_, index) => {
+            this.forEachCell((row, col, index) => {
                 const tile = this.grid[index];
                 if ((tile.gameplay_flags > 0 ) && tile.color === "gray" ) {
-                    const {row, col} = tile.world_pos;
-                    
-                    if (1) {
 
-                        const addNeigbour = (row, col, placement) => {
-                            let t = this.getTile(row, col);
-                            if (t) {
-                                if (t.color !== "gray" ) {
-                                    neighbours |= placement;
-                                }
-                                if (t.id === tile.id) {
-                                    neighbours &= ~(placement);
-                                }
+                    const addNeigbour = (row, col, placement) => {
+                        let t = this.getTile(row, col);
+                        if (t) {
+                            if (t.color !== "gray" ) {
+                                neighbours |= placement;
                             }
-                        };
-                        let neighbours = 0;
-                        
-                        addNeigbour(row-1, col, Neighbours.TOP);
-                        addNeigbour(row+1, col, Neighbours.BOTTOM);
-                        addNeigbour(row, col-1, Neighbours.LEFT);
-                        addNeigbour(row, col+1, Neighbours.RIGHT);
-                        
-                        addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
-                        addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
-                        addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
-                        addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
-                        renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
-                    }
+                            if (t.id === tile.id) {
+                                neighbours &= ~(placement);
+                            }
+                        }
+                    };
+                    let neighbours = 0;
+                    
+                    addNeigbour(row-1, col, Neighbours.TOP);
+                    addNeigbour(row+1, col, Neighbours.BOTTOM);
+                    addNeigbour(row, col-1, Neighbours.LEFT);
+                    addNeigbour(row, col+1, Neighbours.RIGHT);
+                    
+                    addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
+                    addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
+                    addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
+                    addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                    renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
+                
                 }
             });
         }
