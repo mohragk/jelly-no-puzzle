@@ -754,7 +754,8 @@ export class World {
                     renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours, false );
                 }
                 else if (tile.color !== "gray") {
-                    renderer.pushFullRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
+                    //renderer.pushFullRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
+                    renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours, true );
                 }
                
             }

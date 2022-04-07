@@ -88,7 +88,7 @@ export const FS_TILE_SOURCE = `
         float alpha = 0.0;
 
         // TOP LEFT
-        if (uv.x < 0.5 && uv.y < 0.5) {
+        if (uv.x <= 0.5 && uv.y <= 0.5) {
             float st_x = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
             float st_y = map(texCoord.y, 0.0, 0.5, 0.0, 1.0);
 
@@ -96,7 +96,7 @@ export const FS_TILE_SOURCE = `
             alpha = texture2D(uMaskTextureTL, st).r;
         }
         // TOP RIGHT
-        if (uv.x > 0.5 && uv.y < 0.5) {
+        if (uv.x > 0.5 && uv.y <= 0.5) {
             float st_x = map(texCoord.x, 0.5, 1.0, 0.0, 1.0);
             float st_y = map(texCoord.y, 0.0, 0.5, 0.0, 1.0);
 
@@ -105,7 +105,7 @@ export const FS_TILE_SOURCE = `
         }
 
         // BOTTOM LEFT
-        if (uv.x < 0.5 && uv.y > 0.5) {
+        if (uv.x <= 0.5 && uv.y > 0.5) {
             float st_x = map(texCoord.x, 0.0, 0.5, 0.0, 1.0);
             float st_y = map(texCoord.y, 0.5, 1.0, 0.0, 1.0);
 
