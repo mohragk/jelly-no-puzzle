@@ -299,8 +299,6 @@ export class World {
                 
                 piece.tiles = [...merged_tiles];
 
-                
-
                 pieces.push(piece);
             }
         });
@@ -353,7 +351,6 @@ export class World {
                 }
             }
             
-            this.move_set = [];
             this.move_set.length = 0;
         }
     }
@@ -625,9 +622,7 @@ export class World {
 
 
 
-    update(command_buffer, dt, game_state, undo_recorder, renderer) {
-        
-
+    update(command_buffer, dt, game_state, undo_recorder) {
         
         this.handleInput(game_state);
         

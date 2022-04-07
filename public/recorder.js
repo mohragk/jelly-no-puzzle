@@ -15,6 +15,7 @@ export class Recorder {
             this.history.length = this.max;
         }
         this.history[this.count] =  JSON.parse(JSON.stringify(state)) ;
+        //this.history[this.count] =  [...state] ;
         this.count++;
     }
 
