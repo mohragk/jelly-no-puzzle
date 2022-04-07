@@ -225,9 +225,9 @@ function resizeCanvas(canvas) {
     {
         canvas.style.width  = `${new_w}px`;
         canvas.style.height = `${new_h}px`;;
-        renderer.canvas.width = new_w;
-        renderer.canvas.height = new_h;
         const oversampling_factor = 1.0;
+        renderer.canvas.width = new_w * oversampling_factor;
+        renderer.canvas.height = new_h * oversampling_factor;
         renderer.updateCameraProjection(world.dimensions.w, world.dimensions.h, oversampling_factor);
     }
 

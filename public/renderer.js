@@ -935,7 +935,7 @@ export class Renderer {
         const z_far = 100.0;
         const proj_matrix = mat4.create();
 
-        const dim_w = world_dim_w * os_factor;
+        const dim_w = world_dim_w;
         const dim_h = world_dim_h // * os_factor;
         mat4.ortho(
             proj_matrix,
