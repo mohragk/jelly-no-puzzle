@@ -583,7 +583,7 @@ function main() {
     
    
 
-    // Reset to last_saved level
+    // Reset to last saved level
     let level_index = parseInt(localStorage.getItem('last_level')) || 0;
     select.value = `${level_index + 1}`;
     reset(level_index);
