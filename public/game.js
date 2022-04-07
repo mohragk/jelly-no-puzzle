@@ -221,8 +221,6 @@ function resizeCanvas(canvas) {
     let new_w = cell_size * world.dimensions.w;
     new_h = cell_size * world.dimensions.h;
 
-
-
     // OPENGL
     {
         canvas.style.width  = `${new_w}px`;

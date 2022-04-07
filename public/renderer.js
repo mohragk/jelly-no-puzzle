@@ -968,10 +968,6 @@ export class Renderer {
             
            
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            
-           // gl.activeTexture(gl.TEXTURE0);
-           // gl.bindTexture(gl.TEXTURE_2D, frame_buffer.texture);
-
     
             while (renderables.length) {
                 const renderable = renderables.pop();

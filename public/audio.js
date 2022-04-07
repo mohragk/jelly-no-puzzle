@@ -16,9 +16,9 @@ function unlockAudioContext(audioCtx) {
 async function getAudioFile(audio_context, filepath) {
     const res = await fetch(filepath);
     if (res.status === 200) {
-
         const buffer = await res.arrayBuffer();
         const audio_buffer = await audio_context.decodeAudioData(buffer);
+
         return audio_buffer;
     }
 

@@ -5,7 +5,7 @@ void main() {
 `;
 
 export const FS_COLOR_SOURCE = `
-precision highp float;
+    precision mediump float;
     uniform vec4 uColor;
 
     void main() {
@@ -15,7 +15,7 @@ precision highp float;
 
 
 export const FS_ROUNDED_SOURCE = `
-    precision highp float;
+    precision mediump float;
 
     uniform vec4 uColor;
     uniform vec4 uCornerWeights;
@@ -53,7 +53,7 @@ export const FS_ROUNDED_SOURCE = `
 `;
 
 export const FS_MASKED_SOURCE = `
-    precision highp float;
+    precision mediump float;
     uniform vec4 uColor;
 
     uniform sampler2D uMaskTexture;
@@ -68,7 +68,9 @@ export const FS_MASKED_SOURCE = `
 `;
 
 export const FS_TILE_SOURCE = `
-    precision highp float;
+    precision mediump float;
+    precision mediump sampler2D;
+
     uniform vec4 uColor;
 
     uniform sampler2D uMaskTextureTL;
@@ -129,7 +131,7 @@ export const FS_TILE_SOURCE = `
 
 
 export const FS_CIRCLE_SOURCE = `
-    precision highp float;
+    precision mediump float;
 
     uniform vec4 uColor;
     uniform float uRadius;
@@ -153,7 +155,7 @@ export const FS_CIRCLE_SOURCE = `
 
 
 export const FS_MATTE_SOURCE = `
-    precision highp float;
+    precision mediump float;
     
     uniform sampler2D uColorTexture;
    
@@ -166,7 +168,7 @@ export const FS_MATTE_SOURCE = `
 `
 
 export const FS_CURSOR_SOURCE = `
-    precision highp float;
+    precision mediump float;
 
     #define PI 3.14159265359
 
@@ -262,7 +264,7 @@ export const FS_CURSOR_SOURCE = `
 
 
 export const FS_GRID_SOURCE = `
-    precision highp float;
+    precision mediump float;
 
     uniform vec4 uColor;
     uniform vec2 uResolution;

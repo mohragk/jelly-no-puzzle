@@ -7,7 +7,6 @@ import { AnchorPoints, GameplayFlags, Tile } from './tile.js';
 import { CommandTypes, MoveDirections } from './command.js';
 import { lerp } from './math.js';
 import { EventManager, Events } from './events.js';
-import { Renderer } from './renderer.js';
 
 // NOTE: Neighbours in this case means; tiles that are different 
 // in color (or id in case of black tiles) from the current tile.
@@ -750,11 +749,9 @@ export class World {
                 addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
                 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
-                   // renderer.pushRoundedColorTile( tile.color, tile.opengl_visual_pos, neighbours );
                     renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours, false );
                 }
                 else if (tile.color !== "gray") {
-                    //renderer.pushFullRoundedColorTile(tile.color, tile.opengl_visual_pos, neighbours);
                     renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours, true );
                 }
                
