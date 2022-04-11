@@ -367,11 +367,13 @@ function main() {
     function handleUndo() {
         canvas.classList.remove("add_victory_animation");
         document.body.classList.remove("animated-bgcolors");
-        const prev = recorder.getPrevious();
-        world.setState(prev);
-        game_state.has_won = false;
-        game_state.running = true;
-        fallen_trigger.cancel();
+        if (recorder.count > -1) {
+            const prev = recorder.getPrevious();
+            world.setState(prev);
+            game_state.has_won = false;
+            game_state.running = true;
+            fallen_trigger.cancel();
+        }
     }
 
     function handleReset() {
