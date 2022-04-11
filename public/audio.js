@@ -13,14 +13,12 @@ function unlockAudioContext(audioCtx) {
 }
 
 
-async function getAudioFile(audio_context, filepath) {
+async function getAudioFile(audio_context, filepath, load_manager) {
     const res = await fetch(filepath);
-    if (res.status === 200) {
-        const buffer = await res.arrayBuffer();
-        const audio_buffer = await audio_context.decodeAudioData(buffer);
-
-        return audio_buffer;
-    }
+    const buffer = await res.arrayBuffer();
+    const audio_buffer = await audio_context.decodeAudioData(buffer);
+    load_manager.itemEnd()
+    return audio_buffer;
 
     return null;
 }
@@ -34,8 +32,9 @@ export class SoundBank {
 
     // NOTE: sound clips are loaded via the DOM, maybe move that
     // to actual JS?
-    async add(file_name, audio_context) {
-        const audio_buffer = await getAudioFile(audio_context, this.base_path+file_name);
+    async add(file_name, audio_context, load_manager) {
+        load_manager.itemStart();
+        const audio_buffer = await getAudioFile(audio_context, this.base_path+file_name, load_manager);
 
         this.sounds.set(file_name, audio_buffer);
         this.available_sounds.push(file_name);

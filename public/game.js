@@ -283,11 +283,15 @@ function main() {
     sound_bank = new SoundBank();
     sound_bank.base_path = "/assets/audio/";
 
-    sound_bank.add("thump01.ogg", audio_player.audio_context);
-    sound_bank.add("tap01.ogg", audio_player.audio_context);
-    sound_bank.add("victory_flute.ogg", audio_player.audio_context);
-    sound_bank.add("glup01.ogg", audio_player.audio_context);
-    sound_bank.add("move02.ogg", audio_player.audio_context);
+    const addToSoundbank = (name) => {
+        sound_bank.add(name, audio_player.audio_context, load_manager);    
+    }
+
+    addToSoundbank("thump01.ogg");
+    addToSoundbank("tap01.ogg");
+    addToSoundbank("victory_flute.ogg");
+    addToSoundbank("glup01.ogg");
+    addToSoundbank("move02.ogg");
     
     
     // INPUT

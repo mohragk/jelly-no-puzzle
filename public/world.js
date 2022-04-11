@@ -285,7 +285,7 @@ export class World {
 
         // Find all movable pieces
         const visited = [];
-        this.forEachCell( (row, col, index) => {
+        this.forEachCell( (row, col) => {
             const tile = this.getTile(row, col);
             if (visited.includes(tile)) return 
             
