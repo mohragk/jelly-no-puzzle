@@ -710,6 +710,13 @@ export class World {
         }
     }
 
+    shouldAddNeigbour = (row, col, tile) => {
+        let t = this.getTile(row, col);
+        if (t) {
+            return (t.id !== tile.id)
+        }
+        return false;
+    };
 
     drawMovables(renderer) {
 
@@ -718,25 +725,18 @@ export class World {
             if ((tile.gameplay_flags > 0)) {
                 const {row, col} = tile.world_pos;
                 
-                const addNeigbour = (row, col, placement) => {
-                    let t = this.getTile(row, col);
-                    if (t) {
-                        if (t.id !== tile.id) {
-                            neighbours |= placement;
-                        }
-                    }
-                };
+               
                 let neighbours = 0;
                 
-                addNeigbour(row-1, col, Neighbours.TOP);
-                addNeigbour(row+1, col, Neighbours.BOTTOM);
-                addNeigbour(row, col-1, Neighbours.LEFT);
-                addNeigbour(row, col+1, Neighbours.RIGHT);
+                neighbours |= this.shouldAddNeigbour(row-1, col, tile) ? Neighbours.TOP    : 0;
+                neighbours |= this.shouldAddNeigbour(row+1, col, tile) ? Neighbours.BOTTOM : 0; 
+                neighbours |= this.shouldAddNeigbour(row, col-1, tile) ? Neighbours.LEFT   : 0; 
+                neighbours |= this.shouldAddNeigbour(row, col+1, tile) ? Neighbours.RIGHT  : 0; 
                 
-                addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
-                addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
-                addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
-                addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                neighbours |= this.shouldAddNeigbour(row-1, col-1, tile) ? Neighbours.TOP_LEFT     : 0;
+                neighbours |= this.shouldAddNeigbour(row+1, col-1, tile) ? Neighbours.BOTTOM_LEFT  : 0;
+                neighbours |= this.shouldAddNeigbour(row-1, col+1, tile) ? Neighbours.TOP_RIGHT    : 0;
+                neighbours |= this.shouldAddNeigbour(row+1, col+1, tile) ? Neighbours.BOTTOM_RIGHT : 0;
                 
                 if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                     renderer.pushTile( tile.color, tile.opengl_visual_pos, neighbours, false );
