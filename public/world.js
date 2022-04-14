@@ -651,23 +651,19 @@ export class World {
             // size.
 
             const pieces = [];
+            let pieces_count = 0;
             const visited = [];
             this.forEachCell((row, col) => {
                 const tile = this.getTile(row, col);
                 if (visited.includes(tile)) return
                 
                 if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
-                    const piece = new Piece();
-                    piece.color = tile.color;
-                    let tile_list = [];
-                    this.findMergeableTiles(row, col, tile_list, tile, visited, {});
-                    piece.tiles.push(tile_list);
-                    
-                    pieces.push(piece);
+                    this.findMergeableTiles(row, col, [], tile, visited, {});
+                    pieces_count += 1;                    
                 }
             })
             
-            let succes = pieces.length === this.color_set.size;
+            let succes = pieces_count === this.color_set.size;
             if (succes) {
                 game_state.has_won = true;
             }
