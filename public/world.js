@@ -650,7 +650,6 @@ export class World {
             // but for now, just create pieces and see if it exceeds the color_set
             // size.
 
-            const pieces = [];
             let pieces_count = 0;
             const visited = [];
             this.forEachCell((row, col) => {
