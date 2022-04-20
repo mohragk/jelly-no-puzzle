@@ -854,12 +854,15 @@ function render(world) {
     renderer.drawAll(timestamp()/1000.0, enable_grid, game_state);
     
     if (game_state.has_won) {
-        canvas.classList.add("add_victory_animation");
-        document.body.classList.add("animated-bgcolors");
-        const button = document.getElementById("next_button");
-        button.style.visibility = "visible";
+       
         if (game_state.running) {
             game_state.running = false;
+            
+            canvas.classList.add("add_victory_animation");
+            document.body.classList.add("animated-bgcolors");
+            const button = document.getElementById("next_button");
+            button.style.visibility = "visible";
+            
             audio_player.trigger(sound_bank.get("victory_flute.ogg"));
         }
     }
