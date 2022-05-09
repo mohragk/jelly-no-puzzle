@@ -618,6 +618,9 @@ export class World {
         }
     }
 
+
+
+
     drawMouseCursor(game_state, renderer) {
         if (!game_state.show_cursor) return;
 
@@ -757,7 +760,7 @@ export class World {
     }
 
     render(renderer, game_state) {
-        
+        this.predrawBackground(renderer);
         
         // DRAW MOVABLES
         {
@@ -771,8 +774,6 @@ export class World {
 
         this.drawSelectedTileOverlays(game_state, renderer);
         this.drawMouseCursor(game_state, renderer);
-
-        this.predrawBackground(renderer);
     }
     
 };
