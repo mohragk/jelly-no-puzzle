@@ -601,9 +601,9 @@ export class World {
 
             let pieces_count = 0;
             const visited = [];
-            this.forEachCell((row, col) => {
+            this.forEachCell((row, col, index) => {
                 const tile = this.getTile(row, col);
-                if (visited.includes(tile)) return
+                if (visited.includes(index)) return
                 
                 if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                     this.findMergeableTiles(row, col, [], tile, visited, {});

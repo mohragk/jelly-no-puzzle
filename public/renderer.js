@@ -952,7 +952,7 @@ export class Renderer {
         this.texture_environment_background = frame_buffer.texture;
     }
 
-    drawAll(time, enable_grid, game_state) {
+    drawAll(time) {
         const gl = this.#context;
 
         // Pre-render background for better performance.
@@ -963,7 +963,6 @@ export class Renderer {
         
         {
             gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-            
             gl.clear(gl.COLOR_BUFFER_BIT);
 
             if (this.texture_environment_background) {
@@ -980,10 +979,6 @@ export class Renderer {
                 }
             }
             this.render_list.length = 0;
-
-            if (enable_grid) {
-                this.drawGrid(game_state.world_dimensions);
-            }
         }
     }
 }

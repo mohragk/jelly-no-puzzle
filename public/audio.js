@@ -108,8 +108,6 @@ export class AudioPlayer {
         }
     }
 
-  
-
     toggle() {
         this.#is_on = !this.#is_on;
     }
