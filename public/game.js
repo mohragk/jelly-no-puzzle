@@ -1,21 +1,20 @@
-import { TextureCatalog } from './textureCatalog.js';
-import { Renderer } from './renderer.js';
-
 
 import { levels }  from './levels2.js';
 
+import { lerp, isEven } from './math.js';
 
-import { lerp } from './math.js';
+import { World } from './world.js';
 import { GameplayFlags, Tile, AnchorPoints } from './tile.js';
 
-import { World, Neighbours } from './world.js';
-import { Recorder } from './recorder.js';
-import { DelayedTrigger } from './delayedtrigger.js';
 import { CommandBuffer, MoveCommand, MoveDirections } from './command.js';
 import { Events } from './events.js';
-
-import { AudioPlayer, SoundBank } from './audio.js';
+import { DelayedTrigger } from './delayedtrigger.js';
 import { LoadManager } from './loadManager.js';
+
+import { Recorder } from './recorder.js';
+import { TextureCatalog } from './textureCatalog.js';
+import { Renderer } from './renderer.js';
+import { AudioPlayer, SoundBank } from './audio.js';
 
 
 
@@ -47,6 +46,9 @@ let recorder;
 
 let audio_player;
 let sound_bank;
+
+let FULLSCREEN_MODE = false;
+let world = new World();
 
 let event_listener = {
     handleEvent: (e) => {
@@ -118,11 +120,6 @@ const DEBUG_RENDERS = [
 ]
 
 
-let DISPLAY_RASTER = false;
-let FULLSCREEN_MODE = false;
-
-
-let world = new World();
 
 
 
@@ -149,33 +146,33 @@ function getCanvas(renderer) {
 }
 
 function reset(level_index) {
-
-   
     last_time = timestamp();
-
-    renderer.render_list.length = 0;
+    renderer.clearBuffer();
 
     removeClassesFromHTML();
 
     if (level_index < levels.length) {
-        const button = document.getElementById("next_button");
-        button.style.visibility = "hidden";
+        resetAndUpdateUIElements(level_index);
 
-        const select = document.getElementById("level-select");
-        select.value = level_index + 1;
-
-
-        game_state = {...DEFAULT_GAMESTATE};
-       
+        
         world = new World();
         recorder = new Recorder();
         command_buffer = new CommandBuffer();
         
+        game_state = {...DEFAULT_GAMESTATE};
         loadLevel(level_index, levels, world);
         game_state.level_index = level_index;
         
         game_state.running = true;
     }
+}
+
+function resetAndUpdateUIElements(level_index) {
+    const button = document.getElementById("next_button");
+    button.style.visibility = "hidden";
+
+    const select = document.getElementById("level-select");
+    select.value = level_index + 1;
 }
 
 function resetWorld(levels) {
@@ -198,7 +195,7 @@ export const MouseButtons = {
     FORWARD: 4
 };
 
-const isEven = (n) => n % 2 === 0
+
 
 function resizeCanvas(canvas) {
     const getCellSize = (prefer_width, world_dim) => {
@@ -219,7 +216,7 @@ function resizeCanvas(canvas) {
         cell_size -= 1;
     }
     let new_w = cell_size * world.dimensions.w;
-    new_h = cell_size * world.dimensions.h;
+    new_h     = cell_size * world.dimensions.h;
 
     // OPENGL
     {
@@ -264,17 +261,16 @@ function loadTextures(catalog, load_manager, gl) {
 }
 
 function main() {
+    // NOTE: to make we only start the game when we fully loaded
+    // every asset, we use a LoadManager that runs a callback when all items are loaded.
+    const load_manager = new LoadManager( () => {mainLoop()} )
     
     // RENDERING
     renderer = new Renderer();
     canvas = getCanvas(renderer);
     
-    // NOTE: to make we only start the game when we fully loaded
-    // every asset, we use a LoadManager that runs a callback when all items are loaded.
-    const load_manager = new LoadManager( () => {mainLoop()} )
     texture_catalog = new TextureCatalog();
     renderer.setTextureCatalog(texture_catalog);
-
     loadTextures(texture_catalog, load_manager, renderer.getContext());
 
     
@@ -295,6 +291,7 @@ function main() {
     
     
     // INPUT
+    // Disable right clicking in canvas.
     canvas.oncontextmenu = function (e) {
         e.preventDefault();
     };
@@ -324,15 +321,14 @@ function main() {
         }
         
         if (e.key === 'g') {
-            //DISPLAY_RASTER = !DISPLAY_RASTER;
             enable_grid = !enable_grid;
         }
 
         if (e.key === 'f') {
 
-            const updateContainer = (mode) => {
+            const updateContainer = (is_fullscreen) => {
                 const container = document.getElementById("canvas_container");
-                if (FULLSCREEN_MODE) {
+                if (is_fullscreen) {
                     container.classList.add("full_screen");
                 }
                 else {
@@ -350,7 +346,6 @@ function main() {
         if (DEV_MODE) {
             if (e.key === 'd') {
                 debug_render_index = (debug_render_index + 1) % DEBUG_RENDERS.length;
-                //DEBUG_RENDER = !DEBUG_RENDER;
             }
             // Time dilation
             if (e.key === '-') {
@@ -543,7 +538,7 @@ function main() {
     
 
 
-    // Add button behaviours
+    // Add UI button behaviours
     {
         const button = document.getElementById("undo_button");
         button.onclick = e => {
@@ -580,9 +575,9 @@ function main() {
         select.add(option);
     }
     select.onchange = function(e) {
-        const t = e.target.value;
-        reset(t - 1)
-        localStorage.setItem('last_level', JSON.stringify(t-1));
+        const level = e.target.value;
+        reset(level - 1)
+        localStorage.setItem('last_level', JSON.stringify(level-1));
     }
 
 
@@ -595,9 +590,6 @@ function main() {
     reset(level_index);
     
 }
-
-
-
 
 function loadLevel(index, levels, world) {
     
@@ -738,11 +730,12 @@ function loadLevel(index, levels, world) {
             let c = line[index];
             let tile = getTileFromChar(c);
 
-            // NOTE: set new, incremented id for colored tiles           
+            // NOTE: set new id for colored tiles           
             if (tile.id < 0 && (tile.gameplay_flags) ) {
                 tile.id = colored_tile_id++;
             }
 
+            // a = ANCHORED Tile
             if (c === 'a') {
                 let anchor_positions = 0;
 
@@ -759,6 +752,7 @@ function loadLevel(index, levels, world) {
                 const color_symbol = line[++index];
                 tile = getAnchoredTile(anchor_positions, color_symbol, colored_tile_id++);
             }
+            // s = STATIC tile
             else if (c === 's') {
                 const color_symbol = line[++index];
                 tile = getStaticTile(color_symbol, colored_tile_id++); 
@@ -840,19 +834,8 @@ function update(world, command_buffer, dt) {
     for (let trigger of triggers) {
         trigger.update(dt);
     }
-}
 
-
-
-
-
-
-function render(world) {
-    
-    // OPENGL
-    world.render(renderer, game_state);
-    renderer.drawAll(timestamp()/1000.0, enable_grid, game_state);
-    
+     
     if (game_state.has_won) {
        
         if (game_state.running) {
@@ -866,11 +849,26 @@ function render(world) {
             audio_player.trigger(sound_bank.get("victory_flute.ogg"));
         }
     }
+}
+
+
+
+
+
+
+function render(world) {
+    
+    
+    world.render(renderer, game_state);
+
+    // Deferred drawing of all renderables.
+    renderer.drawAll(timestamp()/1000.0, enable_grid, game_state);
+   
     
     if (DEV_MODE) {
-        const render = DEBUG_RENDERS[debug_render_index];
-        if (render) {
-            render();
+        const debug_render = DEBUG_RENDERS[debug_render_index];
+        if (debug_render) {
+            debug_render();
         }
     }
 }

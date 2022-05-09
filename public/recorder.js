@@ -1,3 +1,4 @@
+// DEEP CLONE FUNCTION
 function clone(item) {
     if (!item) { return item; } // null, undefined values check
 

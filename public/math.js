@@ -4,8 +4,11 @@ export function lerp(a, b, t) {
 
 export function lerpToInt(a, b, t) {
     let result = lerp(a,b,t);
-    return Math.floor(result);
+    return Mat
+    h.floor(result);
 }
+
+export const isEven = (n) => (n & 1) === 0;
 
 export class Rectangle {
     top_left     = [0, 0];

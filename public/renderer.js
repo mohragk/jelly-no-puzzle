@@ -341,6 +341,10 @@ export class Renderer {
         return this.#context;
     }
 
+    clearBuffer() {
+        this.render_list.length = 0;
+    }
+
     reset() {
         this.canvas = document.querySelector('#opengl_canvas');
         if (!this.canvas) {

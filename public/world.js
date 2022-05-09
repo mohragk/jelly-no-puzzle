@@ -49,7 +49,7 @@ export class World {
     
     debug_grid = [];
 
-    initialized = false;
+    background_initialized = false;
 
     setDimensions(w, h) {
         this.dimensions.w = w;
@@ -129,8 +129,9 @@ export class World {
 
     findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
+        const index = this.getIndex(row, col);
 
-        if (visited.includes(tile)) {
+        if (visited.includes(index)) {
             return;
         }
 
@@ -139,7 +140,7 @@ export class World {
             if ( tile.id !== original.id ) {
                 info.found_candidate = true;
             }
-            visited.push(tile);
+            visited.push(index);
            
             list.push(tile);
             
@@ -154,14 +155,15 @@ export class World {
 
     findMergedTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
+        const index = this.getIndex(row, col);
         if (!tile) return;
 
-        if (visited.includes(tile)) {
+        if (visited.includes(index)) {
             return;
         }
         
         if ( tile.id === original.id) {
-            visited.push(tile);
+            visited.push(index);
            
             list.push(tile);
             
@@ -285,9 +287,9 @@ export class World {
 
         // Find all movable pieces
         const visited = [];
-        this.forEachCell( (row, col) => {
+        this.forEachCell( (row, col, index) => {
             const tile = this.getTile(row, col);
-            if (visited.includes(tile)) return 
+            if (visited.includes(index)) return;
             
             if (tile.gameplay_flags & GameplayFlags.MOVABLE) {
                 const piece = new Piece();
@@ -357,7 +359,7 @@ export class World {
 
 
     // To check whether pieces should move, recursively fill out a 
-    // temporary grid by checking a piece for mobility and paint in all 
+    // temporary grid by checking a piece for mobility and "paint in" all 
     // pieces that are static. All the leftover pieces _are_ movable and 
     // should have gravity applied to them.
     applyGravity(pieces) {
@@ -594,36 +596,7 @@ export class World {
             }
     }
 
-    drawMouseCursor(game_state, renderer) {
-        if (!game_state.show_cursor) return;
-
-        const getWorldPosForScreenPos = (screen_coord) => {
-            const tile_size_pixels = renderer.canvas.width / this.dimensions.w;
-            const col = screen_coord.x / tile_size_pixels;
-            const row = screen_coord.y / tile_size_pixels;
-            return [col-0.5 , row-0.5];
-        };
-        
-        const [x, y] = getWorldPosForScreenPos(global_mouse_pos);
-        const dir = ( game_state.has_won || input_mode === InputModes.CLASSIC) ? false : game_state.selected_move_dir;
-        renderer.pushCursorQuad("white", [x, y, -1.0], dir, 2.2);
-    }
-
-
-    drawSelectedTileOverlays(game_state, renderer) {
-        if (game_state.has_won || input_mode === InputModes.CLASSIC) return;
-
-        const tiles = game_state.selected_tiles;
-        for (let tile of tiles) {
-            const position = tile.opengl_visual_pos;
-            renderer.pushCircleQuad("white", [...position, -1.0], 0.15);
-        }
-    }
-
-
-
     update(command_buffer, dt, game_state, undo_recorder) {
-        
         this.handleInput(game_state);
         
         const is_moving = this.move_set.length;
@@ -667,10 +640,32 @@ export class World {
                 game_state.has_won = true;
             }
         }
-
     }
 
+    drawMouseCursor(game_state, renderer) {
+        if (!game_state.show_cursor) return;
 
+        const getWorldPosForScreenPos = (screen_coord) => {
+            const tile_size_pixels = renderer.canvas.width / this.dimensions.w;
+            const col = screen_coord.x / tile_size_pixels;
+            const row = screen_coord.y / tile_size_pixels;
+            return [col-0.5 , row-0.5];
+        };
+        
+        const [x, y] = getWorldPosForScreenPos(global_mouse_pos);
+        const dir = ( game_state.has_won || input_mode === InputModes.CLASSIC) ? false : game_state.selected_move_dir;
+        renderer.pushCursorQuad("white", [x, y, -1.0], dir, 2.2);
+    }
+
+    drawSelectedTileOverlays(game_state, renderer) {
+        if (game_state.has_won || input_mode === InputModes.CLASSIC) return;
+
+        const tiles = game_state.selected_tiles;
+        for (let tile of tiles) {
+            const position = tile.opengl_visual_pos;
+            renderer.pushCircleQuad("white", [...position, -1.0], 0.15);
+        }
+    }
 
     drawAnchors(renderer) {
         this.forEachCell( (row, col, index) => {
@@ -680,8 +675,6 @@ export class World {
             }
         });
     }
-
-   
 
     drawAnchorsForTile(renderer, tile) {
         const [vx, vy] = tile.opengl_visual_pos;
@@ -719,7 +712,6 @@ export class World {
     };
 
     drawMovables(renderer) {
-
         this.forEachCell((row_, col_, index) => {
             const tile = this.grid[index];
             if ((tile.gameplay_flags > 0)) {
@@ -747,9 +739,46 @@ export class World {
                
             }
         });
-
     }
  
+    // NOTE: We render the background elements into a texture and re-use it.
+    // This is only called once when loading a new world and running the render
+    // loop.
+    predrawBackground(renderer) {
+        if (this.background_initialized) return;
+
+        this.background_initialized = true;
+        this.forEachCell((row, col, index) => {
+            const tile = this.grid[index];
+            if ((tile.gameplay_flags > 0 ) && tile.color === "gray" ) {
+
+                const addNeigbour = (row, col, placement) => {
+                    let t = this.getTile(row, col);
+                    if (t) {
+                        if (t.color !== "gray" ) {
+                            neighbours |= placement;
+                        }
+                        if (t.id === tile.id) {
+                            neighbours &= ~(placement);
+                        }
+                    }
+                };
+                let neighbours = 0;
+                
+                addNeigbour(row-1, col, Neighbours.TOP);
+                addNeigbour(row+1, col, Neighbours.BOTTOM);
+                addNeigbour(row, col-1, Neighbours.LEFT);
+                addNeigbour(row, col+1, Neighbours.RIGHT);
+                
+                addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
+                addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
+                addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
+                addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
+                renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
+            
+            }
+        });
+    }
 
     render(renderer, game_state) {
         
@@ -767,40 +796,7 @@ export class World {
         this.drawSelectedTileOverlays(game_state, renderer);
         this.drawMouseCursor(game_state, renderer);
 
-        // PRE-DRAW BACKGROUND ELEMENTS TO TEXTURE
-        if (!this.initialized) {
-            this.initialized = true;
-            this.forEachCell((row, col, index) => {
-                const tile = this.grid[index];
-                if ((tile.gameplay_flags > 0 ) && tile.color === "gray" ) {
-
-                    const addNeigbour = (row, col, placement) => {
-                        let t = this.getTile(row, col);
-                        if (t) {
-                            if (t.color !== "gray" ) {
-                                neighbours |= placement;
-                            }
-                            if (t.id === tile.id) {
-                                neighbours &= ~(placement);
-                            }
-                        }
-                    };
-                    let neighbours = 0;
-                    
-                    addNeigbour(row-1, col, Neighbours.TOP);
-                    addNeigbour(row+1, col, Neighbours.BOTTOM);
-                    addNeigbour(row, col-1, Neighbours.LEFT);
-                    addNeigbour(row, col+1, Neighbours.RIGHT);
-                    
-                    addNeigbour(row-1, col-1, Neighbours.TOP_LEFT);
-                    addNeigbour(row+1, col-1, Neighbours.BOTTOM_LEFT);
-                    addNeigbour(row-1, col+1, Neighbours.TOP_RIGHT);
-                    addNeigbour(row+1, col+1, Neighbours.BOTTOM_RIGHT);
-                    renderer.pushEnvironmentQuad(tile.color, tile.opengl_visual_pos, 1.0, neighbours);
-                
-                }
-            });
-        }
+        this.predrawBackground(renderer);
     }
     
 };
