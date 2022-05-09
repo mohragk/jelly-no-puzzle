@@ -103,30 +103,8 @@ export class World {
     }
 
 
-    findMergeableWithAnchoredTiles(row, col, list, original, visited, info, ids_to_include) {
-        const tile = this.getTile(row, col);
-
-        if (visited.includes(tile)) {
-            return;
-        }
-
-        if (  tile.color === original.color && tile.gameplay_flags & GameplayFlags.MERGEABLE ) {
-                
-            if ( tile.id !== original.id ) {
-                info.found_candidate = true;
-            }
-            visited.push(tile);
-           
-            list.push(tile);
-            
-            this.findMergeableWithAnchoredTiles(row+1, col+0, list, original, visited, info);
-            this.findMergeableWithAnchoredTiles(row-1, col+0, list, original, visited, info);
-            this.findMergeableWithAnchoredTiles(row+0, col+1, list, original, visited, info);
-            this.findMergeableWithAnchoredTiles(row+0, col-1, list, original, visited, info);
-        }
-    }
-
-
+    // NOTE: the following two functions are very similar, but have slight
+    // differences so keep them separated.
     findMergeableTiles(row, col, list, original, visited, info) {
         const tile = this.getTile(row, col);
         const index = this.getIndex(row, col);
@@ -151,8 +129,6 @@ export class World {
         }
     }
 
-   
-
     findMergedTiles(row, col, list, original, visited) {
         const tile = this.getTile(row, col);
         const index = this.getIndex(row, col);
@@ -162,7 +138,7 @@ export class World {
             return;
         }
         
-        if ( tile.id === original.id) {
+        if ( tile.id === original.id ) {
             visited.push(index);
            
             list.push(tile);
@@ -178,7 +154,6 @@ export class World {
 
 
     updateTile(tile) {
-       
         let opengl_x = lerp(tile.world_pos.col, tile.target_pos.col, tile.move_t);
         let opengl_y = lerp(tile.world_pos.row, tile.target_pos.row, tile.move_t);
         tile.opengl_visual_pos[0] = opengl_x;
@@ -230,7 +205,9 @@ export class World {
         const { coord, direction }  = c;
         const {row, col} = coord;
 
-        if (c.type === CommandTypes.MOVE) {
+        // There is only one type of command, so no need to check for that!
+        //if (c.type === CommandTypes.MOVE) 
+        {
 
             const piece_index = this.getPiece(row, col, pieces_grid);
             const piece = pieces[piece_index];
@@ -283,7 +260,9 @@ export class World {
         }
     }
 
-    createPieces(pieces, pieces_grid) {
+    createPieces() {
+        const pieces = [];
+        const pieces_grid = [];
 
         // Find all movable pieces
         const visited = [];
@@ -296,9 +275,7 @@ export class World {
                 piece.color = tile.color;
                 
                 const merged_tiles = [];
-                
                 this.findMergedTiles(tile.world_pos.row, tile.world_pos.col, merged_tiles, tile, visited);
-                
                 piece.tiles = [...merged_tiles];
 
                 pieces.push(piece);
@@ -314,6 +291,8 @@ export class World {
                 pieces_grid[grid_index] = index;
             }
         });
+
+        return { pieces, pieces_grid };
     }
 
 
@@ -382,7 +361,7 @@ export class World {
                     }
                 }
                 if (!can_move) {
-                    // Update flags_grid grid
+                    // Update flags_grid 
                     for (let tile of piece.tiles) {
                         const {row, col} = tile.world_pos;
                         const index = this.getIndex(row, col);
@@ -418,8 +397,7 @@ export class World {
 
 
     findAndApplyMerges(skip_event = false) {
-        //const visited = [];
-        this.forEachCell((row, col, index) => {
+        this.forEachCell((row, col) => {
             const tile = this.getTile(row, col);
             if ( (tile.gameplay_flags & GameplayFlags.MERGEABLE) ) {
                 let merge_list = [];
@@ -484,7 +462,7 @@ export class World {
                 return result;
             }
 
-            this.forEachCell( (r, c, index) => {
+            this.forEachCell( (r, c) => {
                 const tile = this.getTile(r,c);
                 if (!tile.gameplay_flags) return;
                 
@@ -601,16 +579,14 @@ export class World {
         
         const is_moving = this.move_set.length;
         if (!is_moving) {
-            const pieces_grid = [];
-            const movable_pieces = [];
-            this.createPieces(movable_pieces, pieces_grid);
+            const { pieces, pieces_grid }  = this.createPieces();
             
-            const cancel_merge = this.applyGravity(movable_pieces);
+            const cancel_merge = this.applyGravity(pieces);
             if (!cancel_merge) {
                 this.findAndApplyMerges();
             }
       
-            this.handleCommands(command_buffer, undo_recorder, movable_pieces, pieces_grid);
+            this.handleCommands(command_buffer, undo_recorder, pieces, pieces_grid);
         }
         
         this.updateMoveset(game_state, dt);

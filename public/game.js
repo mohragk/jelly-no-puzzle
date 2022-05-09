@@ -117,7 +117,7 @@ const DEBUG_RENDERS = [
     () => world.debugRender(),
     () => world.debugRenderTileIDs(),
     () => world.debugRenderPieces(world.debug_pieces),
-]
+];
 
 
 
@@ -125,31 +125,50 @@ const DEBUG_RENDERS = [
 
 
 function shakeCanvas() {
-    canvas.classList.add("add_shake")
-    window.setTimeout(() => canvas.classList.remove("add_shake"), 250)
+    canvas.classList.add("add_shake");
+    window.setTimeout(() => canvas.classList.remove("add_shake"), 250);
 }
 
 
 
-function removeClassesFromHTML() {
+function removeVictoryClassesFromHTML() {
     canvas.classList.remove("add_victory_animation");
     document.body.classList.remove("animated-bgcolors");
+}
+
+function addVictoryClassesToHTML() {
+    canvas.classList.add("add_victory_animation");
+    document.body.classList.add("animated-bgcolors");
+}
+
+
+
+function showHTMLNextButton() {
+    const button = document.getElementById("next_button");
+    button.style.visibility = "visible";
+}
+
+function hideHTMLNextButton() {
+    const button = document.getElementById("next_button");
+    button.style.visibility = "hidden";
 }
 
 
 function getCanvas(renderer) { 
     if (renderer) {
-        return renderer.canvas
+        return renderer.canvas;
     } 
 
     return document.getElementById("grid_canvas");
 }
 
 function reset(level_index) {
+    // @CLEANUP: we need to update this here?
     last_time = timestamp();
-    renderer.clearBuffer();
 
-    removeClassesFromHTML();
+    removeVictoryClassesFromHTML();
+
+    renderer.clearBuffer();
 
     if (level_index < levels.length) {
         resetAndUpdateUIElements(level_index);
@@ -168,8 +187,7 @@ function reset(level_index) {
 }
 
 function resetAndUpdateUIElements(level_index) {
-    const button = document.getElementById("next_button");
-    button.style.visibility = "hidden";
+    hideHTMLNextButton();
 
     const select = document.getElementById("level-select");
     select.value = level_index + 1;
@@ -182,7 +200,7 @@ function resetWorld(levels) {
     
     game_state.running = true;
 
-    removeClassesFromHTML();
+    removeVictoryClassesFromHTML();
 }
 
 
@@ -841,17 +859,13 @@ function update(world, command_buffer, dt) {
         if (game_state.running) {
             game_state.running = false;
             
-            canvas.classList.add("add_victory_animation");
-            document.body.classList.add("animated-bgcolors");
-            const button = document.getElementById("next_button");
-            button.style.visibility = "visible";
+            addVictoryClassesToHTML();
+            showHTMLNextButton();
             
             audio_player.trigger(sound_bank.get("victory_flute.ogg"));
         }
     }
 }
-
-
 
 
 

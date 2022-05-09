@@ -935,8 +935,6 @@ export class Renderer {
         const gl = this.#context;
         const renderables = this.environment_list;
 
-       
-
         // DRAW TO FRAMEBUFFER
         {
             gl.bindFramebuffer(gl.FRAMEBUFFER, frame_buffer.buffer);
@@ -957,9 +955,9 @@ export class Renderer {
     drawAll(time, enable_grid, game_state) {
         const gl = this.#context;
 
+        // Pre-render background for better performance.
         // NOTE: should only be filled at first loop and not in subsequent loops.
         if (this.environment_list.length) {
-            // Pre-render background for better performance.
             this.updateEnvironmentTexture(this.frame_buffer);
         }
         

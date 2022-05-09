@@ -5,8 +5,7 @@ export const MoveDirections = {
 };
 
 export const CommandTypes = {
-    MOVE: 0,
-    IMPOSSIBLE: 1
+    MOVE: 0
 };
 
 export class MoveCommand {
@@ -20,18 +19,11 @@ export class MoveCommand {
 }
 
 
-export class ImpossibleCommand {
-    constructor(coord) {
-        this.coord = coord;
-    }
-    coord;
-    type = CommandTypes.IMPOSSIBLE;
-}
-
-
+// NOTE: Essentially a ringbuffer for storing commands. 
 export class CommandBuffer {
 
-    constructor() {
+    constructor(max_count = 8) {
+        this.max = max_count;
         this.commands.length = this.max;
     }
 

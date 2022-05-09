@@ -15,37 +15,41 @@ function unlockAudioContext(audioCtx) {
 
 async function getAudioFile(audio_context, filepath) {
     const res = await fetch(filepath);
-    const buffer = await res.arrayBuffer();
-    const audio_buffer = await audio_context.decodeAudioData(buffer);
+    if (res.status === 200) {
+        const data         = await res.arrayBuffer();
+        const audio_buffer = await audio_context.decodeAudioData(data);
 
-    return audio_buffer;
+        return audio_buffer;
+    }
+
+    return null;
 }
 
 
 
 export class SoundBank {
     sounds = new Map();
-    available_sounds = [];
     base_path;
 
     async add(file_name, audio_context, load_manager) {
         load_manager.itemStart();
         const audio_buffer = await getAudioFile(audio_context, this.base_path+file_name, load_manager);
-        load_manager.itemEnd();
 
-        this.sounds.set(file_name, audio_buffer);
-        this.available_sounds.push(file_name);
+        if (audio_buffer) {
+            this.sounds.set(file_name, audio_buffer);
+            load_manager.itemEnd();
+        }
+        else {
+            console.error(`[SoundBank] Can't load audio_buffer: ${file_name}. Loading halted!`);
+            return;
+        }
     }
 
     get(name) {
         const el = this.sounds.get(name);
-        if (!el) console.error(`No clip found with name: ${name}!`);
+        if (!el) console.error(`[SoundBank] No clip found with name: ${name}!`);
         
         return el;
-    }
-
-    getAllAvailable() {
-        return this.available_sounds;
     }
 };
 
@@ -62,7 +66,7 @@ export class AudioPlayer {
    
     constructor () {
 
-        this.initialize();
+        this.createAndUnlockContext();
 
         this.toggle_button = document.getElementById('audio_toggle_button');
         if (this.toggle_button) {
@@ -78,13 +82,13 @@ export class AudioPlayer {
         this.global_gain.connect(this.audio_context.destination);
     }
 
-    initialize() {
+    createAndUnlockContext() {
         this.audio_context = new AudioContext();
         unlockAudioContext(this.audio_context);
     }
 
     notFound() {
-        console.error(`AudioPlayer -- Audio clip not found!`)
+        console.error(`[AudioPlayer] Audio clip not found!`)
     }
 
     trigger(buffer) {

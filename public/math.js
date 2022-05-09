@@ -4,8 +4,7 @@ export function lerp(a, b, t) {
 
 export function lerpToInt(a, b, t) {
     let result = lerp(a,b,t);
-    return Mat
-    h.floor(result);
+    return Math.floor(result);
 }
 
 export const isEven = (n) => (n & 1) === 0;
@@ -21,7 +20,7 @@ export class Rectangle {
         this.bottom_right = br;
 
         this.dimensions[0] = this.bottom_right[0] - this.top_left[0]  //x
-        this.dimensions[1] = this.bottom_right[1] - this.top_left[1]  //x
+        this.dimensions[1] = this.bottom_right[1] - this.top_left[1]  //y
     }
 }
 

@@ -64,8 +64,7 @@ export class Recorder {
             this.max *= 2;
             this.history.length = this.max;
         }
-        // NOTE: replaced from JSON.parse(JSON.stringify()) for (maybe) better performance.
-        this.history[this.count] =  clone(state);   
+        this.history[this.count] =  clone(state);   // replaced from JSON.parse(JSON.stringify()) for (maybe) better performance.
         this.count++;
     }
 
