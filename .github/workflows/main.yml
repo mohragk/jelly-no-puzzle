@@ -23,6 +23,6 @@ jobs:
           switches: -avz
           path: public/
           remote_path: /var/www/jelly/public
-          remote_host: ${{ SSH_HOST }}
-          remote_user: ${{ SSH_USER }}
-          remote_key: ${{ SSH_PRIVATE_KEY }}
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
