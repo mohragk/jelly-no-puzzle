@@ -22,7 +22,7 @@ jobs:
       - name: Deploy with rsync
         uses: Burnett01/rsync-deployments@5.2.1
         with:
-          switches: -avz
+          switches: -avzr
           path: src/public/
           remote_path: /var/www/jelly/public
           remote_host: ${{ secrets.SSH_HOST }}
