@@ -4,4 +4,10 @@ jobs:
   write-to-console:
     runs-on: ubuntu-latest
     steps:
-      - run: echo 'Hello Sailor!'
+      - run: echo 'Started deployment!'
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: 'just-some-placeholder-value'
+          
