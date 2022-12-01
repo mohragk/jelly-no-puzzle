@@ -23,7 +23,9 @@ jobs:
         run: ssh-keyscan -H ${{ secrets.SSH_HOST }}  >> ~/.ssh/known_hosts
      
       - name: Test ssh
-        run: ssh -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+        run: echo ${{ secrets.SSH_PRIVATE_KEY }} | sudo tee key.txt \
+          chmod 600 ./key.txt \
+          ssh -i  ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 #       - name: Deploy with rsync
 #         uses: Burnett01/rsync-deployments@5.2.1
 #         with:
